@@ -592,6 +592,11 @@ export default function FormResearch() {
   const [showLoader, setShowLoader] = useState(false);
   const [dialogMessage, setDialogMessage] = useState("");
   const [teamMemberRoles, setTeamMemberRoles] = useState<IDropdownOption[]>([]);
+
+  // Lazy loading states for optional sections
+  const [reportsLoaded, setReportsLoaded] = useState(false);
+  const [disseminationLoaded, setDisseminationLoaded] = useState(false);
+  const [deliverablesLoaded, setDeliverablesLoaded] = useState(false);
   const { callApi } = useDataverseApi();
   const { triggerFlow } = useFlowApi();
   const [searchParams] = useSearchParams();
