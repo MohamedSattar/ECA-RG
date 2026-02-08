@@ -11,12 +11,16 @@ export const handleDataverseProxy: RequestHandler = async (req, res) => {
   try {
     // Extract the path after /api/dataverse
     const path = req.path.replace(/^\/api\/dataverse/, "");
-    const targetUrl = `${DATAVERSE_BASE_URL}${path}${req.url.includes("?") ? req.url.substring(req.url.indexOf("?")) : ""}`;
 
-    // Prepare headers, excluding host to let Node handle it
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
+    // Build target URL with original query string
+    const url = new URL(`${DATAVERSE_BASE_URL}${path}`);
+    if (req.url.includes("?")) {
+      const queryString = req.url.substring(req.url.indexOf("?") + 1);
+      url.search = queryString;
+    }
+
+    // Prepare headers
+    const headers: Record<string, string> = {};
 
     // Pass through important headers from the request
     if (req.headers.authorization) {
@@ -27,9 +31,12 @@ export const handleDataverseProxy: RequestHandler = async (req, res) => {
         "__requestverificationtoken"
       ] as string;
     }
+    if (req.headers["content-type"]) {
+      headers["content-type"] = req.headers["content-type"] as string;
+    }
 
     // Make the request to Dataverse API
-    const proxyResponse = await fetch(targetUrl, {
+    const proxyResponse = await fetch(url.toString(), {
       method: req.method,
       headers,
       body: req.method !== "GET" && req.method !== "HEAD" ? JSON.stringify(req.body) : undefined,
@@ -46,9 +53,9 @@ export const handleDataverseProxy: RequestHandler = async (req, res) => {
       responseData = await proxyResponse.text();
     }
 
-    // Set response headers
+    // Set response status and headers
     res.status(proxyResponse.status);
-    
+
     // Copy important response headers
     const headersToProxy = [
       "content-type",
@@ -56,7 +63,7 @@ export const handleDataverseProxy: RequestHandler = async (req, res) => {
       "odata-version",
       "access-control-allow-origin",
     ];
-    
+
     headersToProxy.forEach((header) => {
       const value = proxyResponse.headers.get(header);
       if (value) {
