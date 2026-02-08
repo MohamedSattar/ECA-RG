@@ -45,23 +45,20 @@ export const API_CONFIG = {
 
     // Remove leading slash if URL contains an absolute URL (e.g., /https://...)
     if (url.startsWith('/http://') || url.startsWith('/https://')) {
-      cleanUrl = url.substring(1); // Remove the leading slash
+      cleanUrl = url.substring(1);
     }
 
-    // If URL is from our production portal, route through proxy to handle CORS
+    // If URL is from our production portal (e.g., https://research-grants-spa.powerappsportals.com/Image/download.aspx?...)
     if (cleanUrl.includes(this.BASE_URL)) {
-      // Extract the path portion (everything after domain)
-      const baseUrlPattern = new RegExp(`^https?:\\/\\/${this.BASE_URL.replace(/^https?:\/\//, '')}`);
-      const path = cleanUrl.replace(baseUrlPattern, '');
-
-      if (path) {
-        return `/_images${path}`;
-      }
+      // Extract the path and query params after the domain
+      // e.g., "https://research-grants-spa.powerappsportals.com/Image/download.aspx?..."
+      // becomes "/Image/download.aspx?..."
+      const path = cleanUrl.replace(this.BASE_URL, '');
+      return `/_images${path}`;
     }
 
     // If URL is relative path from Dataverse API, route through our image proxy
     if (cleanUrl.startsWith('/_api/')) {
-      // Route through proxy: /_images/_api/...
       return `/_images${cleanUrl}`;
     }
 
