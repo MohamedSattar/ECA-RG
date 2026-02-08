@@ -427,7 +427,7 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
               maxSelection={1}
               label="Contact"
               cascadeField={ContactKeys.FULLNAME}
-              cascapeValue={user?.contact?.[ContactFields.FULLNAME]}
+              cascadeValue={user?.contact?.[ContactFields.FULLNAME]}
               isDefaultSelected={true}
               disabled={true}
               onSelect={(values) => {}}
