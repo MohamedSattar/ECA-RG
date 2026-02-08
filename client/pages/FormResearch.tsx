@@ -743,8 +743,11 @@ export default function FormResearch() {
       return;
     }
     try {
+      // Select only necessary fields to reduce payload
+      const disseminationSelect = `${DisseminationRequestFields.DISSEMINATIONAPPLICANTID},${DisseminationRequestFields.TITLE},${DisseminationRequestFields.JOURNALNAME},${DisseminationRequestFields.ABSTRACT},${DisseminationRequestFields.BUDGETNEEDED_BASE},${DisseminationRequestFields.SUBMISSIONDATE},${DisseminationRequestFields.REQUESTSTATUS}`;
+
       const res = await callApi<{ value: any[] }>({
-        url: `/_api/${TableName.DISSEMINATIONAPPLICANTS}?$filter=${DisseminationRequestFields.RESEARCH} eq ${researchId}`,
+        url: `/_api/${TableName.DISSEMINATIONAPPLICANTS}?$filter=${DisseminationRequestFields.RESEARCH} eq ${researchId}&$select=${disseminationSelect}`,
         method: "GET",
       });
 
