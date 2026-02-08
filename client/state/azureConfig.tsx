@@ -8,7 +8,7 @@ export const msalConfig = {
     authority:
       "https://ecab2cdev.b2clogin.com/tfp/20204571-3776-41c1-8358-b82ae0114e6e/b2c_1a_rg_dev_susi/v2.0/", // B2C authority with v2.0 endpoint
     knownAuthorities: ["ecab2cdev.b2clogin.com"], // B2C tenant
-    redirectUri: getRedirectUri(), // Redirects to /updateProfile path
+    redirectUri: REGISTERED_REDIRECT_URI, // Must match URI registered in Azure B2C
     navigateToLoginRequestUrl: true, // Return to original location after login
   },
   cache: {
