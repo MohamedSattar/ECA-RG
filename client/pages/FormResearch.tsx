@@ -1062,20 +1062,21 @@ export default function FormResearch() {
   const loadBudgetByVersion = useCallback(
     async (budgetHeaderId: string) => {
       try {
-        // Fetch budget header
+        // Select only necessary fields and fetch header with expanded line items
+        const budgetHeaderSelect = `${BudgetHeaderFields.BUDGETHEADERID},${BudgetHeaderFields.BUDGETNAME},${BudgetHeaderFields.RESEARCH},${BudgetHeaderFields.TOTALBUDGET},${BudgetHeaderFields.VERSIONNUMBER_BUDGET},${BudgetHeaderFields.STATUS}`;
+        const budgetLineItemSelect = `${BudgetLineItemFields.BUDGETLINEITEMID},${BudgetLineItemFields.LINEITEMNAME},${BudgetLineItemFields.CATEGORY},${BudgetLineItemFields.DESCRIPTION},${BudgetLineItemFields.AMOUNT},${BudgetLineItemFields.BUDGETHEADER}`;
+
+        // Fetch budget header with expanded line items
         const headerRes = await callApi<{ value: any[] }>({
-          url: `/_api/${TableName.BUDGETHEADERS}?$filter=${BudgetHeaderFields.BUDGETHEADERID} eq ${budgetHeaderId}`,
+          url: `/_api/${TableName.BUDGETHEADERS}?$filter=${BudgetHeaderFields.BUDGETHEADERID} eq ${budgetHeaderId}&$select=${budgetHeaderSelect}&$expand=${ExpandRelations.BUDGET_LINE_ITEMS}($select=${budgetLineItemSelect})`,
           method: "GET",
         });
 
         const budgetData = headerRes?.value?.[0];
         if (!budgetData) return;
 
-        // Fetch budget line items
-        const lineItemsRes = await callApi<{ value: any[] }>({
-          url: `/_api/${TableName.BUDGETLINEITEMS}?$filter=${BudgetLineItemFields.BUDGETHEADER} eq ${budgetHeaderId}`,
-          method: "GET",
-        });
+        // Use expanded line items instead of separate call
+        const lineItemsRes = budgetData[ExpandRelations.BUDGET_LINE_ITEMS] || [];
 
         const budgetHeader = mapBudgetHeader(budgetData);
         const budgetLineItems = mapBudgetLineItems(lineItemsRes?.value || []);
