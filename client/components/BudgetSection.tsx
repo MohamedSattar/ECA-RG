@@ -232,24 +232,24 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
               </FluentDialogFooter>
             </FluentDialog>
 
-            <div className="rounded-lg border overflow-hidden">
+            <div className="rounded-lg border border-[#e2e8f0] overflow-hidden shadow-sm">
               <table className="min-w-full text-sm">
-                <thead className="bg-[#f6e4d8]">
+                <thead className="bg-[#1D2054]">
                   <tr className="text-left">
-                    <th className="px-4 py-2 font-semibold text-[#2b201a]">
+                    <th className="px-6 py-3 font-semibold text-white">
                       Item Name
                     </th>
-                    <th className="px-4 py-2 font-semibold text-[#2b201a]">
+                    <th className="px-6 py-3 font-semibold text-white">
                       Description
                     </th>
-                    <th className="px-4 py-2 font-semibold text-[#2b201a]">
+                    <th className="px-6 py-3 font-semibold text-white">
                       Category
                     </th>
-                    <th className="px-4 py-2 font-semibold text-[#2b201a]">
+                    <th className="px-6 py-3 font-semibold text-white text-right">
                       Amount
                     </th>
                     {edit && (
-                      <th className="px-4 py-2 font-semibold text-[#2b201a] text-right">
+                      <th className="px-6 py-3 font-semibold text-white text-right">
                         Actions
                       </th>
                     )}
@@ -257,23 +257,28 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                 </thead>
                 <tbody>
                   {budgetLineItem.map((item, index) => (
-                    <tr key={item.prmtk_amount + index} className="border-t">
-                      <td className="px-4 py-2 font-medium text-[#2b201a]">
+                    <tr
+                      key={item.prmtk_amount + index}
+                      className={`border-t border-[#e2e8f0] transition-colors ${
+                        index % 2 === 0 ? 'bg-white' : 'bg-[#f8fafc]'
+                      } hover:bg-[#f0f4f8]`}
+                    >
+                      <td className="px-6 py-3 font-medium text-[#1e293b]">
                         {item.prmtk_lineitemname}
                       </td>
-                      <td className="px-4 py-2">{item.prmtk_description}</td>
-                      <td className="px-4 py-2">
+                      <td className="px-6 py-3 text-[#475569]">{item.prmtk_description}</td>
+                      <td className="px-6 py-3 text-[#475569]">
                         {categoryOptions.find(
                           (cat) => cat.key === item.prmtk_category,
                         )?.text || item.prmtk_category}
                       </td>
-                      <td className="px-4 py-2">
+                      <td className="px-6 py-3 text-right font-medium text-[#1e293b]">
                         {aedFormat(item.prmtk_amount)}
                       </td>
                       {edit && (
-                        <td className="px-4 py-2 text-right">
+                        <td className="px-6 py-3 text-right">
                           {item.action === "remove" ? (
-                            <span className="text-muted-foreground">
+                            <span className="text-[#94a3b8] line-through">
                               Removed
                             </span>
                           ) : (
@@ -284,6 +289,14 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                                 iconProps={{ iconName: "Edit" }}
                                 title="Edit"
                                 ariaLabel="Edit"
+                                styles={{
+                                  root: {
+                                    color: '#1D2054',
+                                  },
+                                  rootDisabled: {
+                                    color: '#cbd5e1',
+                                  },
+                                }}
                               />
                               <IconButton
                                 disabled={form.type === "view"}
@@ -291,6 +304,14 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                                 iconProps={{ iconName: "Delete" }}
                                 title="Remove"
                                 ariaLabel="Remove"
+                                styles={{
+                                  root: {
+                                    color: '#dc2626',
+                                  },
+                                  rootDisabled: {
+                                    color: '#cbd5e1',
+                                  },
+                                }}
                               />
                             </div>
                           )}
@@ -301,23 +322,23 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                   {budgetLineItem.length === 0 && (
                     <tr>
                       <td
-                        colSpan={5}
-                        className="px-4 py-6 text-center text-muted-foreground"
+                        colSpan={edit ? 5 : 4}
+                        className="px-6 py-8 text-center text-[#94a3b8]"
                       >
                         No budget line items added.
                       </td>
                     </tr>
                   )}
                 </tbody>
-                <tfoot className="bg-[#f6e4d8]">
+                <tfoot className="bg-[#f8fafc] border-t-2 border-[#e2e8f0]">
                   <tr>
                     <td
-                      colSpan={3}
-                      className="px-4 py-2 font-semibold text-[#2b201a]"
+                      colSpan={edit ? 3 : 2}
+                      className="px-6 py-3 font-semibold text-[#1D2054]"
                     >
-                      Total
+                      Total Amount
                     </td>
-                    <td className="px-4 py-2 font-semibold text-[#2b201a]">
+                    <td className="px-6 py-3 font-bold text-right text-[#1D2054] text-lg">
                       {aedFormat(totalLineItemAmount)}
                     </td>
                     <td></td>
