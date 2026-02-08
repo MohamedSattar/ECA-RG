@@ -2494,6 +2494,12 @@ export default function FormResearch() {
             <p className="mt-2 text-muted-foreground">
               Complete the sections below and submit your proposal.
             </p>
+            {form.type !== "new" && (
+              <div className="mt-3 text-sm text-gray-600">
+                <span className="opacity-80">Submission Date:</span>
+                <span className="ml-2 font-semibold text-[#2b201a]">{form.submissionDate}</span>
+              </div>
+            )}
           </div>
         </Reveal>
 
