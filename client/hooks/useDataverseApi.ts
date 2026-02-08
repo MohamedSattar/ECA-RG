@@ -91,10 +91,8 @@ export function useDataverseApi() {
       ...(options.headers || {}),
     };
 
-    // Route through backend proxy instead of direct API calls
-    const proxyUrl = `/api/dataverse${options.url}`;
-
-    const res = await fetch(proxyUrl, {
+    // Call the API directly - backend handles /_api/* routing
+    const res = await fetch(options.url, {
       credentials: "include",
       method: options.method || "GET",
       body: options.data ? JSON.stringify(options.data) : null,
