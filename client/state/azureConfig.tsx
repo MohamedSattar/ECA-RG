@@ -1,5 +1,3 @@
-import { API_CONFIG } from "@/config/api";
-
 // Redirect URI must match what's registered in Azure B2C app settings
 // Use dynamic redirect URI based on current domain for multi-deployment support
 const getRedirectUri = () => {
