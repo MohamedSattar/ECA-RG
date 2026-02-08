@@ -890,7 +890,8 @@ export default function FormResearch() {
     async (researchId: string) => {
       setShowLoader(true);
       try {
-        const select = "*";
+        // Select only necessary fields to reduce payload
+        const select = `${ResearchKeys.RESEARCHID},${ResearchKeys.RESEARCHTITLE},${ResearchKeys.STARTDATE},${ResearchKeys.ENDDATE},${ResearchKeys.RESEARCHAREA},${ResearchKeys.APPLICATIONREFERENCE},${ResearchKeys.PRINCIPALINVESTIGATOR},${ResearchKeys.RESEARCHNUMBER}`;
         const expand = ExpandRelations.RESEARCH_TEAM_MEMBER;
         const currentUserContactId = user?.contact?.[ContactFields.CONTACTID];
 
