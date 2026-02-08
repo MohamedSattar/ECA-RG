@@ -155,7 +155,7 @@ export default function FormApplication() {
           isVisible={showLoader}
           label="Your request is being processed..."
         />
-        <section className="h-[calc(100vh-150px)] overflow-hidden bg-[#0f1840]">
+        <section className="h-[calc(100vh-150px)] overflow-hidden bg-[#1D2054]">
           <Reveal className="h-full flex flex-col justify-center">
             <div className="container h-full py-4 md:py-4 grid gap-10 md:grid-cols-2 items-center justify-center">
               {/* Hero Collage */}
@@ -167,91 +167,164 @@ export default function FormApplication() {
                 />
               </div>
               <div>
-                <section className="bg-white">
-                  <div className="container py-4">
-                    <Reveal className="mt-8">
-                      <div>
-                        <Label>First Name</Label>
-                        <TextField
-                          value={form?.firstName}
-                          onChange={(_, value) =>
-                            setForm((prev) => ({
-                              ...prev,
-                              firstName: value || "",
-                            }))
-                          }
-                        />
-                      </div>
-                      <div>
-                        <Label>Last Name</Label>
-                        <TextField
-                          value={form?.lastName}
-                          onChange={(_, value) =>
-                            setForm((prev) => ({
-                              ...prev,
-                              lastName: value || "",
-                            }))
-                          }
-                        />
-                      </div>
-                      <div>
-                        <Label>Email Address</Label>
-                        <TextField disabled value={form?.email} />
-                      </div>
-                      <div>
-                        <Label>Institute</Label>
-                        <TextField disabled value={form?.Institute} />
-                      </div>
-                      <div>
-                        <Label>Business Phone</Label>
-                        <TextField
-                          value={form?.phoneNumber}
-                          onChange={(_, value) =>
-                            setForm((prev) => ({
-                              ...prev,
-                              phoneNumber: value || "",
-                            }))
-                          }
-                        />
-                      </div>
-                      <div>
-                        <Label>Mobile Phone</Label>
-                        <TextField
-                          value={form?.mobilePhone}
-                          onChange={(_, value) =>
-                            setForm((prev) => ({
-                              ...prev,
-                              mobilePhone: value || "",
-                            }))
-                          }
-                        />
-                      </div>
-                      <div>
-                        <Label>Preferred Method of Contact</Label>
-                        <Dropdown
-                          placeholder="Select an option"
-                          options={PreferredContactMethodCode.map((method) => ({
-                            key: method.key,
-                            text: method.text,
-                          }))}
-                          selectedKey={form?.preferredMethodOfContact}
-                          onChange={(e, option) =>
-                            setForm({
-                              ...form,
-                              preferredMethodOfContact:
-                                parseInt(option?.key as string) || 0,
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="mt-5 text-center">
-                        <PrimaryButton
-                          styles={{ root: { width: "200px" } }}
-                          onClick={() => handleSubmit()}
-                          disabled={!canSubmit}
-                        >
-                          {form?.contactId ? "Update Profile" : "Save Profile"}
-                        </PrimaryButton>
+                <section className="bg-white rounded-xl shadow-lg">
+                  <div className="container py-8 px-8">
+                    <h1 className="text-3xl font-bold text-[#1e293b] mb-8">
+                      Update Profile
+                    </h1>
+                    <Reveal className="mt-6">
+                      <div className="grid gap-6">
+                        <div>
+                          <Label htmlFor="firstName" className="text-[#1e293b] font-semibold">
+                            First Name
+                          </Label>
+                          <div className="mt-2">
+                            <TextField
+                              id="firstName"
+                              value={form?.firstName}
+                              onChange={(_, value) =>
+                                setForm((prev) => ({
+                                  ...prev,
+                                  firstName: value || "",
+                                }))
+                              }
+                              borderless
+                              placeholder="Enter your first name"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label htmlFor="lastName" className="text-[#1e293b] font-semibold">
+                            Last Name
+                          </Label>
+                          <div className="mt-2">
+                            <TextField
+                              id="lastName"
+                              value={form?.lastName}
+                              onChange={(_, value) =>
+                                setForm((prev) => ({
+                                  ...prev,
+                                  lastName: value || "",
+                                }))
+                              }
+                              borderless
+                              placeholder="Enter your last name"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label htmlFor="email" className="text-[#1e293b] font-semibold">
+                            Email Address
+                          </Label>
+                          <div className="mt-2">
+                            <TextField
+                              id="email"
+                              disabled
+                              value={form?.email}
+                              borderless
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label htmlFor="institute" className="text-[#1e293b] font-semibold">
+                            Institute
+                          </Label>
+                          <div className="mt-2">
+                            <TextField
+                              id="institute"
+                              disabled
+                              value={form?.Institute}
+                              borderless
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label htmlFor="businessPhone" className="text-[#1e293b] font-semibold">
+                            Business Phone
+                          </Label>
+                          <div className="mt-2">
+                            <TextField
+                              id="businessPhone"
+                              value={form?.phoneNumber}
+                              onChange={(_, value) =>
+                                setForm((prev) => ({
+                                  ...prev,
+                                  phoneNumber: value || "",
+                                }))
+                              }
+                              borderless
+                              placeholder="Enter your business phone"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label htmlFor="mobilePhone" className="text-[#1e293b] font-semibold">
+                            Mobile Phone
+                          </Label>
+                          <div className="mt-2">
+                            <TextField
+                              id="mobilePhone"
+                              value={form?.mobilePhone}
+                              onChange={(_, value) =>
+                                setForm((prev) => ({
+                                  ...prev,
+                                  mobilePhone: value || "",
+                                }))
+                              }
+                              borderless
+                              placeholder="Enter your mobile phone"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label htmlFor="contactMethod" className="text-[#1e293b] font-semibold">
+                            Preferred Method of Contact
+                          </Label>
+                          <div className="mt-2">
+                            <Dropdown
+                              id="contactMethod"
+                              placeholder="Select an option"
+                              options={PreferredContactMethodCode.map((method) => ({
+                                key: method.key,
+                                text: method.text,
+                              }))}
+                              selectedKey={form?.preferredMethodOfContact}
+                              onChange={(e, option) =>
+                                setForm({
+                                  ...form,
+                                  preferredMethodOfContact:
+                                    parseInt(option?.key as string) || 0,
+                                })
+                              }
+                            />
+                          </div>
+                        </div>
+                        <div className="mt-8 pt-6 border-t border-[#e2e8f0]">
+                          <PrimaryButton
+                            onClick={() => handleSubmit()}
+                            disabled={!canSubmit}
+                            styles={{
+                              root: {
+                                width: "100%",
+                                backgroundColor: '#1D2054',
+                                borderColor: '#1D2054',
+                                height: '44px',
+                                fontSize: '16px',
+                                fontWeight: '600',
+                              },
+                              rootHovered: {
+                                backgroundColor: '#151b41',
+                                borderColor: '#151b41',
+                              },
+                              rootDisabled: {
+                                backgroundColor: '#cbd5e1',
+                                borderColor: '#cbd5e1',
+                              },
+                            }}
+                          >
+                            {form?.contactId ? "Update Profile" : "Save Profile"}
+                          </PrimaryButton>
+                        </div>
                       </div>
                     </Reveal>
                   </div>
@@ -279,4 +352,3 @@ export default function FormApplication() {
       </>
     );
 }
-
