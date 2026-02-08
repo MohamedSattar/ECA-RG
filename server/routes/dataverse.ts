@@ -2,86 +2,77 @@ import { RequestHandler } from "express";
 
 const DATAVERSE_BASE_URL = "https://research-grants-spa.powerappsportals.com";
 
-/**
- * Proxy handler for Dataverse API requests
- * Forwards requests from /api/dataverse/* to the actual Dataverse API
- * Maintains authentication headers and request method
- */
 export const handleDataverseProxy: RequestHandler = async (req, res) => {
   try {
-    // Extract the path after /api/dataverse
-    const path = req.path.replace(/^\/api\/dataverse/, "");
-
-    // Build target URL with original query string
-    const url = new URL(`${DATAVERSE_BASE_URL}${path}`);
+    // Extract the API path after /api/dataverse
+    const apiPath = req.path.replace(/^\/api\/dataverse/, "");
+    const fullUrl = new URL(DATAVERSE_BASE_URL + apiPath);
+    
+    // Preserve query parameters
     if (req.url.includes("?")) {
-      const queryString = req.url.substring(req.url.indexOf("?") + 1);
-      url.search = queryString;
+      const queryPart = req.url.substring(req.url.indexOf("?"));
+      fullUrl.search = queryPart;
     }
 
-    // Prepare headers
-    const headers: Record<string, string> = {};
+    // Build headers
+    const fetchHeaders: HeadersInit = {};
 
-    // Pass through important headers from the request
     if (req.headers.authorization) {
-      headers.authorization = req.headers.authorization;
+      fetchHeaders["Authorization"] = String(req.headers.authorization);
     }
     if (req.headers["__requestverificationtoken"]) {
-      headers["__requestverificationtoken"] = req.headers[
-        "__requestverificationtoken"
-      ] as string;
+      fetchHeaders["__RequestVerificationToken"] = String(req.headers["__requestverificationtoken"]);
     }
     if (req.headers["content-type"]) {
-      headers["content-type"] = req.headers["content-type"] as string;
+      fetchHeaders["Content-Type"] = String(req.headers["content-type"]);
     }
 
-    // Make the request to Dataverse API
-    const proxyResponse = await fetch(url.toString(), {
+    // Prepare request body
+    let body: string | undefined;
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      body = JSON.stringify(req.body);
+    }
+
+    // Make the proxy request
+    const response = await fetch(fullUrl.toString(), {
       method: req.method,
-      headers,
-      body: req.method !== "GET" && req.method !== "HEAD" ? JSON.stringify(req.body) : undefined,
+      headers: fetchHeaders,
+      body,
       credentials: "include",
     });
 
-    // Get response content
-    const contentType = proxyResponse.headers.get("content-type");
-    let responseData: any;
+    // Get the response body
+    const contentType = response.headers.get("content-type");
+    let data: any;
 
-    if (contentType && contentType.includes("application/json")) {
-      responseData = await proxyResponse.json();
+    if (contentType?.includes("application/json")) {
+      data = await response.json();
     } else {
-      responseData = await proxyResponse.text();
+      data = await response.text();
     }
 
-    // Set response status and headers
-    res.status(proxyResponse.status);
+    // Set response status
+    res.status(response.status);
 
-    // Copy important response headers
-    const headersToProxy = [
-      "content-type",
-      "odata-entityid",
-      "odata-version",
-      "access-control-allow-origin",
-    ];
-
-    headersToProxy.forEach((header) => {
-      const value = proxyResponse.headers.get(header);
-      if (value) {
-        res.setHeader(header, value);
-      }
-    });
-
-    // Send the response
-    if (contentType && contentType.includes("application/json")) {
-      res.json(responseData);
-    } else {
-      res.send(responseData);
+    // Set response headers
+    if (response.headers.get("content-type")) {
+      res.setHeader("Content-Type", response.headers.get("content-type")!);
     }
-  } catch (error) {
-    console.error("Dataverse API proxy error:", error);
-    res.status(502).json({
-      error: "Failed to proxy request to Dataverse API",
-      message: error instanceof Error ? error.message : "Unknown error",
-    });
+    if (response.headers.get("odata-entityid")) {
+      res.setHeader("OData-EntityId", response.headers.get("odata-entityid")!);
+    }
+    if (response.headers.get("odata-version")) {
+      res.setHeader("OData-Version", response.headers.get("odata-version")!);
+    }
+
+    // Send response
+    if (contentType?.includes("application/json")) {
+      res.json(data);
+    } else {
+      res.send(data);
+    }
+  } catch (err) {
+    console.error("Dataverse proxy error:", err);
+    res.status(502).json({ error: "Proxy error", details: String(err) });
   }
 };
