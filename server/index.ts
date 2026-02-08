@@ -13,9 +13,9 @@ async function handleDataverseProxy(
     // Extract the API path (everything after the domain)
     let apiPath = req.path;
 
-    // For image proxy requests, rewrite the path from /_images/api/... to /_api/...
+    // For image proxy requests, rewrite the path from /_images/_api/... to /_api/...
     if (apiPath.startsWith("/_images/")) {
-      apiPath = apiPath.replace("/_images/", "/");
+      apiPath = apiPath.replace("/_images", ""); // Remove /_images prefix, keep the rest
     }
 
     const fullUrl = new URL(DATAVERSE_BASE_URL + apiPath);
