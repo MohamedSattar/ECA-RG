@@ -1,3 +1,5 @@
+import { API_CONFIG } from "@/config/api";
+
 export const msalConfig = {
   auth: {
     clientId: "1dc49cf1-aa12-4bfb-bf9e-60ff6df8475e", // Application (client) ID

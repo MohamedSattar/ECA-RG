@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { ChevronDown, User } from "lucide-react";
 import Reveal from "@/motion/Reveal";
 import { useDataverseApi } from "@/hooks/useDataverseApi";
+import { normalizeImageUrl } from "@/lib/utils";
 import {
   ApplicationFields,
   ApplicationKeys,
@@ -685,7 +686,7 @@ export default function Index() {
                       number={idx + 1}
                       ResearchAreaKeyId={area[ResearchAreaKeys.RESEARCHAREAID]}
                       title={area[ResearchAreaKeys.AREANAME]}
-                      image={area[ResearchAreaKeys.THUMBNAIL_URL]}
+                      image={normalizeImageUrl(area[ResearchAreaKeys.THUMBNAIL_URL])}
                       description={area[ResearchAreaKeys.AREADESCRIPTION]}
                       reverse={idx % 2 === 0}
                       navigate={navigate}
