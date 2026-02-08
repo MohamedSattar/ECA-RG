@@ -140,36 +140,37 @@ export default function Applications() {
     return (
       <div
         className="
-      bg-[#FFF8F3] border border-[#FAE7DD] rounded-lg p-4 
-      grid grid-cols-1 
+      bg-white border border-[#e2e8f0] rounded-lg p-6
+      grid grid-cols-1
       lg:grid-cols-[100px_1fr_1fr_200px_80px]
       items-start gap-4
+      hover:shadow-sm transition-shadow
     "
       >
         {/* Number */}
-        <div className="text-sm font-semibold text-orange-500 space-y-2 self-center">
+        <div className="text-sm font-semibold text-[#1D2054] space-y-2 self-center">
           {number}
         </div>
 
         {/* Main Title + Description */}
         <div className="space-y-2">
-          <h3 className="font-semibold text-lg">{title}</h3>
+          <h3 className="font-semibold text-lg text-[#1e293b]">{title}</h3>
 
-          <p className="text-base text-gray-500 mt-2">{desc}</p>
+          <p className="text-base text-[#475569] mt-2">{desc}</p>
         </div>
         {/* Sub Info */}
         <div className="space-y-2">
           <div>
-            <b className="text-brown">Grant Cycle:</b>
-            {grantCycle}
+            <b className="text-[#1e293b]">Grant Cycle:</b>
+            <span className="text-[#475569] ml-1">{grantCycle}</span>
           </div>
           <div>
-            <b className="text-brown">Research Area:</b>
-            {researchArea}
+            <b className="text-[#1e293b]">Research Area:</b>
+            <span className="text-[#475569] ml-1">{researchArea}</span>
           </div>
           <div>
-            <b className="text-brown">Submitted on:</b>
-            {submittedDate}
+            <b className="text-[#1e293b]">Submitted on:</b>
+            <span className="text-[#475569] ml-1">{submittedDate}</span>
           </div>
         </div>
         {/* Status Pill */}
@@ -179,7 +180,7 @@ export default function Applications() {
           {status}
         </div>
 
-        {/* Comment 
+        {/* Comment
         <div className="text-sm text-gray-500">
           {comment || ""}
         </div>
@@ -206,6 +207,10 @@ export default function Applications() {
               }
             }}
             aria-label={`Edit ${title}`}
+            styles={{
+              root: { color: '#1D2054' },
+              rootDisabled: { color: '#cbd5e1' }
+            }}
           />
         </div>
       </div>
@@ -221,8 +226,8 @@ export default function Applications() {
         </div>
 
         <div>
-          <p className="font-semibold">{label}</p>
-          <a href="#" className="text-sm text-gray-500 underline">
+          <p className="font-semibold text-[#1e293b]">{label}</p>
+          <a href="#" className="text-sm text-[#475569] underline">
             {link}
           </a>
         </div>
@@ -231,12 +236,12 @@ export default function Applications() {
   };
   const SummaryCards = () => {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-white p-6 border border-[#FAE7DD] rounded-xl mt-10 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-white p-6 border border-[#e2e8f0] rounded-xl mt-10 mb-6">
         <SummaryCard
           number={applications.length.toString()}
           label="Total Requests"
           link="Check all requests"
-          color="bg-[#1D2153]"
+          color="bg-[#1D2054]"
         />
 
         <SummaryCard
@@ -299,7 +304,7 @@ export default function Applications() {
           <div className="container py-8 md:py-8">
             {/* Header Row */}
             <div className="flex flex-wrap justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Applications</h2>
+              <h2 className="text-xl font-semibold text-[#1e293b]">Applications</h2>
 
               {/* <Link
                 to="/applyapplication"
@@ -319,7 +324,7 @@ export default function Applications() {
             ) : error ? (
               <div className="px-5 py-10 text-center text-red-600">{error}</div>
             ) : applications.length === 0 ? (
-              <div className="px-5 py-10 text-center text-muted-foreground">
+              <div className="px-5 py-10 text-center text-[#94a3b8]">
                 No applications yet. Click "Apply for a Grant" to start your
                 first application.
               </div>
@@ -369,7 +374,7 @@ export default function Applications() {
                 }
               </div>
             )}
-            <div className="border border-[#FAE7DD] my-8"></div>
+            <div className="border border-[#e2e8f0] my-8"></div>
             {/* Summary Section */}
             <SummaryCards />
           </div>
