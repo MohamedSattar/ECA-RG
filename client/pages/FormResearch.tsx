@@ -632,8 +632,9 @@ export default function FormResearch() {
       return;
     }
     try {
+      // Fetch budget header with expanded line items in a single call
       const res = await callApi<{ value: any[] }>({
-        url: `/_api/${TableName.BUDGETHEADERS}?$filter=${BudgetHeaderFields.RESEARCH} eq ${applicationId}`,
+        url: `/_api/${TableName.BUDGETHEADERS}?$filter=${BudgetHeaderFields.RESEARCH} eq ${applicationId}&$expand=${ExpandRelations.BUDGET_LINE_ITEMS}`,
         method: "GET",
       });
       const budgetData = res.value?.[0];
@@ -642,22 +643,10 @@ export default function FormResearch() {
         return;
       }
 
-      const res2 = await callApi<{ value: any[] }>({
-        url: `/_api/${TableName.BUDGETLINEITEMS}?$filter=${BudgetLineItemFields.BUDGETHEADER} eq ${budgetData[BudgetHeaderFields.BUDGETHEADERID]}`,
-        method: "GET",
-      });
-      const filteredArray = res2.value || [];
-
-      // console.log(budgetData, "budgetData");
-      // console.log(filteredArray, "filteredArray");
-      // console.log(filtered, "filtered");
-      // console.log(applicationId, "applicationId");
+      // Use expanded line items from the header response instead of making a separate call
       const lineItems = budgetData[ExpandRelations.BUDGET_LINE_ITEMS] || [];
       const budgetHeader = mapBudgetHeader(budgetData);
-      const budgetLineItems = mapBudgetLineItems(filteredArray);
-      // console.log(budgetHeader);
-      // console.log(budgetLineItems);
-      // console.log(lineItems);
+      const budgetLineItems = mapBudgetLineItems(lineItems);
 
       setForm((prev) => ({
         ...prev,
