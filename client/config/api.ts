@@ -35,8 +35,8 @@ export const API_CONFIG = {
   },
 
   /**
-   * Normalize image URLs by routing through proxy to handle CORS
-   * Used for Dataverse API image URLs that may have CORS restrictions
+   * Normalize image URLs to use full portal URLs
+   * Converts relative paths to absolute URLs from the portal
    */
   normalizeImageUrl(url: string | null | undefined): string | null {
     if (!url) return null;
@@ -53,39 +53,22 @@ export const API_CONFIG = {
       cleanUrl = cleanUrl.substring(1);
     }
 
-    // Handle absolute URLs from our portal
-    // Match: https://research-grants-spa.powerappsportals.com/... or http://...
-    const absoluteUrlMatch = cleanUrl.match(/^https?:\/\/([^/]+)(\/.*)?$/);
-    if (absoluteUrlMatch) {
-      const domain = absoluteUrlMatch[1];
-      const path = absoluteUrlMatch[2] || '';
-
-      // If it's from our portal, route through proxy
-      if (domain === 'research-grants-spa.powerappsportals.com' || domain.includes('powerappsportals.com')) {
-        console.log('[normalizeImageUrl] Portal domain detected, routing through proxy');
-        return `/_images${path}`;
-      } else {
-        // External domain, return as-is
-        console.log('[normalizeImageUrl] External domain, returning as-is');
-        return cleanUrl;
-      }
+    // If it's already an absolute URL from our portal, return as-is
+    if (cleanUrl.startsWith('https://') || cleanUrl.startsWith('http://')) {
+      console.log('[normalizeImageUrl] Already absolute URL, returning as-is');
+      return cleanUrl;
     }
 
-    // If URL is relative path from Dataverse API, route through our image proxy
-    if (cleanUrl.startsWith('/_api/')) {
-      console.log('[normalizeImageUrl] API URL detected, routing through proxy');
-      return `/_images${cleanUrl}`;
+    // If URL is relative path (starts with /), prepend the base portal URL
+    if (cleanUrl.startsWith('/')) {
+      const fullUrl = `${this.BASE_URL}${cleanUrl}`;
+      console.log('[normalizeImageUrl] Relative path converted to full URL:', fullUrl);
+      return fullUrl;
     }
 
-    // If URL starts with just /, assume it's a Dataverse API path
-    if (cleanUrl.startsWith('/') && !cleanUrl.startsWith('http')) {
-      console.log('[normalizeImageUrl] Relative URL detected, routing through proxy');
-      return `/_images${cleanUrl}`;
-    }
-
-    // Fallback: return as-is
-    console.log('[normalizeImageUrl] No pattern matched, returning as-is:', cleanUrl);
-    return cleanUrl;
+    // Fallback: prepend base URL
+    console.log('[normalizeImageUrl] No pattern matched, prepending base URL');
+    return `${this.BASE_URL}/${cleanUrl}`;
   },
 };
 
