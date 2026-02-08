@@ -1,12 +1,6 @@
-// Determine redirect URI based on current environment
-const getRedirectUri = () => {
-  if (typeof window === "undefined") {
-    return "https://research-grants-spa.powerappsportals.com/";
-  }
-
-  // Use current origin - redirect to home page after login
-  return window.location.origin + "/";
-};
+// Redirect URI must match what's registered in Azure B2C app settings
+// This should be the actual application URL, not the deployment preview domain
+const REGISTERED_REDIRECT_URI = "https://research-grants-spa.powerappsportals.com/";
 
 export const msalConfig = {
   auth: {
