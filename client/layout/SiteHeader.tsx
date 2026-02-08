@@ -18,7 +18,7 @@ import { useDataverseApi } from "@/hooks/useDataverseApi";
 export function SiteHeader() {
   const location = useLocation();
   const { t } = useTranslation();
-  const { user, login, logout, isAuthed } = useAuth();
+  const { user, login, logout, isAuthed, isLoading } = useAuth();
   const navigate = useNavigate();
   const { callApi } = useDataverseApi();
   const [unreadCount, setUnreadCount] = useState<number>(0);
