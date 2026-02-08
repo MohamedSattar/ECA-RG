@@ -2,7 +2,6 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { handleDemo } from "./routes/demo";
-import { handleDataverseProxy } from "./routes/dataverse";
 
 export function createServer() {
   const app = express();
@@ -20,9 +19,9 @@ export function createServer() {
 
   app.get("/api/demo", handleDemo);
 
-  // Dataverse API proxy - forward all requests to Dataverse API
-  // This handles GET, POST, PATCH, DELETE methods
-  app.all("/api/dataverse/*", handleDataverseProxy);
+  // Dataverse API proxy - commented out temporarily for debugging
+  // const { handleDataverseProxy } = await import("./routes/dataverse");
+  // app.all("/api/dataverse/*", handleDataverseProxy);
 
   return app;
 }
