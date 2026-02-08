@@ -41,10 +41,22 @@ export const API_CONFIG = {
   normalizeImageUrl(url: string | null | undefined): string | null {
     if (!url) return null;
 
-    // Remove leading slash if URL contains an absolute URL (e.g., /https://...)
     let cleanUrl = url;
+
+    // Remove leading slash if URL contains an absolute URL (e.g., /https://...)
     if (url.startsWith('/http://') || url.startsWith('/https://')) {
       cleanUrl = url.substring(1); // Remove the leading slash
+    }
+
+    // If URL is from our production portal, route through proxy to handle CORS
+    if (cleanUrl.includes(this.BASE_URL)) {
+      // Extract the path portion (everything after domain)
+      const baseUrlPattern = new RegExp(`^https?:\\/\\/${this.BASE_URL.replace(/^https?:\/\//, '')}`);
+      const path = cleanUrl.replace(baseUrlPattern, '');
+
+      if (path) {
+        return `/_images${path}`;
+      }
     }
 
     // If URL is relative path from Dataverse API, route through our image proxy
@@ -56,12 +68,6 @@ export const API_CONFIG = {
     // If URL starts with just /, assume it's a Dataverse API path
     if (cleanUrl.startsWith('/') && !cleanUrl.startsWith('http')) {
       return `/_images${cleanUrl}`;
-    }
-
-    // If URL already uses production base URL, route through proxy
-    if (cleanUrl.includes(this.BASE_URL)) {
-      const path = cleanUrl.replace(this.BASE_URL, '');
-      return `/_images${path}`;
     }
 
     // If URL contains localhost, extract the path and route through proxy
