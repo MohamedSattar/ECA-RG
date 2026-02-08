@@ -871,8 +871,11 @@ export default function FormResearch() {
       return;
     }
     try {
+      // Select only necessary fields to reduce payload
+      const teamMemberSelect = `${ResearchTeamMemberKeys.RESEARCHTEAMMEMBERID},${ResearchTeamMemberKeys.TEAMMEMBERNAME},${ResearchTeamMemberKeys.ROLE},${ResearchTeamMemberKeys.CUSTOMROLE},${ResearchTeamMemberKeys.EDUCATIONLEVEL}`;
+
       const res = await callApi<{ value: any[] }>({
-        url: `/_api/${TableName.RESEARCHTEAMMEMBER}?$filter=_prmtk_research_value eq ${researchId}`,
+        url: `/_api/${TableName.RESEARCHTEAMMEMBER}?$filter=_prmtk_research_value eq ${researchId}&$select=${teamMemberSelect}`,
         method: "GET",
       });
 
