@@ -807,8 +807,11 @@ export default function FormResearch() {
       return;
     }
     try {
+      // Select only necessary fields to reduce payload
+      const deliverableSelect = `${DeliverableFields.DELIVERABLEID},${DeliverableFields.DELIVERABLENAME},${DeliverableFields.DESCRIPTION},${DeliverableFields.DELIVERABLETYPE},${DeliverableFields.SUBMISSIONDATE},${DeliverableFields.FILEURL}`;
+
       const res = await callApi<{ value: any[] }>({
-        url: `/_api/${TableName.DELIVERABLES}?$filter=${DeliverableFields.RESEARCH} eq ${researchId}`,
+        url: `/_api/${TableName.DELIVERABLES}?$filter=${DeliverableFields.RESEARCH} eq ${researchId}&$select=${deliverableSelect}`,
         method: "GET",
       });
 
