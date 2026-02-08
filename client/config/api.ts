@@ -43,9 +43,12 @@ export const API_CONFIG = {
 
     let cleanUrl = url;
 
+    // Decode HTML entities (e.g., &amp; -> &)
+    cleanUrl = cleanUrl.replace(/&amp;/g, '&');
+
     // Remove leading slash if URL contains an absolute URL (e.g., /https://...)
-    if (url.startsWith('/http://') || url.startsWith('/https://')) {
-      cleanUrl = url.substring(1);
+    if (cleanUrl.startsWith('/http://') || cleanUrl.startsWith('/https://')) {
+      cleanUrl = cleanUrl.substring(1);
     }
 
     // If URL is from our production portal (e.g., https://research-grants-spa.powerappsportals.com/Image/download.aspx?...)
@@ -54,16 +57,19 @@ export const API_CONFIG = {
       // e.g., "https://research-grants-spa.powerappsportals.com/Image/download.aspx?..."
       // becomes "/Image/download.aspx?..."
       const path = cleanUrl.replace(this.BASE_URL, '');
+      console.log('[normalizeImageUrl] Portal URL detected, converting to:', `/_images${path}`);
       return `/_images${path}`;
     }
 
     // If URL is relative path from Dataverse API, route through our image proxy
     if (cleanUrl.startsWith('/_api/')) {
+      console.log('[normalizeImageUrl] API URL detected, converting to:', `/_images${cleanUrl}`);
       return `/_images${cleanUrl}`;
     }
 
     // If URL starts with just /, assume it's a Dataverse API path
     if (cleanUrl.startsWith('/') && !cleanUrl.startsWith('http')) {
+      console.log('[normalizeImageUrl] Relative URL detected, converting to:', `/_images${cleanUrl}`);
       return `/_images${cleanUrl}`;
     }
 
@@ -71,16 +77,19 @@ export const API_CONFIG = {
     if (cleanUrl.includes('localhost')) {
       const match = cleanUrl.match(/localhost(?::\d+)?(\/.*)/);
       if (match?.[1]) {
+        console.log('[normalizeImageUrl] Localhost URL detected, converting to:', `/_images${match[1]}`);
         return `/_images${match[1]}`;
       }
     }
 
     // If URL is already absolute (starts with http), return as-is (external images)
     if (cleanUrl.startsWith('http')) {
+      console.log('[normalizeImageUrl] External URL, returning as-is:', cleanUrl);
       return cleanUrl;
     }
 
     // Fallback: return as-is
+    console.log('[normalizeImageUrl] No match, returning as-is:', cleanUrl);
     return cleanUrl;
   },
 };
