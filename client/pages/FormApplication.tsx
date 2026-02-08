@@ -1312,19 +1312,30 @@ export default function FormApplication() {
       </section>
       <section className="bg-white">
         <div className="container py-4">
-          <div className="flex justify-end gap-4">
-            {formType !== "view" && (
+          {formType !== "view" && (
+            <div className="flex justify-end gap-4">
               <button
                 onClick={() => handleSubmitClick(status)}
-                disabled={formType === "view"}
                 className="flex items-center gap-2 px-4 py-1 border border-[#7BAAA3] text-[#7BAAA3] rounded text-sm hover:bg-[#7BAAA3]/10 transition"
               >
                 <Icon iconName="SingleBookmark" />
                 SAVE DRAFT
               </button>
-            )}
 
-            {status !== "Draft" && (
+              {status !== "Draft" && (
+                <button
+                  onClick={() => loadWorkFlowHistory(applicationId as string)}
+                  className="flex items-center gap-2 px-4 py-1 border border-[#7BAAA3] text-[#7BAAA3] rounded text-sm hover:bg-[#7BAAA3]/10 transition"
+                >
+                  <Icon iconName="MailReminder" />
+                  History
+                </button>
+              )}
+            </div>
+          )}
+
+          {formType === "view" && status !== "Draft" && (
+            <div className="flex justify-end gap-4">
               <button
                 onClick={() => loadWorkFlowHistory(applicationId as string)}
                 className="flex items-center gap-2 px-4 py-1 border border-[#7BAAA3] text-[#7BAAA3] rounded text-sm hover:bg-[#7BAAA3]/10 transition"
@@ -1332,8 +1343,8 @@ export default function FormApplication() {
                 <Icon iconName="MailReminder" />
                 History
               </button>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* General Information Section */}
           <div className="mt-8 rounded-xl border bg-white p-6">
