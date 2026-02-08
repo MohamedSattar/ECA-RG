@@ -246,32 +246,32 @@ export function AuthProvider({ children }: PropsWithChildren) {
             toast.success(`Welcome, ${loggedUser.name}!`);
           }
         } catch (error: any) {
-          console.error("Login error:", error);
-
           // Handle specific MSAL errors
-          if (error?.errorCode === "endpoints_resolution_error") {
+          if (error?.errorCode === "user_cancelled") {
+            console.log("[Auth] User cancelled the login request");
+            // Don't show error toast or re-throw for user cancellation - it's normal behavior
+          } else if (error?.errorCode === "endpoints_resolution_error") {
             console.error(
-              "Azure B2C endpoint resolution failed. Check authority configuration.",
+              "[Auth] Azure B2C endpoint resolution failed. Check authority configuration.",
               error
             );
             toast.error(
               "Authentication service unavailable. Please try again later."
             );
+            throw error;
           } else if (error?.errorCode === "network_error") {
-            console.error("Network error during authentication", error);
+            console.error("[Auth] Network error during authentication", error);
             toast.error("Network error. Please check your connection.");
-          } else if (error?.errorCode === "user_cancelled") {
-            console.log("User cancelled the login request");
-            // Don't show error toast for user cancellation
+            throw error;
           } else if (error?.errorCode === "interaction_in_progress") {
-            console.error("Interaction already in progress", error);
+            console.error("[Auth] Interaction already in progress", error);
             toast.error("An authentication request is already in progress. Please wait.");
+            throw error;
           } else {
+            console.error("[Auth] Login error:", error);
             toast.error("Authentication failed. Please try again.");
+            throw error;
           }
-
-          // Re-throw to be caught by caller if needed
-          throw error;
         } finally {
           setIsInteractionInProgress(false);
         }
