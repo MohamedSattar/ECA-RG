@@ -239,25 +239,6 @@ export default function FormApplication() {
                           </div>
                         </div>
                         <div>
-                          <Label htmlFor="businessPhone" className="text-[#1e293b] font-semibold">
-                            Business Phone
-                          </Label>
-                          <div className="mt-2">
-                            <TextField
-                              id="businessPhone"
-                              value={form?.phoneNumber}
-                              onChange={(_, value) =>
-                                setForm((prev) => ({
-                                  ...prev,
-                                  phoneNumber: value || "",
-                                }))
-                              }
-                              borderless
-                              placeholder="Enter your business phone"
-                            />
-                          </div>
-                        </div>
-                        <div>
                           <Label htmlFor="mobilePhone" className="text-[#1e293b] font-semibold">
                             Mobile Phone
                           </Label>
@@ -273,29 +254,6 @@ export default function FormApplication() {
                               }
                               borderless
                               placeholder="Enter your mobile phone"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <Label htmlFor="contactMethod" className="text-[#1e293b] font-semibold">
-                            Preferred Method of Contact
-                          </Label>
-                          <div className="mt-2">
-                            <Dropdown
-                              id="contactMethod"
-                              placeholder="Select an option"
-                              options={PreferredContactMethodCode.map((method) => ({
-                                key: method.key,
-                                text: method.text,
-                              }))}
-                              selectedKey={form?.preferredMethodOfContact}
-                              onChange={(e, option) =>
-                                setForm({
-                                  ...form,
-                                  preferredMethodOfContact:
-                                    parseInt(option?.key as string) || 0,
-                                })
-                              }
                             />
                           </div>
                         </div>
