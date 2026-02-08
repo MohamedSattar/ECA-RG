@@ -136,11 +136,8 @@ export function createServer() {
 
   app.get("/api/demo", handleDemo);
 
-  // Dataverse API proxy - forward all /_api and /_layout requests to Dataverse API
-  app.all(/^\/((_api|_layout)\/)/, handleDataverseProxy);
-
-  // Image proxy - forward image requests through Dataverse API
-  app.get("/_images/*", handleDataverseProxy);
+  // Dataverse API proxy - forward all /_api, /_layout, and /_images requests
+  app.all(/^\/((_api|_layout|_images)\/)/, handleDataverseProxy);
 
   // Fallback for unmatched routes
   app.use((_req, res) => {
