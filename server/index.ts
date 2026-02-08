@@ -47,6 +47,9 @@ async function handleDataverseProxy(req: express.Request, res: express.Response)
       credentials: "include",
     });
 
+    // Log the response status
+    console.log(`[Proxy] Response: ${response.status} ${response.statusText}`);
+
     // Get the response body
     const contentType = response.headers.get("content-type");
     let data: any;
