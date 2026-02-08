@@ -100,6 +100,11 @@ export function createServer() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
+  // Health check endpoint
+  app.get("/health", (_req, res) => {
+    res.json({ status: "ok", message: "Server is running" });
+  });
+
   // Example API routes
   app.get("/api/ping", (_req, res) => {
     const ping = process.env.PING_MESSAGE ?? "ping";
@@ -110,6 +115,11 @@ export function createServer() {
 
   // Dataverse API proxy - forward all /_api and /_layout requests to Dataverse API
   app.all(/^\/((_api|_layout)\/)/, handleDataverseProxy);
+
+  // Fallback for unmatched routes
+  app.use((_req, res) => {
+    res.status(404).json({ error: "Not found" });
+  });
 
   return app;
 }
