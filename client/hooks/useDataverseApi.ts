@@ -81,15 +81,22 @@ export function useDataverseApi() {
     url: string;
     data?: any;
     headers?: Record<string, string>;
+    skipAuth?: boolean;
   }): Promise<T> => {
-    const token = await getToken();
     const headers: Record<string, string> = {
       Accept: "application/json",
-      Authorization: `Bearer ${token}`,
       ...(options.data ? { "Content-Type": "application/json" } : {}),
-      ...(token ? { __RequestVerificationToken: token } : {}),
       ...(options.headers || {}),
     };
+
+    // Add authentication only if not skipped (for public APIs)
+    if (!options.skipAuth) {
+      const token = await getToken();
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+        headers.__RequestVerificationToken = token;
+      }
+    }
 
     // Call through backend proxy (/_api/* routes to Dataverse API)
     const res = await fetch(options.url, {
