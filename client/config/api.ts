@@ -35,8 +35,8 @@ export const API_CONFIG = {
   },
 
   /**
-   * Normalize image URLs by replacing localhost with production URL
-   * Used for Dataverse API image URLs that may contain localhost references
+   * Normalize image URLs by routing through proxy to handle CORS
+   * Used for Dataverse API image URLs that may have CORS restrictions
    */
   normalizeImageUrl(url: string | null | undefined): string | null {
     if (!url) return null;
@@ -47,26 +47,37 @@ export const API_CONFIG = {
       cleanUrl = url.substring(1); // Remove the leading slash
     }
 
-    // If URL is already using production base URL, return as-is
+    // If URL is relative path from Dataverse API, route through our image proxy
+    if (cleanUrl.startsWith('/_api/')) {
+      // Route through proxy endpoint: /_images/?imageUrl=<encoded-url>
+      return `/_images/${cleanUrl.substring(1)}`; // Remove leading / from /_api -> _api
+    }
+
+    // If URL starts with just /, assume it's a Dataverse API path
+    if (cleanUrl.startsWith('/') && !cleanUrl.startsWith('http')) {
+      return `/_images/${cleanUrl.substring(1)}`; // Route through proxy
+    }
+
+    // If URL already uses production base URL, route through proxy
     if (cleanUrl.includes(this.BASE_URL)) {
-      return cleanUrl;
+      const path = cleanUrl.replace(this.BASE_URL, '');
+      return `/_images/${path.substring(1)}`; // Remove leading / from path
     }
 
-    // If URL contains localhost, replace it with production URL
+    // If URL contains localhost, extract the path and route through proxy
     if (cleanUrl.includes('localhost')) {
-      return cleanUrl.replace(/https?:\/\/localhost(:\d+)?\//, this.BASE_URL + '/');
+      const match = cleanUrl.match(/localhost(?::\d+)?(\/.*)/);
+      if (match?.[1]) {
+        return `/_images/${match[1].substring(1)}`; // Route through proxy
+      }
     }
 
-    // If URL is already absolute (starts with http), return as-is
+    // If URL is already absolute (starts with http), return as-is (external images)
     if (cleanUrl.startsWith('http')) {
       return cleanUrl;
     }
 
-    // If URL is relative, prepend base URL
-    if (cleanUrl.startsWith('/')) {
-      return this.BASE_URL + cleanUrl;
-    }
-
+    // Fallback: return as-is
     return cleanUrl;
   },
 };
