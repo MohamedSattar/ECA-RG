@@ -248,14 +248,14 @@ export default function FormApplication() {
                               type="tel"
                               value={form?.mobilePhone}
                               onChange={(_, value) => {
-                                const numericValue = (value || "").replace(/[^\d]/g, "");
+                                const cleanValue = (value || "").replace(/[^\d+]/g, "");
                                 setForm((prev) => ({
                                   ...prev,
-                                  mobilePhone: numericValue,
+                                  mobilePhone: cleanValue,
                                 }))
                               }}
                               borderless
-                              placeholder="Enter your mobile phone"
+                              placeholder="Enter your mobile phone (e.g., +971501234567)"
                             />
                           </div>
                         </div>
