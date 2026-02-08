@@ -7,10 +7,6 @@ import { createServer } from "./server";
 export default defineConfig(({ mode }) => ({
   server: {
     open: "/index.html",
-    proxy: {
-      // Development proxy - not needed since we use backend proxy now
-      // All requests go through /api/dataverse backend route
-    },
   },
   optimizeDeps: {
     exclude: ["express"],
