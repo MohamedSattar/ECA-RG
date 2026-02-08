@@ -129,14 +129,13 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
         {showSection && (
           <div style={{ marginTop: "20px" }}>
             <div className="flex items-center justify-end mb-6">
-              {edit && (
+              {edit && form.type !== "view" && (
                 <PrimaryButton
                   onClick={() => {
                     setLineForm(INITIAL_LINE_FORM);
                     setEditingLineId(null);
                     setIsLineDialogOpen(true);
                   }}
-                  disabled={form.type === "view"}
                   styles={{
                     root: {
                       backgroundColor: '#1D2054',
@@ -145,10 +144,6 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                     rootHovered: {
                       backgroundColor: '#151b41',
                       borderColor: '#151b41',
-                    },
-                    rootDisabled: {
-                      backgroundColor: '#cbd5e1',
-                      borderColor: '#cbd5e1',
                     },
                   }}
                 >
@@ -289,7 +284,7 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                       <td className="px-6 py-3 text-right font-medium text-[#1e293b]">
                         {aedFormat(item.prmtk_amount)}
                       </td>
-                      {edit && (
+                      {edit && form.type !== "view" && (
                         <td className="px-6 py-3 text-right">
                           {item.action === "remove" ? (
                             <span className="text-[#94a3b8] line-through">
@@ -298,7 +293,6 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                           ) : (
                             <div className="flex gap-2 justify-end">
                               <IconButton
-                                disabled={form.type === "view"}
                                 onClick={() => openEditLineDialog(item)}
                                 iconProps={{ iconName: "Edit" }}
                                 title="Edit"
@@ -307,13 +301,9 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                                   root: {
                                     color: '#1D2054',
                                   },
-                                  rootDisabled: {
-                                    color: '#cbd5e1',
-                                  },
                                 }}
                               />
                               <IconButton
-                                disabled={form.type === "view"}
                                 onClick={() => onRemoveBudgetLineItem(item.id)}
                                 iconProps={{ iconName: "Delete" }}
                                 title="Remove"
@@ -321,9 +311,6 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                                 styles={{
                                   root: {
                                     color: '#dc2626',
-                                  },
-                                  rootDisabled: {
-                                    color: '#cbd5e1',
                                   },
                                 }}
                               />
