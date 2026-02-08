@@ -209,7 +209,29 @@ export function AuthProvider({ children }: PropsWithChildren) {
       
       login: async () => {
         try {
+          // Prevent concurrent login attempts
+          if (isInteractionInProgress) {
+            console.warn("[Auth] Login already in progress, ignoring duplicate request");
+            return;
+          }
+
+          // Wait for any previous interactions to complete
+          if (inProgress !== InteractionStatus.None) {
+            console.log("[Auth] Waiting for previous interaction to complete...");
+            // Wait up to 3 seconds for the previous interaction to finish
+            let waitCount = 0;
+            while (inProgress !== InteractionStatus.None && waitCount < 30) {
+              await new Promise((resolve) => setTimeout(resolve, 100));
+              waitCount++;
+            }
+            if (inProgress !== InteractionStatus.None) {
+              throw new Error("Previous interaction still in progress");
+            }
+          }
+
+          setIsInteractionInProgress(true);
           console.log("[Auth] Starting SSO login...");
+
           // Use popup for iframe compatibility (vs redirect which doesn't work in iframes)
           const response = await instance.loginPopup(loginRequest);
           if (response?.account) {
@@ -239,12 +261,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
           } else if (error?.errorCode === "user_cancelled") {
             console.log("User cancelled the login request");
             // Don't show error toast for user cancellation
+          } else if (error?.errorCode === "interaction_in_progress") {
+            console.error("Interaction already in progress", error);
+            toast.error("An authentication request is already in progress. Please wait.");
           } else {
             toast.error("Authentication failed. Please try again.");
           }
 
           // Re-throw to be caught by caller if needed
           throw error;
+        } finally {
+          setIsInteractionInProgress(false);
         }
       },
 
