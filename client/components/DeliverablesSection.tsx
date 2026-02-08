@@ -539,27 +539,27 @@ export const DeliverablesSection: React.FC<DeliverablesSectionProps> = ({
               </FluentDialogFooter>
             </FluentDialog>
 
-            <div className="rounded-lg border overflow-hidden">
+            <div className="rounded-lg border border-[#e2e8f0] overflow-hidden shadow-sm">
               <table className="min-w-full text-sm">
-                <thead className="bg-[#f6e4d8]">
+                <thead className="bg-[#1D2054]">
                   <tr className="text-left">
-                    <th className="px-4 py-2 font-semibold text-[#2b201a]">
+                    <th className="px-6 py-3 font-semibold text-white">
                       Deliverable Name
                     </th>
-                    <th className="px-4 py-2 font-semibold text-[#2b201a]">
+                    <th className="px-6 py-3 font-semibold text-white">
                       Description
                     </th>
-                    <th className="px-4 py-2 font-semibold text-[#2b201a]">
+                    <th className="px-6 py-3 font-semibold text-white">
                       Type
                     </th>
-                    <th className="px-4 py-2 font-semibold text-[#2b201a]">
+                    <th className="px-6 py-3 font-semibold text-white">
                       Submission Date
                     </th>
-                    <th className="px-4 py-2 font-semibold text-[#2b201a]">
+                    <th className="px-6 py-3 font-semibold text-white">
                       Attachments
                     </th>
                     {edit && (
-                      <th className="px-4 py-2 font-semibold text-[#2b201a] text-right">
+                      <th className="px-6 py-3 font-semibold text-white text-right">
                         Actions
                       </th>
                     )}
@@ -567,11 +567,13 @@ export const DeliverablesSection: React.FC<DeliverablesSectionProps> = ({
                 </thead>
                 <tbody>
                   {deliverables.map((item, index) => (
-                    <tr key={item.id || index} className="border-t">
-                      <td className="px-4 py-2 font-medium text-[#2b201a]">
+                    <tr key={item.id || index} className={`border-t border-[#e2e8f0] transition-colors ${
+                        index % 2 === 0 ? 'bg-white' : 'bg-[#f8fafc]'
+                      } hover:bg-[#f0f4f8]`}>
+                      <td className="px-6 py-3 font-medium text-[#1e293b]">
                         {item.deliverableName}
                       </td>
-                      <td className="px-4 py-2">
+                      <td className="px-6 py-3 text-[#475569]">
                         <div
                           className="max-w-xs truncate"
                           title={item.description}
@@ -579,16 +581,16 @@ export const DeliverablesSection: React.FC<DeliverablesSectionProps> = ({
                           {item.description || "-"}
                         </div>
                       </td>
-                      <td className="px-4 py-2">
+                      <td className="px-6 py-3">
                         <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
                           {getDeliverableTypeText(item.deliverableType)}
                         </span>
                       </td>
 
-                      <td className="px-4 py-2">
+                      <td className="px-6 py-3 text-[#475569]">
                         {formatDateOnly(item.submissionDate)}
                       </td>
-                      <td className="px-4 py-2">
+                      <td className="px-6 py-3">
                         {item.files && item.files.length > 0 ? (
                           <div className="flex flex-col gap-1">
                             {item.files.map((fileItem, fileIdx) => {
@@ -616,9 +618,9 @@ export const DeliverablesSection: React.FC<DeliverablesSectionProps> = ({
                         )}
                       </td>
                       {edit && (
-                        <td className="px-4 py-2 text-right">
+                        <td className="px-6 py-3 text-right">
                           {item.action === "remove" ? (
-                            <span className="text-muted-foreground">
+                            <span className="text-[#94a3b8] line-through">
                               Removed
                             </span>
                           ) : (
@@ -629,6 +631,14 @@ export const DeliverablesSection: React.FC<DeliverablesSectionProps> = ({
                                 iconProps={{ iconName: "Edit" }}
                                 title="Edit"
                                 ariaLabel="Edit"
+                                styles={{
+                                  root: {
+                                    color: '#1D2054',
+                                  },
+                                  rootDisabled: {
+                                    color: '#cbd5e1',
+                                  },
+                                }}
                               />
                               <IconButton
                                 disabled={form.type === "view"}
@@ -636,6 +646,14 @@ export const DeliverablesSection: React.FC<DeliverablesSectionProps> = ({
                                 iconProps={{ iconName: "Delete" }}
                                 title="Remove"
                                 ariaLabel="Remove"
+                                styles={{
+                                  root: {
+                                    color: '#dc2626',
+                                  },
+                                  rootDisabled: {
+                                    color: '#cbd5e1',
+                                  },
+                                }}
                               />
                             </div>
                           )}
@@ -647,7 +665,7 @@ export const DeliverablesSection: React.FC<DeliverablesSectionProps> = ({
                     <tr>
                       <td
                         colSpan={edit ? 6 : 5}
-                        className="px-4 py-6 text-center text-muted-foreground"
+                        className="px-6 py-8 text-center text-[#94a3b8]"
                       >
                         No deliverables added.
                       </td>
