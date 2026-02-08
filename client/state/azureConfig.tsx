@@ -30,7 +30,9 @@ export const loginRequest = {
 
 export const signupRequest = {
   scopes: ["openid", "profile", "offline_access"],
-  prompt: "create", // Force signup experience instead of signin
+  extraQueryParameters: {
+    local: "signup", // Force signup experience in Azure B2C
+  },
 };
 
 // B2C Policy Configuration
