@@ -2487,16 +2487,10 @@ export default function FormResearch() {
           </div>
           {showGeneral && (
             <GeneralInformationSection
-              key={`${applicationId}-${researchAreaId}-${user?.adxUserId}`}
+              key={`${user?.adxUserId}`}
               form={form}
               onTitleChange={(value) =>
                 setForm((prev) => ({ ...prev, title: value }))
-              }
-              onApplicationChange={(applicationId) =>
-                setForm((prev) => ({ ...prev, application: applicationId }))
-              }
-              onResearchAreaChange={(areaId) =>
-                setForm((prev) => ({ ...prev, researchArea: areaId }))
               }
               onPrincipalInvestigatorChange={(contactId) =>
                 setForm((prev) => ({
@@ -2510,8 +2504,6 @@ export default function FormResearch() {
               onEndDateChange={(date) =>
                 setForm((prev) => ({ ...prev, endDate: date }))
               }
-              applicationIdFromState={applicationId}
-              researchAreaIdFromState={researchAreaId}
               userAdxUserId={user?.adxUserId}
             />
           )}
