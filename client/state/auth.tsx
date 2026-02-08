@@ -28,6 +28,7 @@ interface AuthContextShape {
   login: () => void;
   logout: () => void;
   isLoading: boolean;
+  isLoggingIn?: boolean;
 }
 
 const AuthContext = createContext<AuthContextShape | null>(null);
