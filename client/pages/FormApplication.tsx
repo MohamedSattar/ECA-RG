@@ -434,14 +434,6 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
             />
           </div>
         </div>
-        {formType !== "new" && (
-          <div>
-            <Label>Submission Date</Label>
-            <div className="mt-1">
-              <TextField value={form.submissionDate} readOnly borderless />
-            </div>
-          </div>
-        )}
       </div>
     </Reveal>
   );
