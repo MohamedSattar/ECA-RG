@@ -473,6 +473,15 @@ export default function Index() {
     () => grant?.[ExpandRelations.RESEARCH_AREAS] || [],
     [grant],
   );
+
+  // Calculate total funding from research areas
+  const totalAllocatedBudget = useMemo(() => {
+    return researchAreas.reduce((sum, area) => {
+      const budget = area?.prmtk_allocatedbudget || 0;
+      return sum + budget;
+    }, 0);
+  }, [researchAreas]);
+
   const navigate = useNavigate();
 
   // Function to check for existing application or create a draft
