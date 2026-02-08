@@ -1,12 +1,10 @@
-import Reveal from "@/motion/Reveal";
 import { Link, useNavigate } from "react-router-dom";
-import { toast } from "@/ui/use-toast";
+import Reveal from "@/motion/Reveal";
 import { useDataverseApi } from "@/hooks/useDataverseApi";
 import { ApplicationKeys, ContactKeys, ResearchKeys, TableName } from "@/constants/index";
 import { useAuth } from "@/state/auth";
 import { useEffect, useMemo, useState } from "react";
 import { IconButton } from "@fluentui/react/lib/Button";
-import Reveal from "@/motion/Reveal";
 import { OverlayLoader } from "@/components/Loader";
 
 interface ResearchItem {
@@ -108,32 +106,23 @@ export default function Researches() {
   };
 
   return (
-    <div>
-      <section className="bg-white"></section>
-      <section className="bg-white">
-        <div className="container py-16">
-          <Reveal>
-            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-              <div>
-                <div className="text-xs tracking-[0.25em] text-[#8c5a3d] uppercase">
-                  Dashboard
-                </div>
-                <h1 className="mt-1 text-3xl md:text-4xl font-bold tracking-tight text-[#2b201a]">
-                  Researches
-                </h1>
-                <p className="mt-2 text-muted-foreground">
-                  Track your submitted research proposals and their review
-                  status.
-                </p>
+    <section className="bg-white">
+      <div className="container py-16">
+        <Reveal>
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+            <div>
+              <div className="text-xs tracking-[0.25em] text-[#8c5a3d] uppercase">
+                Dashboard
               </div>
-              {/*<Link
-              to="/applyresearch"
-              className="inline-flex shrink-0 items-center rounded-md bg-[#e78f6a] px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-[#de835c]"
-            >
-              Apply for a Grant
-            </Link>*/}
+              <h1 className="mt-1 text-3xl md:text-4xl font-bold tracking-tight text-[#2b201a]">
+                Researches
+              </h1>
+              <p className="mt-2 text-muted-foreground">
+                Track your submitted research proposals and their review status.
+              </p>
             </div>
-          </Reveal>
+          </div>
+        </Reveal>
 
           <Reveal className="mt-8">
             <div className="rounded-xl border overflow-hidden bg-white">
@@ -223,8 +212,7 @@ export default function Researches() {
               </div>
             </div>
           </Reveal>
-        </div>
-      </section>
-    </div>
+      </div>
+    </section>
   );
 }
