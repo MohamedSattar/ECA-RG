@@ -155,9 +155,9 @@ export default function FormApplication() {
           isVisible={showLoader}
           label="Your request is being processed..."
         />
-        <section className="h-[calc(100vh-150px)] overflow-hidden bg-[#1D2054]">
-          <Reveal className="h-full flex flex-col justify-center">
-            <div className="container h-full py-4 md:py-4 grid gap-10 md:grid-cols-2 items-center justify-center">
+        <section className="min-h-screen bg-[#1D2054] py-12">
+          <Reveal className="flex flex-col justify-center">
+            <div className="container py-8 grid gap-10 md:grid-cols-2 items-start lg:items-center">
               {/* Hero Collage */}
               <div className="relative flex justify-center md:justify-end">
                 <img
