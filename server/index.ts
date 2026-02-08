@@ -96,8 +96,8 @@ export function createServer() {
 
   app.get("/api/demo", handleDemo);
 
-  // Dataverse API proxy - forward all /_api requests to Dataverse API
-  app.all(/^\/_api\//, handleDataverseProxy);
+  // Dataverse API proxy - forward all /_api and /_layout requests to Dataverse API
+  app.all(/^\/((_api|_layout)\/)/, handleDataverseProxy);
 
   return app;
 }
