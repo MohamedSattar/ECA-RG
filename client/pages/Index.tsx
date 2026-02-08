@@ -142,9 +142,20 @@ function GrantCard({
           className="absolute bottom-[-4rem] right-12 w-32 h-40 z-0"
         />
         <img
-          src={`/${image}&full=true`}
+          src={
+            image
+              ? (() => {
+                  // Check if &full=true is already in the URL
+                  const url = image.startsWith('/') ? image : `/${image}`;
+                  return url.includes('full=true') ? url : `${url}${url.includes('?') ? '&' : '?'}full=true`;
+                })()
+              : ''
+          }
           alt={`${title} visual`}
           className="absolute inset-0 w-80 rounded-2xl m-auto z-20"
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = 'none';
+          }}
         />
       </div>
       <div className="space-y-4">
