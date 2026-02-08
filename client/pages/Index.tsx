@@ -597,10 +597,15 @@ export default function Index() {
                 />*/}
                 {!isAuthed && (
                   <DefaultButton
-                    onClick={() => (
-                      toast.success("Redirecting to sign up..."),
-                      login()
-                    )}
+                    onClick={async () => {
+                      try {
+                        await login();
+                        toast.success("Successfully authenticated!");
+                      } catch (error) {
+                        console.error("Sign up failed:", error);
+                        toast.error("Sign up failed. Please try again.");
+                      }
+                    }}
                     text="Sign up now"
                     styles={{
                       root: {
