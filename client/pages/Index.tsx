@@ -411,7 +411,7 @@ export default function Index() {
       const res = await callApi<{ value: any[] }>({
         url,
         method: "GET",
-        skipAuth: true // Public API - no authentication needed
+        skipAuth: true, // Public API - no authentication needed
       });
       const templates = res?.value ?? [];
       if (templates.length > 0) {
@@ -617,10 +617,12 @@ export default function Index() {
                         color: "rgba(255,255,255,0.9)",
                         opacity: isAuthLoading ? 0.6 : 1,
                       },
-                      rootHovered: isAuthLoading ? {} : {
-                        backgroundColor: "rgba(255,255,255,0.1)",
-                        color: "rgba(255,255,255,0.9)",
-                      },
+                      rootHovered: isAuthLoading
+                        ? {}
+                        : {
+                            backgroundColor: "rgba(255,255,255,0.1)",
+                            color: "rgba(255,255,255,0.9)",
+                          },
                     }}
                   />
                 )}
@@ -895,4 +897,4 @@ export default function Index() {
       )}
     </>
   );
-};
+}

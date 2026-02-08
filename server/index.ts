@@ -5,7 +5,10 @@ import { handleDemo } from "./routes/demo";
 
 const DATAVERSE_BASE_URL = "https://research-grants-spa.powerappsportals.com";
 
-async function handleDataverseProxy(req: express.Request, res: express.Response) {
+async function handleDataverseProxy(
+  req: express.Request,
+  res: express.Response,
+) {
   try {
     // Extract the API path (everything after the domain)
     const apiPath = req.path;
@@ -28,7 +31,9 @@ async function handleDataverseProxy(req: express.Request, res: express.Response)
       fetchHeaders["Authorization"] = String(req.headers.authorization);
     }
     if (req.headers["__requestverificationtoken"]) {
-      fetchHeaders["__RequestVerificationToken"] = String(req.headers["__requestverificationtoken"]);
+      fetchHeaders["__RequestVerificationToken"] = String(
+        req.headers["__requestverificationtoken"],
+      );
     }
     if (req.headers["content-type"]) {
       fetchHeaders["Content-Type"] = String(req.headers["content-type"]);
@@ -95,7 +100,7 @@ async function handleDataverseProxy(req: express.Request, res: express.Response)
     res.status(502).json({
       error: "Proxy error",
       details: errorMessage,
-      target: DATAVERSE_BASE_URL + req.path
+      target: DATAVERSE_BASE_URL + req.path,
     });
   }
 }

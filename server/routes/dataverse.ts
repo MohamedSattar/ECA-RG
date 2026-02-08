@@ -7,7 +7,7 @@ export const handleDataverseProxy: RequestHandler = async (req, res) => {
     // Extract the API path after /api/dataverse
     const apiPath = req.path.replace(/^\/api\/dataverse/, "");
     const fullUrl = new URL(DATAVERSE_BASE_URL + apiPath);
-    
+
     // Preserve query parameters
     if (req.url.includes("?")) {
       const queryPart = req.url.substring(req.url.indexOf("?"));
@@ -21,7 +21,9 @@ export const handleDataverseProxy: RequestHandler = async (req, res) => {
       fetchHeaders["Authorization"] = String(req.headers.authorization);
     }
     if (req.headers["__requestverificationtoken"]) {
-      fetchHeaders["__RequestVerificationToken"] = String(req.headers["__requestverificationtoken"]);
+      fetchHeaders["__RequestVerificationToken"] = String(
+        req.headers["__requestverificationtoken"],
+      );
     }
     if (req.headers["content-type"]) {
       fetchHeaders["Content-Type"] = String(req.headers["content-type"]);

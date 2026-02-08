@@ -54,9 +54,9 @@ function expressPlugin(): Plugin {
       const app = createServer();
       //app.use('/_api', "https://site-9ziqk.powerappsportals.com/");
       // Add Express app as middleware to Vite dev server
-       setTimeout(() => {
+      setTimeout(() => {
         server.middlewares.use(app);
-      },3000);
+      }, 3000);
     },
   };
 }

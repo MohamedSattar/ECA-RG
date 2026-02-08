@@ -74,7 +74,10 @@ const authStorage = {
    FETCH USER CONTACT FROM DATAVERSE
 ------------------------------------------------------- */
 
-async function getCurrentUserContact(email: string, callApi: ReturnType<typeof useDataverseApi>['callApi']) {
+async function getCurrentUserContact(
+  email: string,
+  callApi: ReturnType<typeof useDataverseApi>["callApi"],
+) {
   if (!email) return null;
 
   try {
@@ -95,9 +98,13 @@ async function getCurrentUserContact(email: string, callApi: ReturnType<typeof u
    CREATE USER PROFILE
 ------------------------------------------------------- */
 
-async function createUserProfile(account: any, callApi: ReturnType<typeof useDataverseApi>['callApi']): Promise<UserProfile> {
+async function createUserProfile(
+  account: any,
+  callApi: ReturnType<typeof useDataverseApi>["callApi"],
+): Promise<UserProfile> {
   const adxUserId = (account?.idTokenClaims?.sub as string) || "";
-  const email= (account?.idTokenClaims?.email as string) || account?.username || "";
+  const email =
+    (account?.idTokenClaims?.email as string) || account?.username || "";
 
   return {
     name: (account?.idTokenClaims?.name as string) || account?.username || "",
@@ -113,7 +120,7 @@ async function createUserProfile(account: any, callApi: ReturnType<typeof useDat
 
 const clearAuthState = (
   setAuthed: (value: boolean) => void,
-  setUser: (value: UserProfile | null) => void
+  setUser: (value: UserProfile | null) => void,
 ): void => {
   authStorage.clearAuth();
   setAuthed(false);
@@ -142,7 +149,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     try {
       const response = await instance.handleRedirectPromise();
-      const accounts = response ? [response.account] : instance.getAllAccounts();
+      const accounts = response
+        ? [response.account]
+        : instance.getAllAccounts();
 
       if (accounts?.length && accounts[0]) {
         const loggedUser = await createUserProfile(accounts[0], callApi);
@@ -170,32 +179,32 @@ export function AuthProvider({ children }: PropsWithChildren) {
     if (inProgress !== InteractionStatus.None) return;
     if (inProgress !== InteractionStatus.None) return;
 
-  const handle = async () => {
-    setIsLoading(true);
+    const handle = async () => {
+      setIsLoading(true);
 
-    try {
-      const response = await instance.handleRedirectPromise();
-      const accounts = response
-        ? [response.account]
-        : instance.getAllAccounts();
+      try {
+        const response = await instance.handleRedirectPromise();
+        const accounts = response
+          ? [response.account]
+          : instance.getAllAccounts();
 
-      if (accounts.length > 0) {
-        const loggedUser = await createUserProfile(accounts[0], callApi);
-        authStorage.setUser(loggedUser);
-        setUser(loggedUser);
-        setAuthed(true);
-      } else {
+        if (accounts.length > 0) {
+          const loggedUser = await createUserProfile(accounts[0], callApi);
+          authStorage.setUser(loggedUser);
+          setUser(loggedUser);
+          setAuthed(true);
+        } else {
+          clearAuthState(setAuthed, setUser);
+        }
+      } catch (e) {
+        console.error("Redirect handling failed", e);
         clearAuthState(setAuthed, setUser);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (e) {
-      console.error("Redirect handling failed", e);
-      clearAuthState(setAuthed, setUser);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
 
-  handle();
+    handle();
   }, [inProgress, instance]);
 
   /* -----------------------------------------------
@@ -213,13 +222,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
         try {
           // Prevent concurrent login attempts
           if (isInteractionInProgress) {
-            console.warn("[Auth] Login already in progress, ignoring duplicate request");
+            console.warn(
+              "[Auth] Login already in progress, ignoring duplicate request",
+            );
             return;
           }
 
           // Wait for any previous interactions to complete
           if (inProgress !== InteractionStatus.None) {
-            console.log("[Auth] Waiting for previous interaction to complete...");
+            console.log(
+              "[Auth] Waiting for previous interaction to complete...",
+            );
             // Wait up to 3 seconds for the previous interaction to finish
             let waitCount = 0;
             while (inProgress !== InteractionStatus.None && waitCount < 30) {
@@ -238,7 +251,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
           const response = await instance.loginPopup(loginRequest);
           if (response?.account) {
             console.log("[Auth] Login successful, creating user profile...");
-            const loggedUser = await createUserProfile(response.account, callApi);
+            const loggedUser = await createUserProfile(
+              response.account,
+              callApi,
+            );
             authStorage.setUser(loggedUser);
             setUser(loggedUser);
             setAuthed(true);
@@ -253,10 +269,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
           } else if (error?.errorCode === "endpoints_resolution_error") {
             console.error(
               "[Auth] Azure B2C endpoint resolution failed. Check authority configuration.",
-              error
+              error,
             );
             toast.error(
-              "Authentication service unavailable. Please try again later."
+              "Authentication service unavailable. Please try again later.",
             );
             throw error;
           } else if (error?.errorCode === "network_error") {
@@ -265,7 +281,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
             throw error;
           } else if (error?.errorCode === "interaction_in_progress") {
             console.error("[Auth] Interaction already in progress", error);
-            toast.error("An authentication request is already in progress. Please wait.");
+            toast.error(
+              "An authentication request is already in progress. Please wait.",
+            );
             throw error;
           } else {
             console.error("[Auth] Login error:", error);
@@ -292,7 +310,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         }
       },
     }),
-    [isAuthed, user, isLoading, instance]
+    [isAuthed, user, isLoading, instance],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

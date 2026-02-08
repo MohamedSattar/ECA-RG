@@ -49,7 +49,9 @@ const fetchRequestVerificationToken = async () => {
     console.log(`[Token] Response: ${response.status} ${response.statusText}`);
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch verification token: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `Failed to fetch verification token: ${response.status} ${response.statusText}`,
+      );
     }
 
     const text = await response.text();
@@ -60,7 +62,9 @@ const fetchRequestVerificationToken = async () => {
     );
 
     if (!input?.value) {
-      console.warn("[Token] RequestVerificationToken not found in HTML response");
+      console.warn(
+        "[Token] RequestVerificationToken not found in HTML response",
+      );
       throw new Error("RequestVerificationToken not found");
     }
 
@@ -142,7 +146,10 @@ export function useDataverseApi() {
         return returnvalue;
       } catch (parseErr) {
         // Non-JSON response — return raw text
-        console.warn(`[API] Non-JSON response from ${options.url}:`, text?.substring(0, 200));
+        console.warn(
+          `[API] Non-JSON response from ${options.url}:`,
+          text?.substring(0, 200),
+        );
         return text as unknown as T;
       }
     } catch (err) {
