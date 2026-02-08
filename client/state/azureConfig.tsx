@@ -28,6 +28,11 @@ export const loginRequest = {
   scopes: ["openid", "profile", "offline_access"], // Add other scopes as needed
 };
 
+export const signupRequest = {
+  scopes: ["openid", "profile", "offline_access"],
+  prompt: "login", // Force signup experience
+};
+
 // B2C Policy Configuration
 export const policyConfig = {
   names: {
