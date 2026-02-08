@@ -383,7 +383,7 @@ export default function Index() {
   const [grantTemplate, setGrantTemplate] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { user, login, logout, isAuthed } = useAuth();
+  const { user, login, logout, isAuthed, isLoading: isAuthLoading } = useAuth();
   const [isCreatingApplication, setIsCreatingApplication] = useState(false);
   // Helper: Format date to YYYY-MM-DD
   const getTodayDateString = (date?: Date): string => {
