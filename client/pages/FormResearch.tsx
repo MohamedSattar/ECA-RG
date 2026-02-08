@@ -1254,6 +1254,22 @@ export default function FormResearch() {
     initialize();
   }, [researchAreaId]);
 
+  // Lazy load optional sections after main data loads (with a slight delay to prioritize main content)
+  useEffect(() => {
+    if (formType !== "new" && researchAreaId && form.title) {
+      // Delay lazy loading to prioritize initial render
+      const timer = setTimeout(async () => {
+        await Promise.all([
+          loadOptionalReportData(researchAreaId),
+          loadOptionalDisseminationData(researchAreaId),
+          loadOptionalDeliverableData(researchAreaId),
+        ]);
+      }, 500); // Load optional sections 500ms after main content
+
+      return () => clearTimeout(timer);
+    }
+  }, [researchAreaId, form.title, formType, loadOptionalReportData, loadOptionalDisseminationData, loadOptionalDeliverableData]);
+
   const canSubmit = useMemo(() => form.title.trim().length > 0, [form.title]);
 
   const handleAddMember = useCallback(
