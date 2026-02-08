@@ -950,12 +950,10 @@ export default function FormResearch() {
         // Load files from SharePoint
         const files = await loadApplicationFiles(researchNumber);
 
-        // Load all optional data in parallel (except team members which are already expanded)
+        // Load only critical data (budget and team members) in parallel
+        // Optional data (reports, dissemination, deliverables) will be loaded lazily
         await Promise.all([
           loadBudgetDetails(researchAreaId),
-          loadReportStatus(researchId),
-          loadDisseminationRequests(researchId),
-          loadDeliverables(researchId),
           loadTeamMembers(researchId),
         ]);
         // Update form state
