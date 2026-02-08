@@ -1,0 +1,53 @@
+{
+  "header": {
+    "title": "ECA Research Grants",
+    "home": "Home",
+    "applications": "Applications",
+    "researches": "Researches",
+    "grants": "Grants",
+    "about": "About",
+    "login": "Log in",
+    "logout": "Logout",
+    "profile": "Profile",
+    "notifications": "Notifications"
+  },
+  "home": {
+    "welcome": "Welcome to ECA Research Grants Portal",
+    "description": "Apply for research grants and manage your applications"
+  },
+  "applications": {
+    "title": "Applications",
+    "new": "New Application",
+    "myApplications": "My Applications",
+    "status": "Status",
+    "date": "Date"
+  },
+  "researches": {
+    "title": "Researches",
+    "myResearches": "My Researches",
+    "newResearch": "New Research"
+  },
+  "profile": {
+    "title": "Profile",
+    "personalInfo": "Personal Information",
+    "settings": "Settings"
+  },
+  "common": {
+    "submit": "Submit",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading...",
+    "search": "Search",
+    "filter": "Filter",
+    "close": "Close",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "language": {
+    "select": "Select Language",
+    "english": "English",
+    "arabic": "Arabic"
+  }
+}

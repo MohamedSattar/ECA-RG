@@ -1,0 +1,53 @@
+{
+  "header": {
+    "title": "منح البحوث ECA",
+    "home": "الرئيسية",
+    "applications": "الطلبات",
+    "researches": "الأبحاث",
+    "grants": "المنح",
+    "about": "عن البرنامج",
+    "login": "تسجيل الدخول",
+    "logout": "تسجيل الخروج",
+    "profile": "الملف الشخصي",
+    "notifications": "الإشعارات"
+  },
+  "home": {
+    "welcome": "مرحباً بك في بوابة منح البحوث ECA",
+    "description": "تقديم طلبات المنح البحثية وإدارة طلباتك"
+  },
+  "applications": {
+    "title": "الطلبات",
+    "new": "طلب جديد",
+    "myApplications": "طلباتي",
+    "status": "الحالة",
+    "date": "التاريخ"
+  },
+  "researches": {
+    "title": "الأبحاث",
+    "myResearches": "أبحاثي",
+    "newResearch": "بحث جديد"
+  },
+  "profile": {
+    "title": "الملف الشخصي",
+    "personalInfo": "المعلومات الشخصية",
+    "settings": "الإعدادات"
+  },
+  "common": {
+    "submit": "إرسال",
+    "cancel": "إلغاء",
+    "save": "حفظ",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "loading": "جاري التحميل...",
+    "search": "بحث",
+    "filter": "تصفية",
+    "close": "إغلاق",
+    "yes": "نعم",
+    "no": "لا"
+  },
+  "language": {
+    "select": "اختر اللغة",
+    "english": "English",
+    "arabic": "العربية"
+  }
+}

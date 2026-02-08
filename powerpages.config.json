@@ -1,0 +1,7 @@
+{
+  "bundleFilePatterns": [
+    "assets/*.js",
+    "assets/*.css",
+    "index.html"
+  ]
+}
