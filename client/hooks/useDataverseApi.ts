@@ -24,6 +24,7 @@
 };*/
 
 import { stat } from "fs";
+import { useMsal } from "@azure/msal-react";
 
 export interface ApiOptions extends RequestInit {
   headers?: Record<string, string>;
