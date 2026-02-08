@@ -10,7 +10,7 @@ import {
 
 import { useMsal, useIsAuthenticated } from "@azure/msal-react";
 import { InteractionStatus } from "@azure/msal-browser";
-import { loginRequest } from "./azureConfig";
+import { loginRequest, signupRequest } from "./azureConfig";
 import { useDataverseApi } from "@/hooks/useDataverseApi";
 import { ContactKeys, TableName } from "@/constants";
 import { toast } from "sonner";
