@@ -247,20 +247,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
           setIsInteractionInProgress(true);
           console.log("[Auth] Starting SSO login...");
 
-          // Use popup for iframe compatibility (vs redirect which doesn't work in iframes)
-          const response = await instance.loginPopup(loginRequest);
-          if (response?.account) {
-            console.log("[Auth] Login successful, creating user profile...");
-            const loggedUser = await createUserProfile(
-              response.account,
-              callApi,
-            );
-            authStorage.setUser(loggedUser);
-            setUser(loggedUser);
-            setAuthed(true);
-            console.log("[Auth] User authenticated:", loggedUser.email);
-            toast.success(`Welcome, ${loggedUser.name}!`);
-          }
+          // Use redirect for full page navigation
+          await instance.loginRedirect(loginRequest);
         } catch (error: any) {
           // Handle specific MSAL errors
           if (error?.errorCode === "user_cancelled") {
