@@ -56,10 +56,19 @@ function expressPlugin(): Plugin {
     configureServer(server) {
       const app = createServer();
       //app.use('/_api', "https://site-9ziqk.powerappsportals.com/");
-      // Add Express app as middleware to Vite dev server
-      setTimeout(() => {
-        server.middlewares.use(app);
-      }, 3000);
+      // Add Express app as middleware to Vite dev server BEFORE Vite's fallback handler
+      // Return the app to insert it before Vite's own middlewares
+      return () => {
+        server.middlewares.use((req, res, next) => {
+          // Let Express handle _api and _layout routes, bypass Vite
+          if (req.url.startsWith("/_api") || req.url.startsWith("/_layout")) {
+            console.log(`[Vite] Routing to Express: ${req.method} ${req.url}`);
+            app(req, res, next);
+          } else {
+            next();
+          }
+        });
+      };
     },
   };
 }
