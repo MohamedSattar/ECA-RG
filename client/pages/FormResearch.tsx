@@ -562,12 +562,6 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
         </div>
       </div>
       <div>
-        <Label>Submission Date</Label>
-        <div className="mt-1">
-          <TextField value={form.submissionDate} readOnly borderless />
-        </div>
-      </div>
-      <div>
         <Label>Start Date</Label>
         <div className="mt-1">
           <DatePicker
