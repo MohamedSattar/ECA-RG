@@ -108,21 +108,20 @@ export default function FormApplication() {
     const handleSubmit = async () => {
       setShowLoader(true);
       try {
-        // Add your submit logic here
+        if (!form.contactId) {
+          throw new Error("Contact ID not found. Please refresh the page.");
+        }
+
         const res = await callApi({
           url: `/_api/${TableName.CONTACTS}(${form.contactId})`,
           method: "PATCH",
           data: {
             [ContactKeys.FIRSTNAME]: form.firstName,
             [ContactKeys.LASTNAME]: form.lastName,
-            [ContactKeys.TELEPHONE1]: form.phoneNumber,
             [ContactKeys.MOBILEPHONE]: form.mobilePhone,
-            [ContactKeys.PREFERREDCONTACTMETHODCODE]:
-              form.preferredMethodOfContact,
           },
         });
-        // setDialogMessage("Profile updated successfully!");
-        // setShowSuccessDialog(true);
+
         if (res.status !== 204 && res.status !== 200) {
           throw new Error("No changes were made to the profile.");
         }
@@ -132,15 +131,10 @@ export default function FormApplication() {
         });
       } catch (error) {
         console.error("Failed to update profile:", error);
-        // setDialogMessage(
-        //     error instanceof Error
-        //         ? error.message
-        //         : "Unable to update profile. Please try again."
-        // );
-        // setShowErrorDialog(true);
+        const errorMessage = error instanceof Error ? error.message : "Unable to update profile. Please try again.";
         toast({
           title: "Failed",
-          description: "Unable to update profile. Please try again.",
+          description: errorMessage,
         });
       } finally {
         setShowLoader(false);
