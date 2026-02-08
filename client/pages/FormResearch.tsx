@@ -486,58 +486,6 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
         </div>
       </div>
       <div>
-        <Label>Application Reference</Label>
-        <div className="mt-1">
-          <LookupPicker
-            key={`application-${applicationIdFromState || "none"}`}
-            displayField={ApplicationKeys.APPLICATIONTITLE}
-            keyField={ApplicationKeys.APPLICATIONID}
-            secondaryField={ApplicationKeys.ABSTRACT}
-            searchField={ApplicationKeys.APPLICATIONTITLE}
-            tableName={TableName.APPLICATIONS}
-            maxSelection={1}
-            label="Application"
-            cascadeField={ApplicationKeys.APPLICATIONID}
-            cascadeValue={applicationIdFromState}
-            isDefaultSelected={applicationIdFromState != null}
-            disabled={form.type === "view"}
-            onSelect={(values) => {
-              onApplicationChange(
-                values && values.length > 0
-                  ? values[0][ApplicationKeys.APPLICATIONID]
-                  : null,
-              );
-            }}
-          />
-        </div>
-      </div>
-      <div>
-        <Label>Research Area</Label>
-        <div className="mt-1">
-          <LookupPicker
-            key={`research-area-${researchAreaIdFromState || "none"}`}
-            displayField={ResearchAreaKeys.AREANAME}
-            keyField={ResearchAreaKeys.RESEARCHAREAID}
-            secondaryField={ResearchAreaKeys.AREADESCRIPTION}
-            searchField={ResearchAreaKeys.AREANAME}
-            tableName={TableName.RESEARCHAREAS}
-            maxSelection={1}
-            label="Research Area"
-            cascadeField={ResearchAreaKeys.RESEARCHAREAID}
-            cascadeValue={researchAreaIdFromState}
-            isDefaultSelected={researchAreaIdFromState != null}
-            disabled={form.type === "view"}
-            onSelect={(values) => {
-              onResearchAreaChange(
-                values && values.length > 0
-                  ? values[0][ResearchAreaKeys.RESEARCHAREAID]
-                  : null,
-              );
-            }}
-          />
-        </div>
-      </div>
-      <div>
         <Label>Start Date</Label>
         <div className="mt-1">
           <DatePicker
