@@ -93,8 +93,9 @@ export function useDataverseApi() {
       ...(options.headers || {}),
     };
 
-    // Call the API directly - backend handles /_api/* routing
-    const res = await fetch(options.url, {
+    // Call the Dataverse API directly
+    const fullUrl = `${DATAVERSE_API_BASE}${options.url}`;
+    const res = await fetch(fullUrl, {
       credentials: "include",
       method: options.method || "GET",
       body: options.data ? JSON.stringify(options.data) : null,
