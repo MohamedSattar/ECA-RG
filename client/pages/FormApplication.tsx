@@ -303,11 +303,6 @@ interface GeneralInformationSectionProps {
   form: FormState;
   onTitleChange: (value: string) => void;
   onAbstractChange: (value: string) => void;
-  onGrantCycleChange: (cycleId: string | null) => void;
-  onResearchAreaChange: (areaId: string | null) => void;
-  onMainApplicantChange: (contactId: string) => void;
-  grantCycleIdFromState: string | undefined;
-  researchAreaIdFromState: string | undefined;
   userAdxUserId?: string;
 }
 
@@ -315,11 +310,6 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
   form,
   onTitleChange,
   onAbstractChange,
-  onGrantCycleChange,
-  onResearchAreaChange,
-  onMainApplicantChange,
-  grantCycleIdFromState,
-  researchAreaIdFromState,
   userAdxUserId,
 }) => {
   const { user } = useAuth();
