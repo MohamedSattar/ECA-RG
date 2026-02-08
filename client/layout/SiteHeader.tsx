@@ -119,8 +119,12 @@ export function SiteHeader() {
               onClick={async () => {
                 try {
                   await login();
-                } catch (error) {
-                  console.error("Login failed:", error);
+                } catch (error: any) {
+                  // Error is already handled and logged in auth.tsx
+                  // Only log here if it's an unexpected error
+                  if (error?.errorCode !== "user_cancelled") {
+                    console.error("Login failed:", error);
+                  }
                 }
               }}
               className={`inline-flex items-center rounded-md border border-white/40 px-4 py-1.5 text-sm font-medium text-white transition-colors ${
