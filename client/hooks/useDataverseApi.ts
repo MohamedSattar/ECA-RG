@@ -91,9 +91,8 @@ export function useDataverseApi() {
       ...(options.headers || {}),
     };
 
-    // Call the Dataverse API directly
-    const fullUrl = `${DATAVERSE_API_BASE}${options.url}`;
-    const res = await fetch(fullUrl, {
+    // Call through backend proxy (/_api/* routes to Dataverse API)
+    const res = await fetch(options.url, {
       credentials: "include",
       method: options.method || "GET",
       body: options.data ? JSON.stringify(options.data) : null,
