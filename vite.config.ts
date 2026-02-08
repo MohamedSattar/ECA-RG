@@ -50,32 +50,21 @@ export default defineConfig(({ mode }) => ({
 }));
 
 function expressPlugin(): Plugin {
-  let expressApp: any;
-
   return {
     name: "express-plugin",
     apply: "serve",
     configureServer(server) {
-      expressApp = createServer();
+      const expressApp = createServer();
 
-      // Use pre middleware hook to add Express before Vite's own handlers
-      return () => {
-        // Insert Express as the first middleware (before Vite's fallback)
-        const originalUse = server.middlewares.use.bind(server.middlewares);
-        const wrappedUse = function(fn: any) {
-          // Intercept and handle _api and _layout routes with our Express app
-          originalUse((req: any, res: any, next: any) => {
-            if (req.url.startsWith("/_api") || req.url.startsWith("/_layout")) {
-              console.log(`[Vite] Proxying to Express: ${req.method} ${req.url}`);
-              expressApp(req, res, next);
-            } else {
-              next();
-            }
-          });
-          return originalUse(fn);
-        };
-        server.middlewares.use = wrappedUse as any;
-      };
+      // Add middleware to handle proxy routes FIRST (before Vite's fallback)
+      server.middlewares.use((req, res, next) => {
+        if (req.url.startsWith("/_api") || req.url.startsWith("/_layout")) {
+          console.log(`[Vite] Proxying to Express: ${req.method} ${req.url}`);
+          expressApp(req, res, next);
+        } else {
+          next();
+        }
+      });
     },
   };
 }
