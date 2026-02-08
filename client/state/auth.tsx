@@ -207,7 +207,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
       
       login: async () => {
         try {
-          await instance.loginRedirect(loginRequest);
+          // Use popup for iframe compatibility (vs redirect which doesn't work in iframes)
+          const response = await instance.loginPopup(loginRequest);
+          if (response?.account) {
+            const loggedUser = await createUserProfile(response.account, callApi);
+            authStorage.setUser(loggedUser);
+            setUser(loggedUser);
+            setAuthed(true);
+          }
         } catch (error) {
           console.error("Login error:", error);
         }
@@ -216,13 +223,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
       logout: async () => {
         try {
           clearAuthState(setAuthed, setUser);
-
-          await instance.logoutRedirect({
-            onRedirectNavigate: () => {
-              window.location.href = "/";
-              return false;
-            },
-          });
+          // Use popup for iframe compatibility (vs redirect which doesn't work in iframes)
+          await instance.logoutPopup();
         } catch (error) {
           console.error("Logout error:", error);
           clearAuthState(setAuthed, setUser);
