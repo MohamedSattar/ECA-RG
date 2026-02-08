@@ -284,9 +284,9 @@ export default function GrantDetail() {
                   researchArea?.[ResearchAreaKeys.THUMBNAIL_URL]
                     ? (() => {
                         const normalizedUrl = normalizeImageUrl(researchArea[ResearchAreaKeys.THUMBNAIL_URL]);
-                        // Only append &full=true if not already present
+                        // Ensure full=true is appended for better image quality
                         return normalizedUrl && !normalizedUrl.includes('full=true')
-                          ? `${normalizedUrl}&full=true`
+                          ? `${normalizedUrl}${normalizedUrl.includes('?') ? '&' : '?'}full=true`
                           : normalizedUrl;
                       })()
                     : "/images/GrantDetail.png"
