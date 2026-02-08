@@ -1336,6 +1336,14 @@ export default function FormApplication() {
                 onAbstractChange={(value) =>
                   setForm((prev) => ({ ...prev, abstract: value }))
                 }
+                onGrantCycleChange={(value) =>
+                  setForm((prev) => ({ ...prev, grantCycle: value }))
+                }
+                onResearchAreaChange={(value) =>
+                  setForm((prev) => ({ ...prev, researchArea: value }))
+                }
+                grantCycleId={grantCycleId}
+                researchAreaId={researchAreaId}
                 userAdxUserId={user && user.contact?.[ContactKeys.CONTACTID]}
               />
             )}
