@@ -113,8 +113,10 @@ export function useDataverseApi() {
         const token = await getToken();
         if (token) {
           headers.__RequestVerificationToken = token;
+          console.log("[API] Request verification token added to headers");
         } else {
-          console.warn("[API] No request verification token available");
+          console.error("[API] Failed to obtain request verification token - request will likely fail");
+          // Don't throw here, proceed without token to see the actual error
         }
       }
 
