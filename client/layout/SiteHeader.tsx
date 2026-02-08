@@ -140,7 +140,7 @@ export function SiteHeader() {
                 disabled={isLoading}
                 onClick={async () => {
                   try {
-                    await login();
+                    await login(true);
                   } catch (error: any) {
                     // Error is already handled and logged in auth.tsx
                     // Only log here if it's an unexpected error
