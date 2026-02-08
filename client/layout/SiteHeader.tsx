@@ -115,7 +115,13 @@ export function SiteHeader() {
         <div className="hidden md:flex items-center gap-3">
           {!isAuthed && (
             <button
-              onClick={login}
+              onClick={async () => {
+                try {
+                  await login();
+                } catch (error) {
+                  console.error("Login failed:", error);
+                }
+              }}
               className="inline-flex items-center rounded-md border border-white/40 px-4 py-1.5 text-sm font-medium text-white hover:bg-white/10"
             >
               {t("header.login")}
