@@ -18,7 +18,8 @@ async function handleDataverseProxy(req: express.Request, res: express.Response)
     }
 
     // Log the request for debugging
-    console.log(`[Proxy] ${req.method} ${req.path} -> ${fullUrl.toString()}`);
+    console.log(`[Proxy] ${req.method} ${req.path}`);
+    console.log(`[Proxy] Target: ${fullUrl.toString()}`);
 
     // Build headers
     const fetchHeaders: HeadersInit = {};
