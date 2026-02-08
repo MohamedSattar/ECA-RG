@@ -1275,6 +1275,25 @@ export default function FormApplication() {
                   <span className="ml-2 font-semibold text-[#F7D85C]">{form.submissionDate}</span>
                 </div>
               )}
+              {/* Grant Cycle and Research Area in Header */}
+              <div className="grid grid-cols-2 gap-6 mt-4">
+                <div>
+                  <div className="text-xs text-white opacity-70 mb-1">Grant Cycle</div>
+                  <div className="text-sm font-semibold text-[#F7D85C]">
+                    {form.grantCycle ?
+                      Array.isArray(form.grantCycle) ? form.grantCycle[0]?.name : form.grantCycle
+                      : (grantCycleId || "N/A")}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-white opacity-70 mb-1">Research Area</div>
+                  <div className="text-sm font-semibold text-[#F7D85C]">
+                    {form.researchArea ?
+                      Array.isArray(form.researchArea) ? form.researchArea[0]?.name : form.researchArea
+                      : (researchAreaId || "N/A")}
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Hero Collage */}
