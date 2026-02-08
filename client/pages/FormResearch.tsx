@@ -1025,6 +1025,34 @@ export default function FormResearch() {
     }
   }, []);
 
+  // Lazy load optional sections
+  const loadOptionalReportData = useCallback(
+    async (researchId: string) => {
+      if (reportsLoaded || formType === "new") return;
+      await loadReportStatus(researchId);
+      setReportsLoaded(true);
+    },
+    [formType, reportsLoaded]
+  );
+
+  const loadOptionalDisseminationData = useCallback(
+    async (researchId: string) => {
+      if (disseminationLoaded || formType === "new") return;
+      await loadDisseminationRequests(researchId);
+      setDisseminationLoaded(true);
+    },
+    [formType, disseminationLoaded]
+  );
+
+  const loadOptionalDeliverableData = useCallback(
+    async (researchId: string) => {
+      if (deliverablesLoaded || formType === "new") return;
+      await loadDeliverables(researchId);
+      setDeliverablesLoaded(true);
+    },
+    [formType, deliverablesLoaded]
+  );
+
   // Load all budget versions for research
   const loadBudgetVersions = useCallback(
     async (researchId: string) => {
