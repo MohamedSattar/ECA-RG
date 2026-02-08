@@ -215,8 +215,21 @@ export function AuthProvider({ children }: PropsWithChildren) {
             setUser(loggedUser);
             setAuthed(true);
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error("Login error:", error);
+
+          // Handle specific MSAL errors
+          if (error?.errorCode === "endpoints_resolution_error") {
+            console.error(
+              "Azure B2C endpoint resolution failed. Check authority configuration.",
+              error
+            );
+          } else if (error?.errorCode === "network_error") {
+            console.error("Network error during authentication", error);
+          }
+
+          // Re-throw to be caught by caller if needed
+          throw error;
         }
       },
 
