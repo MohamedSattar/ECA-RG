@@ -49,26 +49,26 @@ export const API_CONFIG = {
 
     // If URL is relative path from Dataverse API, route through our image proxy
     if (cleanUrl.startsWith('/_api/')) {
-      // Route through proxy endpoint: /_images/?imageUrl=<encoded-url>
-      return `/_images/${cleanUrl.substring(1)}`; // Remove leading / from /_api -> _api
+      // Route through proxy: /_images/_api/...
+      return `/_images${cleanUrl}`;
     }
 
     // If URL starts with just /, assume it's a Dataverse API path
     if (cleanUrl.startsWith('/') && !cleanUrl.startsWith('http')) {
-      return `/_images/${cleanUrl.substring(1)}`; // Route through proxy
+      return `/_images${cleanUrl}`;
     }
 
     // If URL already uses production base URL, route through proxy
     if (cleanUrl.includes(this.BASE_URL)) {
       const path = cleanUrl.replace(this.BASE_URL, '');
-      return `/_images/${path.substring(1)}`; // Remove leading / from path
+      return `/_images${path}`;
     }
 
     // If URL contains localhost, extract the path and route through proxy
     if (cleanUrl.includes('localhost')) {
       const match = cleanUrl.match(/localhost(?::\d+)?(\/.*)/);
       if (match?.[1]) {
-        return `/_images/${match[1].substring(1)}`; // Route through proxy
+        return `/_images${match[1]}`;
       }
     }
 
