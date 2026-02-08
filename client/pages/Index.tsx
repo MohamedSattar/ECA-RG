@@ -597,7 +597,7 @@ export default function Index() {
                 />*/}
                 {!isAuthed && (
                   <DefaultButton
-                    disabled={isLoading}
+                    disabled={isAuthLoading}
                     onClick={async () => {
                       try {
                         await login();
@@ -605,15 +605,15 @@ export default function Index() {
                         console.error("Sign up failed:", error);
                       }
                     }}
-                    text={isLoading ? "Authenticating..." : "Sign up now"}
+                    text={isAuthLoading ? "Authenticating..." : "Sign up now"}
                     styles={{
                       root: {
                         border: "1px solid rgba(255,255,255,0.4)",
                         backgroundColor: "transparent",
                         color: "rgba(255,255,255,0.9)",
-                        opacity: isLoading ? 0.6 : 1,
+                        opacity: isAuthLoading ? 0.6 : 1,
                       },
-                      rootHovered: isLoading ? {} : {
+                      rootHovered: isAuthLoading ? {} : {
                         backgroundColor: "rgba(255,255,255,0.1)",
                         color: "rgba(255,255,255,0.9)",
                       },
