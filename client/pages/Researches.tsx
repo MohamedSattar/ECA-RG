@@ -259,6 +259,11 @@ export default function Researches() {
               </div>
             </div>
           </Reveal>
+
+          <div className="border border-[#FAE7DD] my-8"></div>
+
+          {/* Summary Section */}
+          <SummaryCards />
       </div>
     </section>
   );
