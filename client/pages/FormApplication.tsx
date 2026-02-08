@@ -1326,7 +1326,7 @@ export default function FormApplication() {
             </div>
             {showGeneral && (
               <GeneralInformationSection
-                key={`${form.grantCycle}-${form.researchArea}-${user?.adxUserId}`}
+                key={`${user?.adxUserId}`}
                 form={form}
                 onTitleChange={(value) =>
                   setForm((prev) => ({ ...prev, title: value }))
@@ -1334,17 +1334,6 @@ export default function FormApplication() {
                 onAbstractChange={(value) =>
                   setForm((prev) => ({ ...prev, abstract: value }))
                 }
-                onGrantCycleChange={(cycleId) =>
-                  setForm((prev) => ({ ...prev, grantCycle: cycleId }))
-                }
-                onResearchAreaChange={(areaId) =>
-                  setForm((prev) => ({ ...prev, researchArea: areaId }))
-                }
-                onMainApplicantChange={(contactId) =>
-                  setForm((prev) => ({ ...prev, mainApplicant: contactId }))
-                }
-                grantCycleIdFromState={form.grantCycle || grantCycleId}
-                researchAreaIdFromState={form.researchArea || researchAreaId}
                 userAdxUserId={user && user.contact?.[ContactKeys.CONTACTID]}
               />
             )}
