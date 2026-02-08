@@ -245,13 +245,15 @@ export default function FormApplication() {
                           <div className="mt-2">
                             <TextField
                               id="mobilePhone"
+                              type="tel"
                               value={form?.mobilePhone}
-                              onChange={(_, value) =>
+                              onChange={(_, value) => {
+                                const numericValue = (value || "").replace(/[^\d]/g, "");
                                 setForm((prev) => ({
                                   ...prev,
-                                  mobilePhone: value || "",
+                                  mobilePhone: numericValue,
                                 }))
-                              }
+                              }}
                               borderless
                               placeholder="Enter your mobile phone"
                             />
