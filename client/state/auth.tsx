@@ -207,7 +207,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
       isAuthed,
       user,
       isLoading,
-      
+      isLoggingIn: isInteractionInProgress,
+
       login: async () => {
         try {
           // Prevent concurrent login attempts
