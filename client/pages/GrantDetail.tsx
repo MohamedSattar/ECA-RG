@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import Reveal from "@/motion/Reveal";
 import { useDataverseApi } from "@/hooks/useDataverseApi";
+import { normalizeImageUrl } from "@/lib/utils";
 import {
   ApplicationKeys,
   ContactKeys,
@@ -281,12 +282,14 @@ export default function GrantDetail() {
               <img
                 src={
                   researchArea?.[ResearchAreaKeys.THUMBNAIL_URL]
-                    ? `/${researchArea[ResearchAreaKeys.THUMBNAIL_URL]}&full=true`
-                    //`data:image/png;base64,${researchArea[ResearchAreaKeys.THUMBNAIL]}`
+                    ? `${normalizeImageUrl(researchArea[ResearchAreaKeys.THUMBNAIL_URL])}&full=true`
                     : "/images/GrantDetail.png"
                 }
                 alt="Illustration"
                 className={"h-auto w-auto m-auto rounded-lg"}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "/images/GrantDetail.png";
+                }}
               />
             </div>
           </div>
