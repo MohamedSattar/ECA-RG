@@ -8,12 +8,8 @@ export default defineConfig(({ mode }) => ({
   server: {
     open: "/index.html",
     proxy: {
-      // Proxy for development: backend routes through /api/dataverse prefix
-      "/_api": {
-        target: "https://research-grants-spa.powerappsportals.com/",
-        changeOrigin: true,
-        secure: false,
-      },
+      // Development proxy - not needed since we use backend proxy now
+      // All requests go through /api/dataverse backend route
     },
   },
   optimizeDeps: {
