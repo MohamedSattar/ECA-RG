@@ -115,6 +115,7 @@ export function SiteHeader() {
         <div className="hidden md:flex items-center gap-3">
           {!isAuthed && (
             <button
+              disabled={isLoading}
               onClick={async () => {
                 try {
                   await login();
@@ -122,9 +123,13 @@ export function SiteHeader() {
                   console.error("Login failed:", error);
                 }
               }}
-              className="inline-flex items-center rounded-md border border-white/40 px-4 py-1.5 text-sm font-medium text-white hover:bg-white/10"
+              className={`inline-flex items-center rounded-md border border-white/40 px-4 py-1.5 text-sm font-medium text-white transition-colors ${
+                isLoading
+                  ? "opacity-60 cursor-not-allowed"
+                  : "hover:bg-white/10 cursor-pointer"
+              }`}
             >
-              {t("header.login")}
+              {isLoading ? "Authenticating..." : t("header.login")}
             </button>
           )}
           {isAuthed && (
