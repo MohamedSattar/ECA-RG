@@ -358,62 +358,6 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
             />
           </div>
         </div>
-        <div>
-          <Label>Grant Cycle</Label>
-          <div className="mt-1">
-            <LookupPicker
-              key={`grant-cycle-${grantCycleIdFromState || "none"}`}
-              displayField={GrantCycleKeys.CYCLENAME}
-              keyField={GrantCycleKeys.GRANTCYCLEID}
-              secondaryField={GrantCycleKeys.CYCLEDESCRIPTION}
-              searchField={GrantCycleKeys.CYCLENAME}
-              tableName={TableName.GRANTCYCLES}
-              maxSelection={1}
-              disabled={formType === "view"}
-              label="Grant Cycle"
-              cascadeField={GrantCycleKeys.GRANTCYCLEID}
-              cascadeValue={grantCycleIdFromState}
-              isDefaultSelected={
-                grantCycleIdFromState && grantCycleIdFromState != null
-              }
-              onSelect={(values) => {
-                onGrantCycleChange(
-                  values && values.length > 0
-                    ? values[0][GrantCycleKeys.GRANTCYCLEID]
-                    : null,
-                );
-              }}
-            />
-          </div>
-        </div>
-        <div>
-          <Label>Research Area</Label>
-          <div className="mt-1">
-            <LookupPicker
-              key={`research-area-${researchAreaIdFromState || "none"}`}
-              displayField={ResearchAreaKeys.AREANAME}
-              keyField={ResearchAreaKeys.RESEARCHAREAID}
-              secondaryField={ResearchAreaKeys.AREADESCRIPTION}
-              searchField={ResearchAreaKeys.AREANAME}
-              tableName={TableName.RESEARCHAREAS}
-              maxSelection={1}
-              label="Research Area"
-              cascadeField={ResearchAreaKeys.RESEARCHAREAID}
-              cascadeValue={researchAreaIdFromState}
-              isDefaultSelected={
-                researchAreaIdFromState && researchAreaIdFromState != null
-              }
-              disabled={formType === "view"}
-              onSelect={(values) => {
-                onResearchAreaChange(
-                  values && values.length > 0
-                    ? values[0][ResearchAreaKeys.RESEARCHAREAID]
-                    : null,
-                );
-              }}
-            />
-          </div>
-        </div>
       </div>
     </Reveal>
   );
