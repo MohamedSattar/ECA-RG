@@ -40,7 +40,7 @@ export interface ApiOptions extends RequestInit {
 //   return token;
 // };;
 const fetchRequestVerificationToken = async () => {
-  const response = await fetch("/api/dataverse/_layout/tokenhtml", {
+  const response = await fetch("/_layout/tokenhtml", {
     credentials: "include",
   });
 
