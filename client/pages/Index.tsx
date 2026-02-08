@@ -597,23 +597,23 @@ export default function Index() {
                 />*/}
                 {!isAuthed && (
                   <DefaultButton
+                    disabled={isLoading}
                     onClick={async () => {
                       try {
                         await login();
-                        toast.success("Successfully authenticated!");
                       } catch (error) {
                         console.error("Sign up failed:", error);
-                        toast.error("Sign up failed. Please try again.");
                       }
                     }}
-                    text="Sign up now"
+                    text={isLoading ? "Authenticating..." : "Sign up now"}
                     styles={{
                       root: {
                         border: "1px solid rgba(255,255,255,0.4)",
                         backgroundColor: "transparent",
                         color: "rgba(255,255,255,0.9)",
+                        opacity: isLoading ? 0.6 : 1,
                       },
-                      rootHovered: {
+                      rootHovered: isLoading ? {} : {
                         backgroundColor: "rgba(255,255,255,0.1)",
                         color: "rgba(255,255,255,0.9)",
                       },
