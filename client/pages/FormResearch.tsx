@@ -1026,8 +1026,10 @@ export default function FormResearch() {
   const loadBudgetVersions = useCallback(
     async (researchId: string) => {
       try {
+        // Select only necessary fields to reduce payload and use top 20 for performance
+        const budgetVersionSelect = `${BudgetHeaderFields.BUDGETHEADERID},${BudgetHeaderFields.BUDGETNAME},${BudgetHeaderFields.VERSIONNUMBER_BUDGET},${BudgetHeaderFields.STATUS}`;
         const res = await callApi<{ value: any[] }>({
-          url: `/_api/${TableName.BUDGETHEADERS}?$filter=${BudgetHeaderFields.RESEARCH} eq ${researchId}&$select=${BudgetHeaderFields.BUDGETHEADERID},${BudgetHeaderFields.BUDGETNAME},${BudgetHeaderFields.VERSIONNUMBER_BUDGET},${BudgetHeaderFields.STATUS}&$orderby=${BudgetHeaderFields.VERSIONNUMBER_BUDGET} desc`,
+          url: `/_api/${TableName.BUDGETHEADERS}?$filter=${BudgetHeaderFields.RESEARCH} eq ${researchId}&$select=${budgetVersionSelect}&$orderby=${BudgetHeaderFields.VERSIONNUMBER_BUDGET} desc&$top=20`,
           method: "GET",
         });
 
