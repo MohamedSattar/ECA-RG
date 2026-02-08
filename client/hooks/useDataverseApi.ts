@@ -39,8 +39,10 @@ export interface ApiOptions extends RequestInit {
 //   const token = input.getAttribute("value");
 //   return token;
 // };;
+const DATAVERSE_API_BASE = "https://research-grants-spa.powerappsportals.com";
+
 const fetchRequestVerificationToken = async () => {
-  const response = await fetch("/_layout/tokenhtml", {
+  const response = await fetch(`${DATAVERSE_API_BASE}/_layout/tokenhtml`, {
     credentials: "include",
   });
 
