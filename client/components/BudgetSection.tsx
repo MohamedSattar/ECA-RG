@@ -128,7 +128,7 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
         {/* Budget Line Items Section */}
         {showSection && (
           <div style={{ marginTop: "20px" }}>
-            <div className="flex items-center justify-end mb-4">
+            <div className="flex items-center justify-end mb-6">
               {edit && (
                 <PrimaryButton
                   onClick={() => {
@@ -137,8 +137,22 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                     setIsLineDialogOpen(true);
                   }}
                   disabled={form.type === "view"}
+                  styles={{
+                    root: {
+                      backgroundColor: '#1D2054',
+                      borderColor: '#1D2054',
+                    },
+                    rootHovered: {
+                      backgroundColor: '#151b41',
+                      borderColor: '#151b41',
+                    },
+                    rootDisabled: {
+                      backgroundColor: '#cbd5e1',
+                      borderColor: '#cbd5e1',
+                    },
+                  }}
                 >
-                  Add Line Item
+                  + Add Line Item
                 </PrimaryButton>
               )}
             </div>
