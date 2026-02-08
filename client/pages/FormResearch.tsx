@@ -471,106 +471,121 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
   userAdxUserId,
 }) => (
   <Reveal className="mt-8">
-    <div className="mt-4 grid gap-4 md:grid-cols-2">
+    <div className="mt-4 grid gap-6 md:grid-cols-2">
       <div className="md:col-span-2">
         <Label htmlFor="title">Research Title</Label>
-        <TextField
-          id="title"
-          value={form.title}
-          onChange={(e, newValue) => onTitleChange(newValue || "")}
-          placeholder="Enter project title"
-          disabled={form.type === "view"}
-        />
+        <div className="mt-1">
+          <TextField
+            id="title"
+            value={form.title}
+            onChange={(e, newValue) => onTitleChange(newValue || "")}
+            placeholder="Enter project title"
+            disabled={form.type === "view"}
+            borderless
+          />
+        </div>
       </div>
       <div>
         <Label>Application Reference</Label>
-        <LookupPicker
-          key={`application-${applicationIdFromState || "none"}`}
-          displayField={ApplicationKeys.APPLICATIONTITLE}
-          keyField={ApplicationKeys.APPLICATIONID}
-          secondaryField={ApplicationKeys.ABSTRACT}
-          searchField={ApplicationKeys.APPLICATIONTITLE}
-          tableName={TableName.APPLICATIONS}
-          maxSelection={1}
-          label="Application"
-          cascadeField={ApplicationKeys.APPLICATIONID}
-          cascadeValue={applicationIdFromState}
-          isDefaultSelected={applicationIdFromState != null}
-          disabled={form.type === "view"}
-          onSelect={(values) => {
-            onApplicationChange(
-              values && values.length > 0
-                ? values[0][ApplicationKeys.APPLICATIONID]
-                : null,
-            );
-          }}
-        />
+        <div className="mt-1">
+          <LookupPicker
+            key={`application-${applicationIdFromState || "none"}`}
+            displayField={ApplicationKeys.APPLICATIONTITLE}
+            keyField={ApplicationKeys.APPLICATIONID}
+            secondaryField={ApplicationKeys.ABSTRACT}
+            searchField={ApplicationKeys.APPLICATIONTITLE}
+            tableName={TableName.APPLICATIONS}
+            maxSelection={1}
+            label="Application"
+            cascadeField={ApplicationKeys.APPLICATIONID}
+            cascadeValue={applicationIdFromState}
+            isDefaultSelected={applicationIdFromState != null}
+            disabled={form.type === "view"}
+            onSelect={(values) => {
+              onApplicationChange(
+                values && values.length > 0
+                  ? values[0][ApplicationKeys.APPLICATIONID]
+                  : null,
+              );
+            }}
+          />
+        </div>
       </div>
       <div>
         <Label>Research Area</Label>
-        <LookupPicker
-          key={`research-area-${researchAreaIdFromState || "none"}`}
-          displayField={ResearchAreaKeys.AREANAME}
-          keyField={ResearchAreaKeys.RESEARCHAREAID}
-          secondaryField={ResearchAreaKeys.AREADESCRIPTION}
-          searchField={ResearchAreaKeys.AREANAME}
-          tableName={TableName.RESEARCHAREAS}
-          maxSelection={1}
-          label="Research Area"
-          cascadeField={ResearchAreaKeys.RESEARCHAREAID}
-          cascadeValue={researchAreaIdFromState}
-          isDefaultSelected={researchAreaIdFromState != null}
-          disabled={form.type === "view"}
-          onSelect={(values) => {
-            onResearchAreaChange(
-              values && values.length > 0
-                ? values[0][ResearchAreaKeys.RESEARCHAREAID]
-                : null,
-            );
-          }}
-        />
+        <div className="mt-1">
+          <LookupPicker
+            key={`research-area-${researchAreaIdFromState || "none"}`}
+            displayField={ResearchAreaKeys.AREANAME}
+            keyField={ResearchAreaKeys.RESEARCHAREAID}
+            secondaryField={ResearchAreaKeys.AREADESCRIPTION}
+            searchField={ResearchAreaKeys.AREANAME}
+            tableName={TableName.RESEARCHAREAS}
+            maxSelection={1}
+            label="Research Area"
+            cascadeField={ResearchAreaKeys.RESEARCHAREAID}
+            cascadeValue={researchAreaIdFromState}
+            isDefaultSelected={researchAreaIdFromState != null}
+            disabled={form.type === "view"}
+            onSelect={(values) => {
+              onResearchAreaChange(
+                values && values.length > 0
+                  ? values[0][ResearchAreaKeys.RESEARCHAREAID]
+                  : null,
+              );
+            }}
+          />
+        </div>
       </div>
       <div>
         <Label>Principal Investigator</Label>
-        <LookupPicker
-          key={`principal-investigator-${userAdxUserId || "none"}`}
-          displayField={ContactKeys.FULLNAME}
-          keyField={ContactKeys.CONTACTID}
-          secondaryField={ContactKeys.EMAILADDRESS1}
-          searchField={ContactKeys.FULLNAME}
-          tableName={TableName.CONTACTS}
-          maxSelection={1}
-          label="Contact"
-          cascadeField={ContactKeys.ADX_USERID}
-          cascadeValue={userAdxUserId}
-          isDefaultSelected={true}
-          disabled={form.type === "view"}
-          onSelect={(value) => {
-            if (value && value.length > 0) {
-              onPrincipalInvestigatorChange(value[0][ContactKeys.CONTACTID]);
-            }
-          }}
-        />
+        <div className="mt-1">
+          <LookupPicker
+            key={`principal-investigator-${userAdxUserId || "none"}`}
+            displayField={ContactKeys.FULLNAME}
+            keyField={ContactKeys.CONTACTID}
+            secondaryField={ContactKeys.EMAILADDRESS1}
+            searchField={ContactKeys.FULLNAME}
+            tableName={TableName.CONTACTS}
+            maxSelection={1}
+            label="Contact"
+            cascadeField={ContactKeys.ADX_USERID}
+            cascadeValue={userAdxUserId}
+            isDefaultSelected={true}
+            disabled={form.type === "view"}
+            onSelect={(value) => {
+              if (value && value.length > 0) {
+                onPrincipalInvestigatorChange(value[0][ContactKeys.CONTACTID]);
+              }
+            }}
+          />
+        </div>
       </div>
       <div>
         <Label>Submission Date</Label>
-        <TextField value={form.submissionDate} readOnly />
+        <div className="mt-1">
+          <TextField value={form.submissionDate} readOnly borderless />
+        </div>
       </div>
       <div>
         <Label>Start Date</Label>
-        <DatePicker
-          value={form.startDate}
-          onSelectDate={onStartDateChange}
-          disabled={form.type === "view"}
-        />
+        <div className="mt-1">
+          <DatePicker
+            value={form.startDate}
+            onSelectDate={onStartDateChange}
+            disabled={form.type === "view"}
+          />
+        </div>
       </div>
       <div>
         <Label>End Date</Label>
-        <DatePicker
-          value={form.endDate}
-          onSelectDate={onEndDateChange}
-          disabled={form.type === "view"}
-        />
+        <div className="mt-1">
+          <DatePicker
+            value={form.endDate}
+            onSelectDate={onEndDateChange}
+            disabled={form.type === "view"}
+          />
+        </div>
       </div>
     </div>
   </Reveal>
