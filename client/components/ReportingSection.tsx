@@ -753,36 +753,36 @@ export const ReportingSection: React.FC<ReportingSectionProps> = ({
               </FluentDialogFooter>
             </FluentDialog>
 
-            <div className="rounded-lg border overflow-hidden">
+            <div className="rounded-lg border border-[#e2e8f0] overflow-hidden shadow-sm">
               <table className="min-w-full text-sm">
-                <thead className="bg-[#f6e4d8]">
+                <thead className="bg-[#1D2054]">
                   <tr className="text-left">
-                    <th className="px-4 py-2 font-semibold text-[#2b201a]">
+                    <th className="px-6 py-3 font-semibold text-white">
                       Report Title
                     </th>
-                    <th className="px-4 py-2 font-semibold text-[#2b201a]">
+                    <th className="px-6 py-3 font-semibold text-white">
                       Reporting Year
                     </th>
-                    <th className="px-4 py-2 font-semibold text-[#2b201a]">
+                    <th className="px-6 py-3 font-semibold text-white">
                       Reporting Month
                     </th>
-                    <th className="px-4 py-2 font-semibold text-[#2b201a]">
+                    <th className="px-6 py-3 font-semibold text-white">
                       Reporting Date
                     </th>
-                    <th className="px-4 py-2 font-semibold text-[#2b201a]">
+                    <th className="px-6 py-3 font-semibold text-white">
                       Budget Spent (AED)
                     </th>
-                    <th className="px-4 py-2 font-semibold text-[#2b201a]">
+                    <th className="px-6 py-3 font-semibold text-white">
                       Overall Health
                     </th>
-                    <th className="px-4 py-2 font-semibold text-[#2b201a]">
+                    <th className="px-6 py-3 font-semibold text-white">
                       Achievements
                     </th>
-                    <th className="px-4 py-2 font-semibold text-[#2b201a]">
+                    <th className="px-6 py-3 font-semibold text-white">
                       Attachments
                     </th>
                     {edit && (
-                      <th className="px-4 py-2 font-semibold text-[#2b201a] text-right">
+                      <th className="px-6 py-3 font-semibold text-white text-right">
                         Actions
                       </th>
                     )}
@@ -790,24 +790,26 @@ export const ReportingSection: React.FC<ReportingSectionProps> = ({
                 </thead>
                 <tbody>
                   {reportItems.map((item, index) => (
-                    <tr key={item.id || index} className="border-t">
-                      <td className="px-4 py-2 font-medium text-[#2b201a]">
+                    <tr key={item.id || index} className={`border-t border-[#e2e8f0] transition-colors ${
+                        index % 2 === 0 ? 'bg-white' : 'bg-[#f8fafc]'
+                      } hover:bg-[#f0f4f8]`}>
+                      <td className="px-6 py-3 font-medium text-[#1e293b]">
                         {item.prmtk_reporttitle}
                       </td>
-                      <td className="px-4 py-2">{item.prmtk_reportingyear}</td>
-                      <td className="px-4 py-2">{item.prmtk_reportingmonth}</td>
-                      <td className="px-4 py-2">
+                      <td className="px-6 py-3 text-[#475569]">{item.prmtk_reportingyear}</td>
+                      <td className="px-6 py-3 text-[#475569]">{item.prmtk_reportingmonth}</td>
+                      <td className="px-6 py-3 text-[#475569]">
                         {formatDateOnly(item.reportingDate)}
                       </td>
-                      <td className="px-4 py-2">
+                      <td className="px-6 py-3 font-medium text-[#1e293b]">
                         {aedFormat(item.prmtk_budgetspent || 0)}
                       </td>
-                      <td className="px-4 py-2">
+                      <td className="px-6 py-3 text-[#475569]">
                         {getHealthIndicatorText(
                           item.prmtk_researchhealthindicator,
                         )}
                       </td>
-                      <td className="px-4 py-2">
+                      <td className="px-6 py-3 text-[#475569]">
                         {item.prmtk_achievements ? (
                           <div
                             className="max-w-xs truncate"
@@ -819,7 +821,7 @@ export const ReportingSection: React.FC<ReportingSectionProps> = ({
                           "-"
                         )}
                       </td>
-                      <td className="px-4 py-2">
+                      <td className="px-6 py-3">
                         {item.files && item.files.length > 0 ? (
                           <div className="flex flex-col gap-1">
                             {item.files.map((fileItem, fileIdx) => {
@@ -847,9 +849,9 @@ export const ReportingSection: React.FC<ReportingSectionProps> = ({
                         )}
                       </td>
                       {edit && (
-                        <td className="px-4 py-2 text-right">
+                        <td className="px-6 py-3 text-right">
                           {item.action === "remove" ? (
-                            <span className="text-muted-foreground">
+                            <span className="text-[#94a3b8] line-through">
                               Removed
                             </span>
                           ) : (
@@ -860,6 +862,14 @@ export const ReportingSection: React.FC<ReportingSectionProps> = ({
                                 iconProps={{ iconName: "Edit" }}
                                 title="Edit"
                                 ariaLabel="Edit"
+                                styles={{
+                                  root: {
+                                    color: '#1D2054',
+                                  },
+                                  rootDisabled: {
+                                    color: '#cbd5e1',
+                                  },
+                                }}
                               />
                               <IconButton
                                 disabled={form.type === "view"}
@@ -867,6 +877,14 @@ export const ReportingSection: React.FC<ReportingSectionProps> = ({
                                 iconProps={{ iconName: "Delete" }}
                                 title="Remove"
                                 ariaLabel="Remove"
+                                styles={{
+                                  root: {
+                                    color: '#dc2626',
+                                  },
+                                  rootDisabled: {
+                                    color: '#cbd5e1',
+                                  },
+                                }}
                               />
                             </div>
                           )}
@@ -878,7 +896,7 @@ export const ReportingSection: React.FC<ReportingSectionProps> = ({
                     <tr>
                       <td
                         colSpan={edit ? 9 : 8}
-                        className="px-4 py-6 text-center text-muted-foreground"
+                        className="px-6 py-8 text-center text-[#94a3b8]"
                       >
                         No reports added.
                       </td>
