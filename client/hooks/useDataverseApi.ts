@@ -108,14 +108,13 @@ export function useDataverseApi() {
         ...(options.headers || {}),
       };
 
-      // Add authentication only if not skipped (for public APIs)
+      // Add request verification token only if not skipped (for public APIs)
       if (!options.skipAuth) {
         const token = await getToken();
         if (token) {
-          headers.Authorization = `Bearer ${token}`;
           headers.__RequestVerificationToken = token;
         } else {
-          console.warn("[API] No authentication token available");
+          console.warn("[API] No request verification token available");
         }
       }
 
