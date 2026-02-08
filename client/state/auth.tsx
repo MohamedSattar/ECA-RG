@@ -25,7 +25,7 @@ interface UserProfile {
 interface AuthContextShape {
   isAuthed: boolean;
   user: UserProfile | null;
-  login: () => void;
+  login: (isSignup?: boolean) => void;
   logout: () => void;
   isLoading: boolean;
   isLoggingIn?: boolean;
