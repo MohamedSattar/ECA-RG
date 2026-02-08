@@ -6,20 +6,7 @@ import { useAuth } from "@/state/auth";
 import { useEffect, useMemo, useState } from "react";
 import { IconButton } from "@fluentui/react/lib/Button";
 
-interface ResearchItem {
-  id: string;
-  title: string;
-  submittedAt: string;
-  status: "Draft" | "Submitted" | "In Review" | "Approved" | "Rejected";
-}
-
-const researches: ResearchItem[] = [
-  { id: "res-101", title: "Cognitive Development Patterns in Preschoolers", submittedAt: "2025-01-05", status: "In Review" },
-  { id: "res-102", title: "Impact of Outdoor Activities on Early Learning", submittedAt: "2024-12-27", status: "Submitted" },
-  { id: "res-103", title: "Digital Tools for Early Literacy", submittedAt: "2024-12-03", status: "Draft" },
-];
-
-function StatusBadge({ value }: { value: ResearchItem["status"] }) {
+function StatusBadge({ value }: { value?: string | null }) {
   const cls =
     value === "Approved"
       ? "bg-green-100 text-green-800 border-green-200"
