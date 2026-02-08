@@ -448,26 +448,18 @@ const viewFile = (fileData: {
 interface GeneralInformationSectionProps {
   form: FormState;
   onTitleChange: (value: string) => void;
-  onApplicationChange: (applicationId: string | null) => void;
-  onResearchAreaChange: (areaId: string | null) => void;
   onPrincipalInvestigatorChange: (contactId: string) => void;
   onStartDateChange: (date?: Date) => void;
   onEndDateChange: (date?: Date) => void;
-  applicationIdFromState: string | undefined;
-  researchAreaIdFromState: string | undefined;
   userAdxUserId?: string;
 }
 
 const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
   form,
   onTitleChange,
-  onApplicationChange,
-  onResearchAreaChange,
   onPrincipalInvestigatorChange,
   onStartDateChange,
   onEndDateChange,
-  applicationIdFromState,
-  researchAreaIdFromState,
   userAdxUserId,
 }) => (
   <Reveal className="mt-8">
