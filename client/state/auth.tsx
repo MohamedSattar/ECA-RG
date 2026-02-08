@@ -130,6 +130,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [isAuthed, setAuthed] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isInteractionInProgress, setIsInteractionInProgress] = useState(false);
 
   /* -----------------------------------------------
      HANDLE REDIRECT LOGIN
