@@ -68,6 +68,9 @@ async function handleDataverseProxy(req: express.Request, res: express.Response)
       res.setHeader("OData-Version", response.headers.get("odata-version")!);
     }
 
+    // Ensure CORS headers are set
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+
     // Send response
     if (contentType?.includes("application/json")) {
       res.json(data);
