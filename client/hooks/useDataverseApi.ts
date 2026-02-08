@@ -140,6 +140,12 @@ export function useDataverseApi() {
       }
 
       const text = await res.text();
+      console.log(`[API] Response body (first 500 chars):`, text?.substring(0, 500));
+
+      if (!res.ok) {
+        console.error(`[API] API Error ${res.status}: ${text?.substring(0, 200)}`);
+      }
+
       try {
         const returnvalue = text ? (JSON.parse(text) as T) : ({} as T);
         (returnvalue as any).status = res.status;
