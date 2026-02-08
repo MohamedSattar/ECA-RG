@@ -40,26 +40,36 @@ export interface ApiOptions extends RequestInit {
 //   return token;
 // };;
 const fetchRequestVerificationToken = async () => {
-  const response = await fetch(`/_layout/tokenhtml`, {
-    credentials: "include",
-  });
+  try {
+    console.log("[Token] Fetching verification token...");
+    const response = await fetch(`/_layout/tokenhtml`, {
+      credentials: "include",
+    });
 
-  if (!response.ok) {
-    throw new Error("Failed to fetch verification token");
+    console.log(`[Token] Response: ${response.status} ${response.statusText}`);
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch verification token: ${response.status} ${response.statusText}`);
+    }
+
+    const text = await response.text();
+    const doc = new DOMParser().parseFromString(text, "text/html");
+
+    const input = doc.querySelector<HTMLInputElement>(
+      'input[name="__RequestVerificationToken"]',
+    );
+
+    if (!input?.value) {
+      console.warn("[Token] RequestVerificationToken not found in HTML response");
+      throw new Error("RequestVerificationToken not found");
+    }
+
+    console.log("[Token] Successfully fetched verification token");
+    return input.value;
+  } catch (err) {
+    console.error("[Token] Error fetching verification token:", err);
+    throw err;
   }
-
-  const text = await response.text();
-  const doc = new DOMParser().parseFromString(text, "text/html");
-
-  const input = doc.querySelector<HTMLInputElement>(
-    'input[name="__RequestVerificationToken"]',
-  );
-
-  if (!input?.value) {
-    throw new Error("RequestVerificationToken not found");
-  }
-
-  return input.value;
 };
 
 export function useDataverseApi() {
