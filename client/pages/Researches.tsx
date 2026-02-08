@@ -92,6 +92,66 @@ export default function Researches() {
     );
   };
 
+  const SummaryCard = ({ number, label, link, color }) => {
+    return (
+      <div className="flex items-center gap-4">
+        <div
+          className={`${color} text-white w-12 h-12 flex items-center justify-center rounded-full font-bold`}
+        >
+          {number}
+        </div>
+
+        <div>
+          <p className="font-semibold">{label}</p>
+          <a href="#" className="text-sm text-gray-500 underline">
+            {link}
+          </a>
+        </div>
+      </div>
+    );
+  };
+
+  const SummaryCards = () => {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-white p-6 border border-[#FAE7DD] rounded-xl mt-10 mb-6">
+        <SummaryCard
+          number={researches.length.toString()}
+          label="Total Researches"
+          link="Check all researches"
+          color="bg-[#1D2153]"
+        />
+
+        <SummaryCard
+          number={researches
+            .filter(
+              (res) =>
+                res[ResearchKeys.RESEARCHSTATUS_FORMATTED]
+                  ?.toLowerCase()
+                  .indexOf("reject") !== -1,
+            )
+            .length.toString()}
+          label="Rejected"
+          link="Check all researches"
+          color="bg-red-500"
+        />
+
+        <SummaryCard
+          number={researches
+            .filter(
+              (res) =>
+                res[ResearchKeys.RESEARCHSTATUS_FORMATTED]
+                  ?.toLowerCase()
+                  .indexOf("approve") !== -1,
+            )
+            .length.toString()}
+          label="Approved"
+          link="Check all researches"
+          color="bg-green-500"
+        />
+      </div>
+    );
+  };
+
   return (
     <section className="bg-white">
       <div className="container py-16">
