@@ -99,12 +99,16 @@ export function useDataverseApi() {
     }
 
     // Call through backend proxy (/_api/* routes to Dataverse API)
+    console.log(`[API] ${options.method || "GET"} ${options.url}`);
+
     const res = await fetch(options.url, {
       credentials: "include",
       method: options.method || "GET",
       body: options.data ? JSON.stringify(options.data) : null,
       headers,
     });
+
+    console.log(`[API] Response: ${res.status} ${res.statusText}`);
 
     // Detect redirects (usually not authenticated)
     if (res.redirected) {
@@ -119,8 +123,9 @@ export function useDataverseApi() {
       (returnvalue as any).status = res.status;
       (returnvalue as any).headers = res.headers;
       return returnvalue;
-    } catch {
+    } catch (parseErr) {
       // Non-JSON response — return raw text
+      console.warn(`[API] Non-JSON response from ${options.url}:`, text?.substring(0, 200));
       return text as unknown as T;
     }
   };
