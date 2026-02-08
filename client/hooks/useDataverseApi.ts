@@ -55,20 +55,29 @@ const fetchRequestVerificationToken = async () => {
     }
 
     const text = await response.text();
+    console.log("[Token] HTML Response (first 500 chars):", text?.substring(0, 500));
+
     const doc = new DOMParser().parseFromString(text, "text/html");
 
-    const input = doc.querySelector<HTMLInputElement>(
+    // Try multiple selectors to find the token
+    let input = doc.querySelector<HTMLInputElement>(
       'input[name="__RequestVerificationToken"]',
     );
+
+    if (!input) {
+      console.log("[Token] Trying alternative selector...");
+      input = doc.querySelector<HTMLInputElement>('#__RequestVerificationToken');
+    }
 
     if (!input?.value) {
       console.warn(
         "[Token] RequestVerificationToken not found in HTML response",
       );
+      console.warn("[Token] HTML content:", text);
       throw new Error("RequestVerificationToken not found");
     }
 
-    console.log("[Token] Successfully fetched verification token");
+    console.log("[Token] Successfully fetched verification token:", input.value?.substring(0, 20) + "...");
     return input.value;
   } catch (err) {
     console.error("[Token] Error fetching verification token:", err);
