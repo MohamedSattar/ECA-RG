@@ -738,7 +738,7 @@ export default function Index() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x">
                     <div className="p-6 animate-in fade-in-50 duration-700">
                       <div className="text-2xl md:text-3xl font-extrabold tracking-tight">
-                        {formatAedMillion(grant[GrantCycleKeys.CYCLEBUDGET])}
+                        {formatAedMillion(totalAllocatedBudget)}
                       </div>
                       <div className="text-sm text-muted-foreground mt-1">
                         Total Funding Available
