@@ -1268,6 +1268,60 @@ export default function FormApplication() {
             </div>
           )}
 
+          {/* Grant Cycle and Research Area Section */}
+          <div className="mt-8 grid gap-6 md:grid-cols-2">
+            <div>
+              <Label>Grant Cycle</Label>
+              <div className="mt-1">
+                <LookupPicker
+                  key={`grant-cycle-${form.grantCycle || "none"}`}
+                  displayField={GrantCycleKeys.CYCLENAME}
+                  keyField={GrantCycleKeys.GRANTCYCLEID}
+                  secondaryField={GrantCycleKeys.CYCLEDESCRIPTION}
+                  searchField={GrantCycleKeys.CYCLENAME}
+                  tableName={TableName.GRANTCYCLES}
+                  maxSelection={1}
+                  disabled={formType === "view"}
+                  label="Grant Cycle"
+                  cascadeField={GrantCycleKeys.GRANTCYCLEID}
+                  cascadeValue={grantCycleId}
+                  isDefaultSelected={grantCycleId != null}
+                  onSelect={(values) => {
+                    setForm((prev) => ({
+                      ...prev,
+                      grantCycle: values && values.length > 0 ? values[0][GrantCycleKeys.GRANTCYCLEID] : null,
+                    }));
+                  }}
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Research Area</Label>
+              <div className="mt-1">
+                <LookupPicker
+                  key={`research-area-${form.researchArea || "none"}`}
+                  displayField={ResearchAreaKeys.AREANAME}
+                  keyField={ResearchAreaKeys.RESEARCHAREAID}
+                  secondaryField={ResearchAreaKeys.AREADESCRIPTION}
+                  searchField={ResearchAreaKeys.AREANAME}
+                  tableName={TableName.RESEARCHAREAS}
+                  maxSelection={1}
+                  label="Research Area"
+                  cascadeField={ResearchAreaKeys.RESEARCHAREAID}
+                  cascadeValue={researchAreaId}
+                  isDefaultSelected={researchAreaId != null}
+                  disabled={formType === "view"}
+                  onSelect={(values) => {
+                    setForm((prev) => ({
+                      ...prev,
+                      researchArea: values && values.length > 0 ? values[0][ResearchAreaKeys.RESEARCHAREAID] : null,
+                    }));
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
           {/* General Information Section */}
           <div className="mt-8 rounded-xl border bg-white p-6">
             <div className="flex items-center justify-between">
