@@ -87,19 +87,53 @@ const fetchRequestVerificationToken = async () => {
 };
 
 export function useDataverseApi() {
+  const { instance, accounts } = useMsal();
   let cachedToken: string | null = null;
+  let cachedBearerToken: string | null = null;
+  let bearerTokenExpiryTime: number = 0;
 
   const getToken = async () => {
     try {
       if (cachedToken) {
-        console.log("[Token] Using cached token");
+        console.log("[Token] Using cached verification token");
         return cachedToken;
       }
       cachedToken = await fetchRequestVerificationToken();
       return cachedToken;
     } catch (err) {
-      console.error("[Token] Failed to get token:", err);
+      console.error("[Token] Failed to get verification token:", err);
       cachedToken = null;
+      return null;
+    }
+  };
+
+  const getBearerToken = async () => {
+    try {
+      // Check if cached token is still valid
+      if (cachedBearerToken && bearerTokenExpiryTime > Date.now()) {
+        console.log("[Bearer] Using cached bearer token");
+        return cachedBearerToken;
+      }
+
+      if (!accounts || accounts.length === 0) {
+        console.warn("[Bearer] No Azure accounts found");
+        return null;
+      }
+
+      const response = await instance.acquireTokenSilent({
+        scopes: ["https://service.crm.dynamics.com/.default"],
+        account: accounts[0],
+      });
+
+      cachedBearerToken = response.accessToken;
+      // Set expiry time to token expiration minus 5 minutes
+      bearerTokenExpiryTime = response.expiresOn.getTime() - 5 * 60 * 1000;
+      console.log("[Bearer] Successfully obtained bearer token");
+      return cachedBearerToken;
+    } catch (err) {
+      console.error("[Bearer] Failed to get bearer token:", err);
+      cachedBearerToken = null;
+      bearerTokenExpiryTime = 0;
       return null;
     }
   };
@@ -126,7 +160,15 @@ export function useDataverseApi() {
           console.log("[API] Request verification token added to headers");
         } else {
           console.error("[API] Failed to obtain request verification token - request will likely fail");
-          // Don't throw here, proceed without token to see the actual error
+        }
+
+        // Add Azure Bearer token for authenticated API calls
+        const bearerToken = await getBearerToken();
+        if (bearerToken) {
+          headers.Authorization = `Bearer ${bearerToken}`;
+          console.log("[API] Bearer token added to Authorization header");
+        } else {
+          console.warn("[API] Failed to obtain bearer token");
         }
       }
 
