@@ -303,6 +303,10 @@ interface GeneralInformationSectionProps {
   form: FormState;
   onTitleChange: (value: string) => void;
   onAbstractChange: (value: string) => void;
+  onGrantCycleChange: (value: string | null) => void;
+  onResearchAreaChange: (value: string | null) => void;
+  grantCycleId?: string | null;
+  researchAreaId?: string | null;
   userAdxUserId?: string;
 }
 
@@ -310,6 +314,10 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
   form,
   onTitleChange,
   onAbstractChange,
+  onGrantCycleChange,
+  onResearchAreaChange,
+  grantCycleId,
+  researchAreaId,
   userAdxUserId,
 }) => {
   const { user } = useAuth();
@@ -318,6 +326,54 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
   return (
     <Reveal className="mt-8">
       <div className="mt-4 grid gap-6 md:grid-cols-2">
+        <div>
+          <Label>Grant Cycle</Label>
+          <div className="mt-1">
+            <LookupPicker
+              key={`grant-cycle-${form.grantCycle || "none"}`}
+              displayField={GrantCycleKeys.CYCLENAME}
+              keyField={GrantCycleKeys.GRANTCYCLEID}
+              secondaryField={GrantCycleKeys.CYCLEDESCRIPTION}
+              searchField={GrantCycleKeys.CYCLENAME}
+              tableName={TableName.GRANTCYCLES}
+              maxSelection={1}
+              disabled={formType === "view"}
+              label="Grant Cycle"
+              cascadeField={GrantCycleKeys.GRANTCYCLEID}
+              cascadeValue={grantCycleId}
+              isDefaultSelected={grantCycleId != null}
+              onSelect={(values) => {
+                onGrantCycleChange(
+                  values && values.length > 0 ? values[0][GrantCycleKeys.GRANTCYCLEID] : null
+                );
+              }}
+            />
+          </div>
+        </div>
+        <div>
+          <Label>Research Area</Label>
+          <div className="mt-1">
+            <LookupPicker
+              key={`research-area-${form.researchArea || "none"}`}
+              displayField={ResearchAreaKeys.AREANAME}
+              keyField={ResearchAreaKeys.RESEARCHAREAID}
+              secondaryField={ResearchAreaKeys.AREADESCRIPTION}
+              searchField={ResearchAreaKeys.AREANAME}
+              tableName={TableName.RESEARCHAREAS}
+              maxSelection={1}
+              label="Research Area"
+              cascadeField={ResearchAreaKeys.RESEARCHAREAID}
+              cascadeValue={researchAreaId}
+              isDefaultSelected={researchAreaId != null}
+              disabled={formType === "view"}
+              onSelect={(values) => {
+                onResearchAreaChange(
+                  values && values.length > 0 ? values[0][ResearchAreaKeys.RESEARCHAREAID] : null
+                );
+              }}
+            />
+          </div>
+        </div>
         <div className="md:col-span-2">
           <Label htmlFor="title">
             Title <span className="text-red-500">*</span>
