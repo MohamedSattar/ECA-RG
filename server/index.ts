@@ -13,9 +13,13 @@ async function handleDataverseProxy(
     // Extract the API path (everything after the domain)
     let apiPath = req.path;
 
-    // For image proxy requests, rewrite the path from /_images/_api/... to /_api/...
+    console.log(`[Proxy] Original request path: ${req.path}`);
+    console.log(`[Proxy] Original request URL: ${req.url}`);
+
+    // For image proxy requests, rewrite the path from /_images/... to /...
     if (apiPath.startsWith("/_images/")) {
       apiPath = apiPath.replace("/_images", ""); // Remove /_images prefix, keep the rest
+      console.log(`[Proxy] Image proxy detected, rewritten path: ${apiPath}`);
     }
 
     const fullUrl = new URL(DATAVERSE_BASE_URL + apiPath);
@@ -24,11 +28,12 @@ async function handleDataverseProxy(
     if (req.url.includes("?")) {
       const queryPart = req.url.substring(req.url.indexOf("?"));
       fullUrl.search = queryPart;
+      console.log(`[Proxy] Query parameters added: ${queryPart}`);
     }
 
     // Log the request for debugging
     console.log(`[Proxy] ${req.method} ${req.path}`);
-    console.log(`[Proxy] Target: ${fullUrl.toString()}`);
+    console.log(`[Proxy] Final target URL: ${fullUrl.toString()}`);
     console.log(`[Proxy] Headers:`, {
       authorization: req.headers.authorization ? "***" : "none",
       requestverificationtoken: req.headers["__requestverificationtoken"] ? "***" : "none",
