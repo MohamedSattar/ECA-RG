@@ -7,8 +7,8 @@ const DATAVERSE_BASE_URL = "https://research-grants-spa.powerappsportals.com";
 
 async function handleDataverseProxy(req: express.Request, res: express.Response) {
   try {
-    // Extract the API path after /api/dataverse
-    const apiPath = req.path.replace(/^\/api\/dataverse/, "");
+    // Extract the API path (everything after the domain)
+    const apiPath = req.path;
     const fullUrl = new URL(DATAVERSE_BASE_URL + apiPath);
 
     // Preserve query parameters
