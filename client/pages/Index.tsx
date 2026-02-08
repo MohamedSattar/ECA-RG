@@ -145,9 +145,8 @@ function GrantCard({
           src={
             image
               ? (() => {
-                  // Check if &full=true is already in the URL
-                  const url = image.startsWith('/') ? image : `/${image}`;
-                  return url.includes('full=true') ? url : `${url}${url.includes('?') ? '&' : '?'}full=true`;
+                  // Ensure full=true is appended for better image quality
+                  return image.includes('full=true') ? image : `${image}${image.includes('?') ? '&' : '?'}full=true`;
                 })()
               : ''
           }
