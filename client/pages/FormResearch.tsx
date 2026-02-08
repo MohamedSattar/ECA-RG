@@ -1076,10 +1076,10 @@ export default function FormResearch() {
         if (!budgetData) return;
 
         // Use expanded line items instead of separate call
-        const lineItemsRes = budgetData[ExpandRelations.BUDGET_LINE_ITEMS] || [];
+        const lineItems = budgetData[ExpandRelations.BUDGET_LINE_ITEMS] || [];
 
         const budgetHeader = mapBudgetHeader(budgetData);
-        const budgetLineItems = mapBudgetLineItems(lineItemsRes?.value || []);
+        const budgetLineItems = mapBudgetLineItems(lineItems);
 
         setForm((prev) => ({
           ...prev,
