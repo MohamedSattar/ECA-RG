@@ -218,7 +218,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       isLoading,
       isLoggingIn: isInteractionInProgress,
 
-      login: async () => {
+      login: async (isSignup?: boolean) => {
         try {
           // Prevent concurrent login attempts
           if (isInteractionInProgress) {
@@ -245,10 +245,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
           }
 
           setIsInteractionInProgress(true);
-          console.log("[Auth] Starting SSO login...");
+          const requestType = isSignup ? "signup" : "login";
+          console.log(`[Auth] Starting SSO ${requestType}...`);
 
           // Use redirect for full page navigation
-          await instance.loginRedirect(loginRequest);
+          const request = isSignup ? signupRequest : loginRequest;
+          await instance.loginRedirect(request);
         } catch (error: any) {
           // Handle specific MSAL errors
           if (error?.errorCode === "user_cancelled") {
