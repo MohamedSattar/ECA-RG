@@ -74,13 +74,17 @@ const fetchRequestVerificationToken = async () => {
 
 export function useDataverseApi() {
   let cachedToken: string | null = null;
+
   const getToken = async () => {
-    // return "FfOvx9ULJl5zJMz0uHfG_7KnekSL4NDLPUjk9AH3wNcxSKlqWJ2niXpe51VPre07eD_vfkHaXzohtPQxC_e2IXaz2GHqNJ3gcVSyUpPZhug1";
-    // if (cachedToken) return cachedToken;
     try {
+      if (cachedToken) {
+        console.log("[Token] Using cached token");
+        return cachedToken;
+      }
       cachedToken = await fetchRequestVerificationToken();
       return cachedToken;
-    } catch {
+    } catch (err) {
+      console.error("[Token] Failed to get token:", err);
       cachedToken = null;
       return null;
     }
