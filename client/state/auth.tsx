@@ -208,13 +208,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
       
       login: async () => {
         try {
+          console.log("[Auth] Starting SSO login...");
           // Use popup for iframe compatibility (vs redirect which doesn't work in iframes)
           const response = await instance.loginPopup(loginRequest);
           if (response?.account) {
+            console.log("[Auth] Login successful, creating user profile...");
             const loggedUser = await createUserProfile(response.account, callApi);
             authStorage.setUser(loggedUser);
             setUser(loggedUser);
             setAuthed(true);
+            console.log("[Auth] User authenticated:", loggedUser.email);
+            toast.success(`Welcome, ${loggedUser.name}!`);
           }
         } catch (error: any) {
           console.error("Login error:", error);
@@ -225,8 +229,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
               "Azure B2C endpoint resolution failed. Check authority configuration.",
               error
             );
+            toast.error(
+              "Authentication service unavailable. Please try again later."
+            );
           } else if (error?.errorCode === "network_error") {
             console.error("Network error during authentication", error);
+            toast.error("Network error. Please check your connection.");
+          } else if (error?.errorCode === "user_cancelled") {
+            console.log("User cancelled the login request");
+            // Don't show error toast for user cancellation
+          } else {
+            toast.error("Authentication failed. Please try again.");
           }
 
           // Re-throw to be caught by caller if needed
@@ -236,12 +249,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       logout: async () => {
         try {
+          console.log("[Auth] Logging out...");
           clearAuthState(setAuthed, setUser);
           // Use popup for iframe compatibility (vs redirect which doesn't work in iframes)
           await instance.logoutPopup();
+          console.log("[Auth] Logout successful");
+          toast.success("You have been logged out.");
         } catch (error) {
           console.error("Logout error:", error);
           clearAuthState(setAuthed, setUser);
+          toast.success("You have been logged out.");
         }
       },
     }),
