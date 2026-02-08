@@ -110,14 +110,15 @@ export const TeamMemberSection: React.FC<TeamMemberSectionProps> = ({
   return (
     <Reveal className="mt-6">
       <>
-        <div className="flex items-center justify-end">
-          <PrimaryButton
-            onClick={() => setIsDialogOpen(true)}
-            disabled={form.type === "view"}
-          >
-            Add member
-          </PrimaryButton>
-        </div>
+        {form.type !== "view" && (
+          <div className="flex items-center justify-end">
+            <PrimaryButton
+              onClick={() => setIsDialogOpen(true)}
+            >
+              Add member
+            </PrimaryButton>
+          </div>
+        )}
         <FluentDialog
           hidden={!isDialogOpen}
           onDismiss={handleDialogDismiss}
@@ -235,32 +236,28 @@ export const TeamMemberSection: React.FC<TeamMemberSectionProps> = ({
                 <td className="px-6 py-3 text-right">
                   {m.action === "remove" ? (
                     <span className="text-[#94a3b8]">Removed</span>
-                  ) : (
+                  ) : form.type !== "view" ? (
                     <>
                       <IconButton
-                        disabled={form.type === "view"}
                         onClick={() => handleEditClick(m)}
                         iconProps={{ iconName: "Edit" }}
                         title="Edit"
                         ariaLabel="Edit"
                         styles={{
-                          root: { color: '#1D2054' },
-                          rootDisabled: { color: '#cbd5e1' }
+                          root: { color: '#1D2054' }
                         }}
                       />
                       <IconButton
-                        disabled={form.type === "view"}
                         onClick={() => onRemoveMember(m.id)}
                         iconProps={{ iconName: "Delete" }}
                         title="Remove"
                         ariaLabel="Remove"
                         styles={{
-                          root: { color: '#dc2626' },
-                          rootDisabled: { color: '#cbd5e1' }
+                          root: { color: '#dc2626' }
                         }}
                       />
                     </>
-                  )}
+                  ) : null}
                 </td>
               </tr>
             ))}
