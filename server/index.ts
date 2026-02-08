@@ -85,8 +85,9 @@ async function handleDataverseProxy(req: express.Request, res: express.Response)
       res.send(data);
     }
   } catch (err) {
-    console.error("Dataverse proxy error:", err);
-    console.error("Failed URL:", DATAVERSE_BASE_URL + req.path);
+    console.error(`[Proxy] Error on ${req.method} ${req.path}`);
+    console.error(`[Proxy] Target URL: ${DATAVERSE_BASE_URL + req.path}`);
+    console.error(`[Proxy] Error details:`, err);
     res.status(502).json({ error: "Proxy error", details: String(err) });
   }
 }
