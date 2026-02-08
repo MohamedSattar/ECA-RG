@@ -668,8 +668,11 @@ export default function FormResearch() {
       return;
     }
     try {
+      // Select only necessary fields to reduce payload
+      const reportSelect = `${StatusReportFields.STATUSREPORTID},${StatusReportFields.REPORTTITLE},${StatusReportFields.REPORTINGYEAR},${StatusReportFields.REPORTINGMONTH},${StatusReportFields.REPORTINGDATE},${StatusReportFields.BUDGETSPENT_BASE},${StatusReportFields.RESEARCHHEALTHINDICATOR},${StatusReportFields.ACHIEVEMENTS},${StatusReportFields.CHALLENGES},${StatusReportFields.KEYACTIVITIES},${StatusReportFields.UPCOMINGACTIVITIES},${StatusReportFields.JOURNALPUBLICATIONS},${StatusReportFields.WORKFORCEDEVELOPMENT}`;
+
       const res2 = await callApi<{ value: any[] }>({
-        url: `/_api/${TableName.STATUSREPORT}?$filter=${StatusReportFields.RESEARCH} eq ${researchId}`,
+        url: `/_api/${TableName.STATUSREPORT}?$filter=${StatusReportFields.RESEARCH} eq ${researchId}&$select=${reportSelect}`,
         method: "GET",
       });
 
