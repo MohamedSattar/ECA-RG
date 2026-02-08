@@ -538,30 +538,6 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
         </div>
       </div>
       <div>
-        <Label>Principal Investigator</Label>
-        <div className="mt-1">
-          <LookupPicker
-            key={`principal-investigator-${userAdxUserId || "none"}`}
-            displayField={ContactKeys.FULLNAME}
-            keyField={ContactKeys.CONTACTID}
-            secondaryField={ContactKeys.EMAILADDRESS1}
-            searchField={ContactKeys.FULLNAME}
-            tableName={TableName.CONTACTS}
-            maxSelection={1}
-            label="Contact"
-            cascadeField={ContactKeys.ADX_USERID}
-            cascadeValue={userAdxUserId}
-            isDefaultSelected={true}
-            disabled={form.type === "view"}
-            onSelect={(value) => {
-              if (value && value.length > 0) {
-                onPrincipalInvestigatorChange(value[0][ContactKeys.CONTACTID]);
-              }
-            }}
-          />
-        </div>
-      </div>
-      <div>
         <Label>Start Date</Label>
         <div className="mt-1">
           <DatePicker
