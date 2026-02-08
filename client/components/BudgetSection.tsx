@@ -2,7 +2,11 @@ import * as React from "react";
 import { useMemo, useState } from "react";
 import Reveal from "@/motion/Reveal";
 import { toast } from "@/ui/use-toast";
-import { Dialog as FluentDialog, DialogFooter as FluentDialogFooter, DialogType } from "@fluentui/react/lib/Dialog";
+import {
+  Dialog as FluentDialog,
+  DialogFooter as FluentDialogFooter,
+  DialogType,
+} from "@fluentui/react/lib/Dialog";
 import { PrimaryButton, DefaultButton } from "@fluentui/react/lib/Button";
 import { Label } from "@fluentui/react/lib/Label";
 import { Dropdown, IDropdownOption } from "@fluentui/react/lib/Dropdown";
@@ -138,12 +142,12 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                   }}
                   styles={{
                     root: {
-                      backgroundColor: '#1D2054',
-                      borderColor: '#1D2054',
+                      backgroundColor: "#1D2054",
+                      borderColor: "#1D2054",
                     },
                     rootHovered: {
-                      backgroundColor: '#151b41',
-                      borderColor: '#151b41',
+                      backgroundColor: "#151b41",
+                      borderColor: "#151b41",
                     },
                   }}
                 >
@@ -269,13 +273,15 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                     <tr
                       key={item.prmtk_amount + index}
                       className={`border-t border-[#e2e8f0] transition-colors ${
-                        index % 2 === 0 ? 'bg-white' : 'bg-[#f8fafc]'
+                        index % 2 === 0 ? "bg-white" : "bg-[#f8fafc]"
                       } hover:bg-[#f0f4f8]`}
                     >
                       <td className="px-6 py-3 font-medium text-[#1e293b]">
                         {item.prmtk_lineitemname}
                       </td>
-                      <td className="px-6 py-3 text-[#475569]">{item.prmtk_description}</td>
+                      <td className="px-6 py-3 text-[#475569]">
+                        {item.prmtk_description}
+                      </td>
                       <td className="px-6 py-3 text-[#475569]">
                         {categoryOptions.find(
                           (cat) => cat.key === item.prmtk_category,
@@ -299,7 +305,7 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                                 ariaLabel="Edit"
                                 styles={{
                                   root: {
-                                    color: '#1D2054',
+                                    color: "#1D2054",
                                   },
                                 }}
                               />
@@ -310,7 +316,7 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                                 ariaLabel="Remove"
                                 styles={{
                                   root: {
-                                    color: '#dc2626',
+                                    color: "#dc2626",
                                   },
                                 }}
                               />

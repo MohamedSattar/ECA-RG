@@ -790,14 +790,21 @@ export const ReportingSection: React.FC<ReportingSectionProps> = ({
                 </thead>
                 <tbody>
                   {reportItems.map((item, index) => (
-                    <tr key={item.id || index} className={`border-t border-[#e2e8f0] transition-colors ${
-                        index % 2 === 0 ? 'bg-white' : 'bg-[#f8fafc]'
-                      } hover:bg-[#f0f4f8]`}>
+                    <tr
+                      key={item.id || index}
+                      className={`border-t border-[#e2e8f0] transition-colors ${
+                        index % 2 === 0 ? "bg-white" : "bg-[#f8fafc]"
+                      } hover:bg-[#f0f4f8]`}
+                    >
                       <td className="px-6 py-3 font-medium text-[#1e293b]">
                         {item.prmtk_reporttitle}
                       </td>
-                      <td className="px-6 py-3 text-[#475569]">{item.prmtk_reportingyear}</td>
-                      <td className="px-6 py-3 text-[#475569]">{item.prmtk_reportingmonth}</td>
+                      <td className="px-6 py-3 text-[#475569]">
+                        {item.prmtk_reportingyear}
+                      </td>
+                      <td className="px-6 py-3 text-[#475569]">
+                        {item.prmtk_reportingmonth}
+                      </td>
                       <td className="px-6 py-3 text-[#475569]">
                         {formatDateOnly(item.reportingDate)}
                       </td>
@@ -864,10 +871,10 @@ export const ReportingSection: React.FC<ReportingSectionProps> = ({
                                 ariaLabel="Edit"
                                 styles={{
                                   root: {
-                                    color: '#1D2054',
+                                    color: "#1D2054",
                                   },
                                   rootDisabled: {
-                                    color: '#cbd5e1',
+                                    color: "#cbd5e1",
                                   },
                                 }}
                               />
@@ -879,10 +886,10 @@ export const ReportingSection: React.FC<ReportingSectionProps> = ({
                                 ariaLabel="Remove"
                                 styles={{
                                   root: {
-                                    color: '#dc2626',
+                                    color: "#dc2626",
                                   },
                                   rootDisabled: {
-                                    color: '#cbd5e1',
+                                    color: "#cbd5e1",
                                   },
                                 }}
                               />

@@ -17,15 +17,16 @@ function StatusBadge({ value }: { value?: string | null }) {
           : value === "Submitted"
             ? "bg-blue-100 text-blue-800 border-blue-200"
             : "bg-slate-100 text-slate-800 border-slate-200";
-  return <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${cls}`}>{value}</span>;
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${cls}`}
+    >
+      {value}
+    </span>
+  );
 }
 
-
-
-
 export default function Researches() {
-
-
   const { callApi } = useDataverseApi();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -33,19 +34,21 @@ export default function Researches() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-    const currentUserId = user?.contact?.[ContactKeys.CONTACTID] || "";
+  const currentUserId = user?.contact?.[ContactKeys.CONTACTID] || "";
 
   const select = `*,${ResearchKeys.PRINCIPALINVESTIGATOR}`;
   const filter = `${ResearchKeys.PRINCIPALINVESTIGATOR} eq ${currentUserId}`;
   const currentUserApplicationURL = `/_api/${TableName.RESEARCHES}?$select=${select}&$filter=${filter}`;
 
   const loadResearches = async () => {
-
     setLoading(true);
     setError(null);
 
     try {
-      const res = await callApi<{ value: any }>({ url: currentUserApplicationURL, method: "GET" });
+      const res = await callApi<{ value: any }>({
+        url: currentUserApplicationURL,
+        method: "GET",
+      });
       const list = res?.value ?? [];
       console.log("Fetched applications:", list);
       setResearches(list);

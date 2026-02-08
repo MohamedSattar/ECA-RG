@@ -219,9 +219,9 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
                     }}
                     styles={{
                       root: {
-                        backgroundColor: '#1D2054',
-                        borderColor: '#1D2054',
-                        color: '#fff',
+                        backgroundColor: "#1D2054",
+                        borderColor: "#1D2054",
+                        color: "#fff",
                       },
                     }}
                   />
@@ -261,7 +261,7 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
                               title="Download file"
                               ariaLabel="Download file"
                               styles={{
-                                root: { color: '#1D2054' },
+                                root: { color: "#1D2054" },
                               }}
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -279,7 +279,7 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
                                 title="Remove file"
                                 ariaLabel="Remove file"
                                 styles={{
-                                  root: { color: '#dc2626' },
+                                  root: { color: "#dc2626" },
                                 }}
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -351,9 +351,9 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
                     }}
                     styles={{
                       root: {
-                        backgroundColor: '#1D2054',
-                        borderColor: '#1D2054',
-                        color: '#fff',
+                        backgroundColor: "#1D2054",
+                        borderColor: "#1D2054",
+                        color: "#fff",
                       },
                     }}
                   />
@@ -361,7 +361,8 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
               )}
 
               <div className="mt-4">
-                {generalFiles.filter((f) => f.action !== "remove").length > 0 ? (
+                {generalFiles.filter((f) => f.action !== "remove").length >
+                0 ? (
                   <div className="space-y-2">
                     {generalFiles.map((f) => {
                       const key = getFileKey(f.file);
@@ -392,7 +393,7 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
                               title="Download file"
                               ariaLabel="Download file"
                               styles={{
-                                root: { color: '#1D2054' },
+                                root: { color: "#1D2054" },
                               }}
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -410,7 +411,7 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
                                 title="Remove file"
                                 ariaLabel="Remove file"
                                 styles={{
-                                  root: { color: '#dc2626' },
+                                  root: { color: "#dc2626" },
                                 }}
                                 onClick={(e) => {
                                   e.stopPropagation();

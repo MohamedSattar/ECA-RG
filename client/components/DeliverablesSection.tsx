@@ -549,9 +549,7 @@ export const DeliverablesSection: React.FC<DeliverablesSectionProps> = ({
                     <th className="px-6 py-3 font-semibold text-white">
                       Description
                     </th>
-                    <th className="px-6 py-3 font-semibold text-white">
-                      Type
-                    </th>
+                    <th className="px-6 py-3 font-semibold text-white">Type</th>
                     <th className="px-6 py-3 font-semibold text-white">
                       Submission Date
                     </th>
@@ -567,9 +565,12 @@ export const DeliverablesSection: React.FC<DeliverablesSectionProps> = ({
                 </thead>
                 <tbody>
                   {deliverables.map((item, index) => (
-                    <tr key={item.id || index} className={`border-t border-[#e2e8f0] transition-colors ${
-                        index % 2 === 0 ? 'bg-white' : 'bg-[#f8fafc]'
-                      } hover:bg-[#f0f4f8]`}>
+                    <tr
+                      key={item.id || index}
+                      className={`border-t border-[#e2e8f0] transition-colors ${
+                        index % 2 === 0 ? "bg-white" : "bg-[#f8fafc]"
+                      } hover:bg-[#f0f4f8]`}
+                    >
                       <td className="px-6 py-3 font-medium text-[#1e293b]">
                         {item.deliverableName}
                       </td>
@@ -633,10 +634,10 @@ export const DeliverablesSection: React.FC<DeliverablesSectionProps> = ({
                                 ariaLabel="Edit"
                                 styles={{
                                   root: {
-                                    color: '#1D2054',
+                                    color: "#1D2054",
                                   },
                                   rootDisabled: {
-                                    color: '#cbd5e1',
+                                    color: "#cbd5e1",
                                   },
                                 }}
                               />
@@ -648,10 +649,10 @@ export const DeliverablesSection: React.FC<DeliverablesSectionProps> = ({
                                 ariaLabel="Remove"
                                 styles={{
                                   root: {
-                                    color: '#dc2626',
+                                    color: "#dc2626",
                                   },
                                   rootDisabled: {
-                                    color: '#cbd5e1',
+                                    color: "#cbd5e1",
                                   },
                                 }}
                               />

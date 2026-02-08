@@ -283,10 +283,13 @@ export default function GrantDetail() {
                 src={
                   researchArea?.[ResearchAreaKeys.THUMBNAIL_URL]
                     ? (() => {
-                        const normalizedUrl = normalizeImageUrl(researchArea[ResearchAreaKeys.THUMBNAIL_URL]);
+                        const normalizedUrl = normalizeImageUrl(
+                          researchArea[ResearchAreaKeys.THUMBNAIL_URL],
+                        );
                         // Ensure full=true is appended for better image quality
-                        return normalizedUrl && !normalizedUrl.includes('full=true')
-                          ? `${normalizedUrl}${normalizedUrl.includes('?') ? '&' : '?'}full=true`
+                        return normalizedUrl &&
+                          !normalizedUrl.includes("full=true")
+                          ? `${normalizedUrl}${normalizedUrl.includes("?") ? "&" : "?"}full=true`
                           : normalizedUrl;
                       })()
                     : "/images/GrantDetail.png"
@@ -294,7 +297,8 @@ export default function GrantDetail() {
                 alt="Illustration"
                 className={"h-auto w-64 m-auto rounded-lg"}
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = "/images/GrantDetail.png";
+                  (e.target as HTMLImageElement).src =
+                    "/images/GrantDetail.png";
                 }}
               />
             </div>

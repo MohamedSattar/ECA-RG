@@ -56,7 +56,10 @@ const fetchRequestVerificationToken = async () => {
     }
 
     const text = await response.text();
-    console.log("[Token] HTML Response (first 500 chars):", text?.substring(0, 500));
+    console.log(
+      "[Token] HTML Response (first 500 chars):",
+      text?.substring(0, 500),
+    );
 
     const doc = new DOMParser().parseFromString(text, "text/html");
 
@@ -67,7 +70,9 @@ const fetchRequestVerificationToken = async () => {
 
     if (!input) {
       console.log("[Token] Trying alternative selector...");
-      input = doc.querySelector<HTMLInputElement>('#__RequestVerificationToken');
+      input = doc.querySelector<HTMLInputElement>(
+        "#__RequestVerificationToken",
+      );
     }
 
     if (!input?.value) {
@@ -78,7 +83,10 @@ const fetchRequestVerificationToken = async () => {
       throw new Error("RequestVerificationToken not found");
     }
 
-    console.log("[Token] Successfully fetched verification token:", input.value?.substring(0, 20) + "...");
+    console.log(
+      "[Token] Successfully fetched verification token:",
+      input.value?.substring(0, 20) + "...",
+    );
     return input.value;
   } catch (err) {
     console.error("[Token] Error fetching verification token:", err);
@@ -159,7 +167,9 @@ export function useDataverseApi() {
           headers.__RequestVerificationToken = token;
           console.log("[API] Request verification token added to headers");
         } else {
-          console.error("[API] Failed to obtain request verification token - request will likely fail");
+          console.error(
+            "[API] Failed to obtain request verification token - request will likely fail",
+          );
         }
 
         // Add Azure Bearer token for authenticated API calls
@@ -192,10 +202,15 @@ export function useDataverseApi() {
       }
 
       const text = await res.text();
-      console.log(`[API] Response body (first 500 chars):`, text?.substring(0, 500));
+      console.log(
+        `[API] Response body (first 500 chars):`,
+        text?.substring(0, 500),
+      );
 
       if (!res.ok) {
-        console.error(`[API] API Error ${res.status}: ${text?.substring(0, 200)}`);
+        console.error(
+          `[API] API Error ${res.status}: ${text?.substring(0, 200)}`,
+        );
       }
 
       try {

@@ -957,7 +957,7 @@ export default function FormResearch() {
       await loadReportStatus(researchId);
       setReportsLoaded(true);
     },
-    [formType, reportsLoaded]
+    [formType, reportsLoaded],
   );
 
   const loadOptionalDisseminationData = useCallback(
@@ -966,7 +966,7 @@ export default function FormResearch() {
       await loadDisseminationRequests(researchId);
       setDisseminationLoaded(true);
     },
-    [formType, disseminationLoaded]
+    [formType, disseminationLoaded],
   );
 
   const loadOptionalDeliverableData = useCallback(
@@ -975,7 +975,7 @@ export default function FormResearch() {
       await loadDeliverables(researchId);
       setDeliverablesLoaded(true);
     },
-    [formType, deliverablesLoaded]
+    [formType, deliverablesLoaded],
   );
 
   // Load all budget versions for research
@@ -1193,7 +1193,14 @@ export default function FormResearch() {
 
       return () => clearTimeout(timer);
     }
-  }, [researchAreaId, form.title, formType, loadOptionalReportData, loadOptionalDisseminationData, loadOptionalDeliverableData]);
+  }, [
+    researchAreaId,
+    form.title,
+    formType,
+    loadOptionalReportData,
+    loadOptionalDisseminationData,
+    loadOptionalDeliverableData,
+  ]);
 
   const canSubmit = useMemo(() => form.title.trim().length > 0, [form.title]);
 
@@ -2413,7 +2420,9 @@ export default function FormResearch() {
             {form.type !== "new" && (
               <div className="mt-3 text-sm text-gray-600">
                 <span className="opacity-80">Submission Date:</span>
-                <span className="ml-2 font-semibold text-[#2b201a]">{form.submissionDate}</span>
+                <span className="ml-2 font-semibold text-[#2b201a]">
+                  {form.submissionDate}
+                </span>
               </div>
             )}
           </div>
@@ -2440,7 +2449,10 @@ export default function FormResearch() {
                 onSelect={(values) => {
                   setForm((prev) => ({
                     ...prev,
-                    application: values && values.length > 0 ? values[0][ApplicationKeys.APPLICATIONID] : null,
+                    application:
+                      values && values.length > 0
+                        ? values[0][ApplicationKeys.APPLICATIONID]
+                        : null,
                   }));
                 }}
               />
@@ -2465,7 +2477,10 @@ export default function FormResearch() {
                 onSelect={(values) => {
                   setForm((prev) => ({
                     ...prev,
-                    researchArea: values && values.length > 0 ? values[0][ResearchAreaKeys.RESEARCHAREAID] : null,
+                    researchArea:
+                      values && values.length > 0
+                        ? values[0][ResearchAreaKeys.RESEARCHAREAID]
+                        : null,
                   }));
                 }}
               />

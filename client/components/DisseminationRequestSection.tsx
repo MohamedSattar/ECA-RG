@@ -576,13 +576,18 @@ export const DisseminationRequestSection: React.FC<
                 </thead>
                 <tbody>
                   {disseminationRequests.map((item, index) => (
-                    <tr key={item.id || index} className={`border-t border-[#e2e8f0] transition-colors ${
-                        index % 2 === 0 ? 'bg-white' : 'bg-[#f8fafc]'
-                      } hover:bg-[#f0f4f8]`}>
+                    <tr
+                      key={item.id || index}
+                      className={`border-t border-[#e2e8f0] transition-colors ${
+                        index % 2 === 0 ? "bg-white" : "bg-[#f8fafc]"
+                      } hover:bg-[#f0f4f8]`}
+                    >
                       <td className="px-6 py-3 font-medium text-[#1e293b]">
                         {item.title}
                       </td>
-                      <td className="px-6 py-3 text-[#475569]">{item.journalName}</td>
+                      <td className="px-6 py-3 text-[#475569]">
+                        {item.journalName}
+                      </td>
                       <td className="px-6 py-3 text-[#475569]">
                         <div
                           className="max-w-xs truncate"
@@ -655,10 +660,10 @@ export const DisseminationRequestSection: React.FC<
                                 ariaLabel="Edit"
                                 styles={{
                                   root: {
-                                    color: '#1D2054',
+                                    color: "#1D2054",
                                   },
                                   rootDisabled: {
-                                    color: '#cbd5e1',
+                                    color: "#cbd5e1",
                                   },
                                 }}
                               />
@@ -670,10 +675,10 @@ export const DisseminationRequestSection: React.FC<
                                 ariaLabel="Remove"
                                 styles={{
                                   root: {
-                                    color: '#dc2626',
+                                    color: "#dc2626",
                                   },
                                   rootDisabled: {
-                                    color: '#cbd5e1',
+                                    color: "#cbd5e1",
                                   },
                                 }}
                               />

@@ -16,7 +16,6 @@ async function handleDataverseProxy(
     console.log(`[Proxy] Original request path: ${req.path}`);
     console.log(`[Proxy] Original request URL: ${req.url}`);
 
-
     const fullUrl = new URL(DATAVERSE_BASE_URL + apiPath);
 
     // Preserve query parameters
@@ -31,7 +30,9 @@ async function handleDataverseProxy(
     console.log(`[Proxy] Final target URL: ${fullUrl.toString()}`);
     console.log(`[Proxy] Headers:`, {
       authorization: req.headers.authorization ? "***" : "none",
-      requestverificationtoken: req.headers["__requestverificationtoken"] ? "***" : "none",
+      requestverificationtoken: req.headers["__requestverificationtoken"]
+        ? "***"
+        : "none",
     });
 
     // Build headers

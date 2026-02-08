@@ -2,7 +2,11 @@ import * as React from "react";
 import { useMemo, useState } from "react";
 import Reveal from "@/motion/Reveal";
 import { toast } from "@/ui/use-toast";
-import { Dialog as FluentDialog, DialogFooter as FluentDialogFooter, DialogType } from "@fluentui/react/lib/Dialog";
+import {
+  Dialog as FluentDialog,
+  DialogFooter as FluentDialogFooter,
+  DialogType,
+} from "@fluentui/react/lib/Dialog";
 import { PrimaryButton, DefaultButton } from "@fluentui/react/lib/Button";
 import { Label } from "@fluentui/react/lib/Label";
 import { Dropdown, IDropdownOption } from "@fluentui/react/lib/Dropdown";
@@ -112,9 +116,7 @@ export const TeamMemberSection: React.FC<TeamMemberSectionProps> = ({
       <>
         {form.type !== "view" && (
           <div className="flex items-center justify-end">
-            <PrimaryButton
-              onClick={() => setIsDialogOpen(true)}
-            >
+            <PrimaryButton onClick={() => setIsDialogOpen(true)}>
               Add member
             </PrimaryButton>
           </div>
@@ -220,7 +222,7 @@ export const TeamMemberSection: React.FC<TeamMemberSectionProps> = ({
               <tr
                 key={m.id}
                 className={`border-t border-[#e2e8f0] hover:bg-[#f0f4f8] transition-colors ${
-                  index % 2 === 0 ? 'bg-white' : 'bg-[#f8fafc]'
+                  index % 2 === 0 ? "bg-white" : "bg-[#f8fafc]"
                 }`}
               >
                 <td className="px-6 py-3 font-medium text-[#1e293b]">
@@ -232,7 +234,9 @@ export const TeamMemberSection: React.FC<TeamMemberSectionProps> = ({
                     : dropdownOptions.find((role) => role.key == m.role)
                         ?.text || m.role}
                 </td>
-                <td className="px-6 py-3 text-[#475569]">{m.educationLevel || "N/A"}</td>
+                <td className="px-6 py-3 text-[#475569]">
+                  {m.educationLevel || "N/A"}
+                </td>
                 <td className="px-6 py-3 text-right">
                   {m.action === "remove" ? (
                     <span className="text-[#94a3b8]">Removed</span>
@@ -244,7 +248,7 @@ export const TeamMemberSection: React.FC<TeamMemberSectionProps> = ({
                         title="Edit"
                         ariaLabel="Edit"
                         styles={{
-                          root: { color: '#1D2054' }
+                          root: { color: "#1D2054" },
                         }}
                       />
                       <IconButton
@@ -253,7 +257,7 @@ export const TeamMemberSection: React.FC<TeamMemberSectionProps> = ({
                         title="Remove"
                         ariaLabel="Remove"
                         styles={{
-                          root: { color: '#dc2626' }
+                          root: { color: "#dc2626" },
                         }}
                       />
                     </>

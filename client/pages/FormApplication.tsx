@@ -344,7 +344,9 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
               isDefaultSelected={grantCycleId != null}
               onSelect={(values) => {
                 onGrantCycleChange(
-                  values && values.length > 0 ? values[0][GrantCycleKeys.GRANTCYCLEID] : null
+                  values && values.length > 0
+                    ? values[0][GrantCycleKeys.GRANTCYCLEID]
+                    : null,
                 );
               }}
             />
@@ -368,7 +370,9 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
               disabled={formType === "view"}
               onSelect={(values) => {
                 onResearchAreaChange(
-                  values && values.length > 0 ? values[0][ResearchAreaKeys.RESEARCHAREAID] : null
+                  values && values.length > 0
+                    ? values[0][ResearchAreaKeys.RESEARCHAREAID]
+                    : null,
                 );
               }}
             />
@@ -1262,7 +1266,9 @@ export default function FormApplication() {
               {formType !== "new" && (
                 <div className="text-sm text-white">
                   <span className="opacity-80">Submission Date:</span>
-                  <span className="ml-2 font-semibold text-[#F7D85C]">{form.submissionDate}</span>
+                  <span className="ml-2 font-semibold text-[#F7D85C]">
+                    {form.submissionDate}
+                  </span>
                 </div>
               )}
             </div>

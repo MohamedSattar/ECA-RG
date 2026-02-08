@@ -182,8 +182,8 @@ export default function Applications() {
               }}
               aria-label={`Edit ${title}`}
               styles={{
-                root: { color: '#1D2054' },
-                rootDisabled: { color: '#cbd5e1' }
+                root: { color: "#1D2054" },
+                rootDisabled: { color: "#cbd5e1" },
               }}
             />
           </div>
@@ -195,16 +195,28 @@ export default function Applications() {
         {/* Metadata Row: Grant Cycle, Research Area, Submitted Date */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-[#e2e8f0]">
           <div>
-            <p className="text-xs font-medium text-[#64748b] uppercase tracking-wide">Grant Cycle</p>
-            <p className="text-sm text-[#1e293b] mt-1 font-medium">{grantCycle}</p>
+            <p className="text-xs font-medium text-[#64748b] uppercase tracking-wide">
+              Grant Cycle
+            </p>
+            <p className="text-sm text-[#1e293b] mt-1 font-medium">
+              {grantCycle}
+            </p>
           </div>
           <div>
-            <p className="text-xs font-medium text-[#64748b] uppercase tracking-wide">Research Area</p>
-            <p className="text-sm text-[#1e293b] mt-1 font-medium">{researchArea}</p>
+            <p className="text-xs font-medium text-[#64748b] uppercase tracking-wide">
+              Research Area
+            </p>
+            <p className="text-sm text-[#1e293b] mt-1 font-medium">
+              {researchArea}
+            </p>
           </div>
           <div>
-            <p className="text-xs font-medium text-[#64748b] uppercase tracking-wide">Submitted</p>
-            <p className="text-sm text-[#1e293b] mt-1 font-medium">{submittedDate}</p>
+            <p className="text-xs font-medium text-[#64748b] uppercase tracking-wide">
+              Submitted
+            </p>
+            <p className="text-sm text-[#1e293b] mt-1 font-medium">
+              {submittedDate}
+            </p>
           </div>
         </div>
       </div>
@@ -298,7 +310,9 @@ export default function Applications() {
           <div className="container py-8 md:py-8">
             {/* Header Row */}
             <div className="flex flex-wrap justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-[#1e293b]">Applications</h2>
+              <h2 className="text-xl font-semibold text-[#1e293b]">
+                Applications
+              </h2>
 
               {/* <Link
                 to="/applyapplication"

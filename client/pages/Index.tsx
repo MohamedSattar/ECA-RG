@@ -146,14 +146,16 @@ function GrantCard({
             image
               ? (() => {
                   // Ensure full=true is appended for better image quality
-                  return image.includes('full=true') ? image : `${image}${image.includes('?') ? '&' : '?'}full=true`;
+                  return image.includes("full=true")
+                    ? image
+                    : `${image}${image.includes("?") ? "&" : "?"}full=true`;
                 })()
-              : ''
+              : ""
           }
           alt={`${title} visual`}
           className="absolute inset-0 w-80 rounded-2xl m-auto z-20"
           onError={(e) => {
-            (e.target as HTMLImageElement).style.display = 'none';
+            (e.target as HTMLImageElement).style.display = "none";
           }}
         />
       </div>
@@ -721,7 +723,9 @@ export default function Index() {
                       number={idx + 1}
                       ResearchAreaKeyId={area[ResearchAreaKeys.RESEARCHAREAID]}
                       title={area[ResearchAreaKeys.AREANAME]}
-                      image={normalizeImageUrl(area[ResearchAreaKeys.THUMBNAIL_URL])}
+                      image={normalizeImageUrl(
+                        area[ResearchAreaKeys.THUMBNAIL_URL],
+                      )}
                       description={area[ResearchAreaKeys.AREADESCRIPTION]}
                       reverse={idx % 2 === 0}
                       navigate={navigate}

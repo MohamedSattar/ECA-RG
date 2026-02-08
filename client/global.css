@@ -6,7 +6,6 @@
 @tailwind utilities;
 
 @layer base {
-
   /**
    * Tailwind CSS theme
    * tailwind.config.ts expects the following color variables to be expressed as HSL values.
@@ -99,7 +98,17 @@
   }
 
   html {
-    font-family: "Graphik Arabic", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    font-family:
+      "Graphik Arabic",
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      Segoe UI,
+      Roboto,
+      "Helvetica Neue",
+      Arial,
+      "Apple Color Emoji",
+      "Segoe UI Emoji";
   }
 
   body {
@@ -123,75 +132,75 @@
 }
 
 svg.rdp-chevron {
-  fill: #e78f6a!important;
+  fill: #e78f6a !important;
 }
 
-.rdp-selected .rdp-day_button{
-  border-color: #e78f6a!important;
-  background: #e78f6a!important;
-  color: #fff!important;;
+.rdp-selected .rdp-day_button {
+  border-color: #e78f6a !important;
+  background: #e78f6a !important;
+  color: #fff !important;
 }
 
 .rdp-today {
-  color: #e78f6a!important;;
+  color: #e78f6a !important;
 }
 .hover\:bg-accent:hover {
-    background-color: transparent!important;
-    color: inherit!important;
+  background-color: transparent !important;
+  color: inherit !important;
 }
-.text-blue{
-    color: #1D2054!important;
+.text-blue {
+  color: #1d2054 !important;
 }
-.text-brown{
-    color: #391400!important;
+.text-brown {
+  color: #391400 !important;
 }
-.text-light-brown{
-    color: #391400A3!important;
+.text-light-brown {
+  color: #391400a3 !important;
 }
-.text-orange{
-  color:#EF6D58!important;
+.text-orange {
+  color: #ef6d58 !important;
 }
-.text-white{
-  color:#FFFFFF!important;
+.text-white {
+  color: #ffffff !important;
 }
-.text-yellow{
-  color:#F7D85C!important;
+.text-yellow {
+  color: #f7d85c !important;
 }
-.bg-blue{
-  background-color:#1D2054!important;
+.bg-blue {
+  background-color: #1d2054 !important;
 }
-.bg-orange{
-  background-color:#EF6D58!important;
+.bg-orange {
+  background-color: #ef6d58 !important;
 }
-.bg-lightorange{
-  background-color:#F3D1BF!important;
+.bg-lightorange {
+  background-color: #f3d1bf !important;
 }
-.bg-light{
-  background-color:#FFF8F3!important;
+.bg-light {
+  background-color: #fff8f3 !important;
 }
-.border-dotted{
-  border-style: dotted!important;
+.border-dotted {
+  border-style: dotted !important;
 }
 .ms-Persona .ms-Persona-primaryText {
-    color: #ffff !important;
+  color: #ffff !important;
 }
 button.ms-Button.ms-Button--commandBar {
-    background: #0f1840 !important;
-    height: 4rem !important;
+  background: #0f1840 !important;
+  height: 4rem !important;
 }
 .ms-Persona i.ms-Icon.ms-Button-menuIcon {
-    color: #ffff !important;
-    background: #0f1840 !important;
+  color: #ffff !important;
+  background: #0f1840 !important;
 }
 .borderLeftthink {
-    border-left-width: 4px !important;
-    border-color: #EF6D58 !important;
+  border-left-width: 4px !important;
+  border-color: #ef6d58 !important;
 }
-.border-color-orange{
-  border-color: #F3D1BF!important;
+.border-color-orange {
+  border-color: #f3d1bf !important;
 }
-#spa-root{
-  font-family:sans-serif!important;
+#spa-root {
+  font-family: sans-serif !important;
 }
 
 /* RTL Support for Arabic */
@@ -230,11 +239,11 @@ html[dir="ltr"] body {
 }
 
 @media (min-width: 768px) {
-    .col-last {
-        order: 1 !important;
-    }
-    .col-first {
-      order: 99999!important;
+  .col-last {
+    order: 1 !important;
+  }
+  .col-first {
+    order: 99999 !important;
   }
 }
 
@@ -256,7 +265,7 @@ html[dir="ltr"] body {
 }
 
 .ms-TextField-field:focus {
-  border-color: #1D2054 !important;
+  border-color: #1d2054 !important;
   box-shadow: 0 0 0 3px rgba(29, 32, 84, 0.1) !important;
 }
 
@@ -296,7 +305,7 @@ html[dir="ltr"] body {
 }
 
 .ms-BasePicker-text:focus-within {
-  border-color: #1D2054 !important;
+  border-color: #1d2054 !important;
   box-shadow: 0 0 0 3px rgba(29, 32, 84, 0.1) !important;
 }
 
@@ -340,7 +349,7 @@ html[dir="ltr"] body {
 
 .ms-Suggestions-item.is-selected {
   background-color: #e0e7ff !important;
-  color: #1D2054 !important;
+  color: #1d2054 !important;
 }
 
 /* DatePicker styling */
@@ -358,7 +367,7 @@ html[dir="ltr"] body {
 }
 
 .ms-DatePicker-input:focus {
-  border-color: #1D2054 !important;
+  border-color: #1d2054 !important;
   box-shadow: 0 0 0 3px rgba(29, 32, 84, 0.1) !important;
 }
 
@@ -392,7 +401,7 @@ html[dir="ltr"] body {
 }
 
 .ms-Dropdown-title.is-open {
-  border-color: #1D2054 !important;
+  border-color: #1d2054 !important;
   box-shadow: 0 0 0 3px rgba(29, 32, 84, 0.1) !important;
 }
 
@@ -420,5 +429,5 @@ html[dir="ltr"] body {
 
 .ms-Dropdown-item.is-selected {
   background-color: #e0e7ff !important;
-  color: #1D2054 !important;
+  color: #1d2054 !important;
 }
