@@ -30,7 +30,7 @@ export const loginRequest = {
 
 export const signupRequest = {
   scopes: ["openid", "profile", "offline_access"],
-  prompt: "login", // Force signup experience
+  prompt: "create", // Force signup experience instead of signin
 };
 
 // B2C Policy Configuration
