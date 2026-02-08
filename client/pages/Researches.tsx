@@ -64,7 +64,7 @@ export default function Researches() {
 
   const applicationResearches = useMemo(() => researches || [], [researches]);
 
-  const onView = (item: ResearchItem) => {
+  const onView = (item: any) => {
     navigate(
       `/applyresearch?applicationId=${item[ResearchKeys.APPLICATIONREFERENCE]}&researchId=${item[ResearchKeys.RESEARCHID]}&formType=view`,
       {
@@ -77,7 +77,8 @@ export default function Researches() {
       },
     );
   };
-  const onEdit = (item: ResearchItem) => {
+
+  const onEdit = (item: any) => {
     navigate(
       `/applyresearch?applicationId=${item[ResearchKeys.APPLICATIONREFERENCE]}&researchId=${item[ResearchKeys.RESEARCHID]}&formType=edit`,
       {
