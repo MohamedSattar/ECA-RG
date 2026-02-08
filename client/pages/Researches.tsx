@@ -6,6 +6,8 @@ import { ApplicationKeys, ContactKeys, ResearchKeys, TableName } from "@/constan
 import { useAuth } from "@/state/auth";
 import { useEffect, useMemo, useState } from "react";
 import { IconButton } from "@fluentui/react/lib/Button";
+import Reveal from "@/motion/Reveal";
+import { OverlayLoader } from "@/components/Loader";
 
 interface ResearchItem {
   id: string;
@@ -226,5 +228,3 @@ export default function Researches() {
     </div>
   );
 }
-
-
