@@ -1297,6 +1297,12 @@ export default function FormApplication() {
                   Grant : {applicationNumber}
                 </div>
               )}
+              {formType !== "new" && (
+                <div className="text-sm text-white">
+                  <span className="opacity-80">Submission Date:</span>
+                  <span className="ml-2 font-semibold text-[#F7D85C]">{form.submissionDate}</span>
+                </div>
+              )}
             </div>
 
             {/* Hero Collage */}
