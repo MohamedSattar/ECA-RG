@@ -9,9 +9,24 @@ export default defineConfig(({ mode }) => ({
     open: "/index.html",
     proxy: {
       "/_api": {
-        target: "https://researchgrantsspa.powerappsportals.com/",
+        target: "https://research-grants-spa.powerappsportals.com/",
         changeOrigin: true,
         secure: false,
+        credentials: "include",
+        onProxyReq: (proxyReq, req, res) => {
+          // Pass through any authorization headers from the original request
+          if (req.headers.authorization) {
+            proxyReq.setHeader("Authorization", req.headers.authorization);
+          }
+          if (req.headers["__requestverificationtoken"]) {
+            proxyReq.setHeader("__RequestVerificationToken", req.headers["__requestverificationtoken"]);
+          }
+        },
+        onError: (err, req, res) => {
+          console.error("Proxy error:", err);
+          res.writeHead(502, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Proxy error", message: err.message }));
+        },
       },
     },
   },
