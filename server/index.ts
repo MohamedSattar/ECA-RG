@@ -23,6 +23,10 @@ async function handleDataverseProxy(
     // Log the request for debugging
     console.log(`[Proxy] ${req.method} ${req.path}`);
     console.log(`[Proxy] Target: ${fullUrl.toString()}`);
+    console.log(`[Proxy] Headers:`, {
+      authorization: req.headers.authorization ? "***" : "none",
+      requestverificationtoken: req.headers["__requestverificationtoken"] ? "***" : "none",
+    });
 
     // Build headers
     const fetchHeaders: HeadersInit = {};
