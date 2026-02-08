@@ -1,11 +1,11 @@
 // Determine redirect URI based on current environment
 const getRedirectUri = () => {
   if (typeof window === "undefined") {
-    return "https://research-grants-spa.powerappsportals.com/updateProfile";
+    return "https://research-grants-spa.powerappsportals.com/updateprofile";
   }
 
-  // Use current origin with /updateProfile redirect path
-  return window.location.origin + "/updateProfile";
+  // Use current origin with /updateprofile redirect path (matches React route)
+  return window.location.origin + "/updateprofile";
 };
 
 export const msalConfig = {
