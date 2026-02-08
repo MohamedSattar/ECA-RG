@@ -154,7 +154,7 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
     );
   };
   return (
-    <div className="mt-8 rounded-xl border bg-white p-6">
+    <div className="mt-8 rounded-xl border border-[#e2e8f0] bg-white p-6">
       <div className="flex items-center justify-between">
         <h2 className={HEADING_TEXT}>Attachments</h2>
         <IconButton
@@ -162,205 +162,273 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
             iconName: showSection ? "ChevronUp" : "ChevronDown",
           }}
           onClick={() => setShowSection((prev) => !prev)}
-          ariaLabel="Toggle general information"
+          ariaLabel="Toggle attachments"
         />
       </div>
       {showSection && (
         <Reveal className="mt-6">
-          {/* Application Files Section - PDF Only */}
-          <div className="mb-8">
-            <h3 className="text-lg font-semibold text-gray-700 mb-3">
-              Main Proposal
-            </h3>
-            {form.type !== "view" && (
-              <div
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  e.dataTransfer.dropEffect = "copy";
-                }}
-                onDrop={onApplicationDrop}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  applicationFileInputRef.current?.click();
-                }}
-                className="bg-[#FFF8F3] flex cursor-pointer flex-row items-center justify-between rounded-lg border-2 border-dashed border-[#F3D1BF] px-6 py-10 text-center hover:bg-[#FAE7DD]"
-              >
-                <input
-                  ref={applicationFileInputRef}
-                  type="file"
-                  accept=".pdf,application/pdf"
-                  className="hidden"
-                  onChange={onApplicationFilePick}
-                  disabled={form.type === "view"}
-                />
-                <div className="flex gap-10 items-center">
-                  <div>
-                    <Icon
-                      iconName="PDF"
-                      className="mx-auto mb-2 h-6 w-6 text-red-600 text-4xl text-bold"
-                    />
-                  </div>
-                  <div className="text-[#2F3047] text-xl text-semibold">
-                    Drag and drop PDF file here, or click to browse
-                    <p className="text-[#8B6B50] text-left text-sm mt-2">
-                      Main Proposal - PDF file only
-                    </p>
-                  </div>
-                </div>
-                <div className="bg-[#1D2054] w-[150px] py-2 px-3 rounded-md text-sm text-white cursor-pointer">
-                  CHOOSE PDF FILE
-                </div>
+          <div className="grid gap-8">
+            {/* Application Files Section - PDF Only */}
+            <div>
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-[#1e293b]">
+                  Main Proposal
+                </h3>
+                <p className="text-sm text-[#475569] mt-1">
+                  Upload the main proposal document (PDF only)
+                </p>
               </div>
-            )}
 
-            <div className="flex gap-6 mt-6 flex-row flex-wrap">
-              {applicationFiles.map((f) => {
-                const key = getFileKey(f.file);
-                if (f.action === "remove") return null;
-                return (
-                  <div
-                    key={key}
-                    className="flex items-center gap-3 bg-[#FFEBEE] px-4 py-2 rounded-xl shadow-sm"
-                  >
-                    <Icon className="text-red-600 text-xl" iconName="PDF" />
-                    <span className="text-sm text-[#8B6B50]">
-                      {f.file.name}
-                    </span>
-                    <IconButton
-                      className="text-[#8B6B50]"
-                      iconProps={{ iconName: "Download" }}
-                      title="Download file"
-                      ariaLabel="Download file"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const url = URL.createObjectURL(f.file);
-                        const a = document.createElement("a");
-                        a.href = url;
-                        a.download = f.file.name;
-                        a.click();
-                        URL.revokeObjectURL(url);
-                      }}
-                    />
-                    {form.type !== "view" && (
-                      <IconButton
-                        className="text-red-600"
-                        iconProps={{ iconName: "Delete" }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onApplicationFileRemove(key);
-                        }}
-                        title="Remove file"
-                      />
-                    )}
-                  </div>
-                );
-              })}
-              {applicationFiles.filter((f) => f.action !== "remove").length ===
-                0 && (
-                <div className="px-4 py-6 text-center text-sm text-muted-foreground">
-                  No application files added.
+              {form.type !== "view" && (
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "copy";
+                  }}
+                  onDrop={onApplicationDrop}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    applicationFileInputRef.current?.click();
+                  }}
+                  className="bg-[#f8fafc] flex flex-col items-center justify-center cursor-pointer rounded-lg border-2 border-dashed border-[#cbd5e1] px-6 py-12 text-center hover:bg-[#f0f4f8] hover:border-[#1D2054] transition-colors"
+                >
+                  <input
+                    ref={applicationFileInputRef}
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    className="hidden"
+                    onChange={onApplicationFilePick}
+                    disabled={form.type === "view"}
+                  />
+                  <Icon
+                    iconName="PDF"
+                    className="text-red-600 mb-3"
+                    style={{ fontSize: "32px" }}
+                  />
+                  <p className="text-[#1e293b] font-semibold mb-1">
+                    Drag and drop your PDF here
+                  </p>
+                  <p className="text-sm text-[#475569] mb-4">
+                    or click to browse
+                  </p>
+                  <DefaultButton
+                    text="Choose PDF File"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      applicationFileInputRef.current?.click();
+                    }}
+                    styles={{
+                      root: {
+                        backgroundColor: '#1D2054',
+                        borderColor: '#1D2054',
+                        color: '#fff',
+                      },
+                    }}
+                  />
                 </div>
               )}
+
+              <div className="mt-4">
+                {applicationFiles.filter((f) => f.action !== "remove").length >
+                0 ? (
+                  <div className="space-y-2">
+                    {applicationFiles.map((f) => {
+                      const key = getFileKey(f.file);
+                      if (f.action === "remove") return null;
+                      return (
+                        <div
+                          key={key}
+                          className="flex items-center justify-between bg-white border border-[#e2e8f0] rounded-lg px-4 py-3 hover:shadow-sm transition-shadow"
+                        >
+                          <div className="flex items-center gap-3 flex-1">
+                            <Icon
+                              className="text-red-600 flex-shrink-0"
+                              iconName="PDF"
+                              style={{ fontSize: "20px" }}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-[#1e293b] truncate">
+                                {f.file.name}
+                              </p>
+                              <p className="text-xs text-[#475569]">
+                                {formatSize(f.file.size)}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <IconButton
+                              iconProps={{ iconName: "Download" }}
+                              title="Download file"
+                              ariaLabel="Download file"
+                              styles={{
+                                root: { color: '#1D2054' },
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const url = URL.createObjectURL(f.file);
+                                const a = document.createElement("a");
+                                a.href = url;
+                                a.download = f.file.name;
+                                a.click();
+                                URL.revokeObjectURL(url);
+                              }}
+                            />
+                            {form.type !== "view" && (
+                              <IconButton
+                                iconProps={{ iconName: "Delete" }}
+                                title="Remove file"
+                                ariaLabel="Remove file"
+                                styles={{
+                                  root: { color: '#dc2626' },
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onApplicationFileRemove(key);
+                                }}
+                              />
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="px-4 py-6 text-center text-sm text-[#94a3b8]">
+                    No proposal file added
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
 
-          {/* General Files Section - Any File Type */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-700 mb-3">
-              supported File
-            </h3>
-            {form.type !== "view" && (
-              <div
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  e.dataTransfer.dropEffect = "copy";
-                }}
-                onDrop={onGeneralDrop}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  generalFileInputRef.current?.click();
-                }}
-                className="bg-[#FFF8F3] flex cursor-pointer flex-row items-center justify-between rounded-lg border-2 border-dashed border-[#F3D1BF] px-6 py-10 text-center hover:bg-[#FAE7DD]"
-              >
-                <input
-                  ref={generalFileInputRef}
-                  type="file"
-                  multiple
-                  className="hidden"
-                  onChange={onGeneralFilePick}
-                  disabled={form.type === "view"}
-                />
-                <div className="flex gap-10 items-center">
-                  <div>
-                    <Icon
-                      iconName="Upload"
-                      className="mx-auto mb-2 h-6 w-6 text-[#8B6B50] text-4xl text-bold"
-                    />
-                  </div>
-                  <div className="text-[#2F3047] text-xl text-semibold">
-                    Drag and drop files here, or click to browse
-                    <p className="text-[#8B6B50] text-left text-sm mt-2">
-                      Supports PDF, Word, Excel, Images, and other files
-                    </p>
-                  </div>
-                </div>
-                <div className="bg-[#1D2054] w-[150px] py-2 px-3 rounded-md text-sm text-white cursor-pointer">
-                  CHOOSE FILES
-                </div>
+            {/* General Files Section - Any File Type */}
+            <div className="border-t border-[#e2e8f0] pt-8">
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-[#1e293b]">
+                  Supporting Documents
+                </h3>
+                <p className="text-sm text-[#475569] mt-1">
+                  Upload additional files (PDF, Word, Excel, Images, etc.)
+                </p>
               </div>
-            )}
 
-            <div className="flex gap-6 mt-6 flex-row flex-wrap">
-              {generalFiles.map((f) => {
-                const key = getFileKey(f.file);
-                if (f.action === "remove") return null;
-                return (
-                  <div
-                    key={key}
-                    className="flex items-center gap-3 bg-[#FAEDE7] px-4 py-2 rounded-xl shadow-sm"
-                  >
-                    <Icon
-                      className="text-[#8B6B50] text-xl"
-                      iconName="Attach"
-                    />
-                    <span className="text-sm text-[#8B6B50]">
-                      {f.file.name}
-                    </span>
-                    <IconButton
-                      className="text-[#8B6B50]"
-                      iconProps={{ iconName: "Download" }}
-                      title="Download file"
-                      ariaLabel="Download file"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const url = URL.createObjectURL(f.file);
-                        const a = document.createElement("a");
-                        a.href = url;
-                        a.download = f.file.name;
-                        a.click();
-                        URL.revokeObjectURL(url);
-                      }}
-                    />
-                    {form.type !== "view" && (
-                      <IconButton
-                        className="text-red-600"
-                        iconProps={{ iconName: "Delete" }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onGeneralFileRemove(key);
-                        }}
-                        title="Remove file"
-                      />
-                    )}
-                  </div>
-                );
-              })}
-              {generalFiles.filter((f) => f.action !== "remove").length ===
-                0 && (
-                <div className="px-4 py-6 text-center text-sm text-muted-foreground">
-                  No files added.
+              {form.type !== "view" && (
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "copy";
+                  }}
+                  onDrop={onGeneralDrop}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    generalFileInputRef.current?.click();
+                  }}
+                  className="bg-[#f8fafc] flex flex-col items-center justify-center cursor-pointer rounded-lg border-2 border-dashed border-[#cbd5e1] px-6 py-12 text-center hover:bg-[#f0f4f8] hover:border-[#1D2054] transition-colors"
+                >
+                  <input
+                    ref={generalFileInputRef}
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={onGeneralFilePick}
+                    disabled={form.type === "view"}
+                  />
+                  <Icon
+                    iconName="Attach"
+                    className="text-[#1D2054] mb-3"
+                    style={{ fontSize: "32px" }}
+                  />
+                  <p className="text-[#1e293b] font-semibold mb-1">
+                    Drag and drop files here
+                  </p>
+                  <p className="text-sm text-[#475569] mb-4">
+                    or click to browse
+                  </p>
+                  <DefaultButton
+                    text="Choose Files"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      generalFileInputRef.current?.click();
+                    }}
+                    styles={{
+                      root: {
+                        backgroundColor: '#1D2054',
+                        borderColor: '#1D2054',
+                        color: '#fff',
+                      },
+                    }}
+                  />
                 </div>
               )}
+
+              <div className="mt-4">
+                {generalFiles.filter((f) => f.action !== "remove").length > 0 ? (
+                  <div className="space-y-2">
+                    {generalFiles.map((f) => {
+                      const key = getFileKey(f.file);
+                      if (f.action === "remove") return null;
+                      return (
+                        <div
+                          key={key}
+                          className="flex items-center justify-between bg-white border border-[#e2e8f0] rounded-lg px-4 py-3 hover:shadow-sm transition-shadow"
+                        >
+                          <div className="flex items-center gap-3 flex-1">
+                            <Icon
+                              className="text-[#1D2054] flex-shrink-0"
+                              iconName="Attach"
+                              style={{ fontSize: "20px" }}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-[#1e293b] truncate">
+                                {f.file.name}
+                              </p>
+                              <p className="text-xs text-[#475569]">
+                                {formatSize(f.file.size)}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <IconButton
+                              iconProps={{ iconName: "Download" }}
+                              title="Download file"
+                              ariaLabel="Download file"
+                              styles={{
+                                root: { color: '#1D2054' },
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const url = URL.createObjectURL(f.file);
+                                const a = document.createElement("a");
+                                a.href = url;
+                                a.download = f.file.name;
+                                a.click();
+                                URL.revokeObjectURL(url);
+                              }}
+                            />
+                            {form.type !== "view" && (
+                              <IconButton
+                                iconProps={{ iconName: "Delete" }}
+                                title="Remove file"
+                                ariaLabel="Remove file"
+                                styles={{
+                                  root: { color: '#dc2626' },
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onGeneralFileRemove(key);
+                                }}
+                              />
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="px-4 py-6 text-center text-sm text-[#94a3b8]">
+                    No supporting documents added
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </Reveal>
