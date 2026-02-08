@@ -407,10 +407,12 @@ export default function Index() {
   // Load grant template with FAQ
   const loadGrantTemplate = async () => {
     try {
-      // TODO: Replace 'prmtk_granttemplates' with correct table name from your Dataverse
-      // Current table name returns 404 - verify in Dataverse what table stores FAQ content
       const url = `/_api/prmtk_granttemplates`;
-      const res = await callApi<{ value: any[] }>({ url, method: "GET" });
+      const res = await callApi<{ value: any[] }>({
+        url,
+        method: "GET",
+        skipAuth: true // Public API - no authentication needed
+      });
       const templates = res?.value ?? [];
       if (templates.length > 0) {
         setGrantTemplate(templates[0]);
