@@ -153,24 +153,32 @@ export default function Researches() {
   };
 
   return (
-    <section className="bg-white">
-      <div className="container py-16">
+    <>
+      {/* Header Banner */}
+      <section className="relative overflow-hidden bg-[#1D2054]">
         <Reveal>
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-            <div>
-              <div className="text-xs tracking-[0.25em] text-[#8c5a3d] uppercase">
-                Dashboard
-              </div>
-              <h1 className="mt-1 text-3xl md:text-4xl font-bold tracking-tight text-[#2b201a]">
-                Researches
+          <div className="container py-4 md:py-4 grid gap-10 md:grid-cols-2 items-center">
+            <div className="max-w-2xl">
+              <h1 className="text-4xl md:text-6xl font-extrabold leading-tight tracking-tight text-white">
+                My Research Status
               </h1>
-              <p className="mt-2 text-muted-foreground">
-                Track your submitted research proposals and their review status.
-              </p>
+            </div>
+
+            {/* Hero Collage */}
+            <div className="relative flex justify-center md:justify-end">
+              <img
+                src="/images/application.png"
+                alt="Illustration"
+                className="h-auto w-auto max-w-none"
+              />
             </div>
           </div>
         </Reveal>
+      </section>
 
+      {/* Page Content */}
+      <section className="bg-white">
+        <div className="container py-16">
           <Reveal className="mt-8">
             <div className="rounded-xl border overflow-hidden bg-white">
               <div className="overflow-x-auto">
@@ -264,7 +272,8 @@ export default function Researches() {
 
           {/* Summary Section */}
           <SummaryCards />
-      </div>
-    </section>
+        </div>
+      </section>
+    </>
   );
 }
