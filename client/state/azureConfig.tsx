@@ -1,8 +1,15 @@
 import { API_CONFIG } from "@/config/api";
 
 // Redirect URI must match what's registered in Azure B2C app settings
-// This should be the actual application URL, not the deployment preview domain
-const REGISTERED_REDIRECT_URI = API_CONFIG.BASE_URL + "/";
+// Use dynamic redirect URI based on current domain for multi-deployment support
+const getRedirectUri = () => {
+  if (typeof window === "undefined") {
+    return "https://research-grants-spa.powerappsportals.com/";
+  }
+  return `${window.location.origin}/`;
+};
+
+const REGISTERED_REDIRECT_URI = getRedirectUri();
 
 export const msalConfig = {
   auth: {
