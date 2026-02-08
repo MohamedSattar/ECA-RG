@@ -237,3 +237,108 @@ html[dir="ltr"] body {
       order: 99999!important;
   }
 }
+
+/* Form Field Styling - Unified */
+.ms-TextField {
+  width: 100%;
+}
+
+.ms-TextField-wrapper {
+  width: 100%;
+}
+
+.ms-TextField-field {
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 0.5rem !important;
+  padding: 0.75rem 0.75rem !important;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.ms-TextField-field:focus {
+  border-color: #1D2054 !important;
+  box-shadow: 0 0 0 3px rgba(29, 32, 84, 0.1) !important;
+}
+
+.ms-TextField-field:disabled {
+  background-color: #f8fafc !important;
+  color: #94a3b8 !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* TextArea specific styling */
+.ms-TextField-field[data-is-multiline="true"] {
+  padding: 0.75rem !important;
+  min-height: 100px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+/* Label styling */
+.ms-Label {
+  font-weight: 500 !important;
+  color: #1e293b !important;
+  margin-bottom: 0.5rem !important;
+  font-size: 14px;
+}
+
+/* LookupPicker / TagPicker styling */
+.ms-BasePicker {
+  width: 100%;
+}
+
+.ms-BasePicker-text {
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 0.5rem !important;
+  min-height: 38px;
+  padding: 0.5rem !important;
+  transition: all 0.2s ease;
+}
+
+.ms-BasePicker-text:focus-within {
+  border-color: #1D2054 !important;
+  box-shadow: 0 0 0 3px rgba(29, 32, 84, 0.1) !important;
+}
+
+.ms-BasePicker-text.is-disabled {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+.ms-BasePicker-tag {
+  background-color: #f0f4f8 !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 0.375rem !important;
+  padding: 0.25rem 0.5rem !important;
+  color: #1e293b !important;
+}
+
+.ms-BasePicker-tag .ms-Button {
+  color: #64748b !important;
+}
+
+.ms-BasePicker-tag .ms-Button:hover {
+  color: #1e293b !important;
+}
+
+/* TagPicker suggestions dropdown */
+.ms-Suggestions {
+  border: 1px solid #e2e8f0 !important;
+  border-top: none;
+  border-radius: 0 0 0.5rem 0.5rem !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+.ms-Suggestions-item {
+  padding: 0.75rem !important;
+  transition: background-color 0.15s ease;
+}
+
+.ms-Suggestions-item:hover {
+  background-color: #f0f4f8 !important;
+}
+
+.ms-Suggestions-item.is-selected {
+  background-color: #e0e7ff !important;
+  color: #1D2054 !important;
+}
