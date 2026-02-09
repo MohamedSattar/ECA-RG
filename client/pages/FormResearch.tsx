@@ -465,8 +465,10 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
   <Reveal className="mt-8">
     <div className="mt-4 grid gap-6 md:grid-cols-2">
       <div className="md:col-span-2">
-        <Label htmlFor="title">Research Title</Label>
-        <div className="mt-1">
+        <Label htmlFor="title" className="text-sm font-medium text-[#1e293b]">
+          Research Title
+        </Label>
+        <div className="mt-2">
           <TextField
             id="title"
             value={form.title}
@@ -474,26 +476,56 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
             placeholder="Enter project title"
             disabled={form.type === "view"}
             borderless
+            styles={{
+              root: {
+                border: "1px solid #e2e8f0",
+                borderRadius: "6px",
+                backgroundColor: form.type === "view" ? "#f8fafc" : "#ffffff",
+                paddingLeft: "12px",
+                paddingRight: "12px",
+              },
+              field: {
+                fontSize: "14px",
+                color: "#1e293b",
+                "::placeholder": {
+                  color: "#94a3b8",
+                },
+              },
+            }}
           />
         </div>
       </div>
       <div>
-        <Label>Start Date</Label>
-        <div className="mt-1">
+        <Label className="text-sm font-medium text-[#1e293b]">Start Date</Label>
+        <div className="mt-2">
           <DatePicker
             value={form.startDate}
             onSelectDate={onStartDateChange}
             disabled={form.type === "view"}
+            styles={{
+              root: {
+                border: "1px solid #e2e8f0",
+                borderRadius: "6px",
+                backgroundColor: form.type === "view" ? "#f8fafc" : "#ffffff",
+              },
+            }}
           />
         </div>
       </div>
       <div>
-        <Label>End Date</Label>
-        <div className="mt-1">
+        <Label className="text-sm font-medium text-[#1e293b]">End Date</Label>
+        <div className="mt-2">
           <DatePicker
             value={form.endDate}
             onSelectDate={onEndDateChange}
             disabled={form.type === "view"}
+            styles={{
+              root: {
+                border: "1px solid #e2e8f0",
+                borderRadius: "6px",
+                backgroundColor: form.type === "view" ? "#f8fafc" : "#ffffff",
+              },
+            }}
           />
         </div>
       </div>
