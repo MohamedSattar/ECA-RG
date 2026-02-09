@@ -303,11 +303,10 @@ interface GeneralInformationSectionProps {
   form: FormState;
   onTitleChange: (value: string) => void;
   onAbstractChange: (value: string) => void;
-  onGrantCycleChange: (cycleId: string | null) => void;
-  onResearchAreaChange: (areaId: string | null) => void;
-  onMainApplicantChange: (contactId: string) => void;
-  grantCycleIdFromState: string | undefined;
-  researchAreaIdFromState: string | undefined;
+  onGrantCycleChange: (value: string | null) => void;
+  onResearchAreaChange: (value: string | null) => void;
+  grantCycleId?: string | null;
+  researchAreaId?: string | null;
   userAdxUserId?: string;
 }
 
@@ -317,9 +316,8 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
   onAbstractChange,
   onGrantCycleChange,
   onResearchAreaChange,
-  onMainApplicantChange,
-  grantCycleIdFromState,
-  researchAreaIdFromState,
+  grantCycleId,
+  researchAreaId,
   userAdxUserId,
 }) => {
   const { user } = useAuth();
@@ -327,108 +325,89 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
   const formType = searchParams.get("formType") || "new";
   return (
     <Reveal className="mt-8">
-      <div className="mt-4 grid gap-4 md:grid-cols-2">
+      <div className="mt-4 grid gap-6 md:grid-cols-2">
+        <div>
+          <Label>Grant Cycle</Label>
+          <div className="mt-1">
+            <LookupPicker
+              key={`grant-cycle-${form.grantCycle || "none"}`}
+              displayField={GrantCycleKeys.CYCLENAME}
+              keyField={GrantCycleKeys.GRANTCYCLEID}
+              secondaryField={GrantCycleKeys.CYCLEDESCRIPTION}
+              searchField={GrantCycleKeys.CYCLENAME}
+              tableName={TableName.GRANTCYCLES}
+              maxSelection={1}
+              disabled={formType === "view"}
+              label="Grant Cycle"
+              cascadeField={GrantCycleKeys.GRANTCYCLEID}
+              cascadeValue={grantCycleId}
+              isDefaultSelected={grantCycleId != null}
+              onSelect={(values) => {
+                onGrantCycleChange(
+                  values && values.length > 0
+                    ? values[0][GrantCycleKeys.GRANTCYCLEID]
+                    : null,
+                );
+              }}
+            />
+          </div>
+        </div>
+        <div>
+          <Label>Research Area</Label>
+          <div className="mt-1">
+            <LookupPicker
+              key={`research-area-${form.researchArea || "none"}`}
+              displayField={ResearchAreaKeys.AREANAME}
+              keyField={ResearchAreaKeys.RESEARCHAREAID}
+              secondaryField={ResearchAreaKeys.AREADESCRIPTION}
+              searchField={ResearchAreaKeys.AREANAME}
+              tableName={TableName.RESEARCHAREAS}
+              maxSelection={1}
+              label="Research Area"
+              cascadeField={ResearchAreaKeys.RESEARCHAREAID}
+              cascadeValue={researchAreaId}
+              isDefaultSelected={researchAreaId != null}
+              disabled={formType === "view"}
+              onSelect={(values) => {
+                onResearchAreaChange(
+                  values && values.length > 0
+                    ? values[0][ResearchAreaKeys.RESEARCHAREAID]
+                    : null,
+                );
+              }}
+            />
+          </div>
+        </div>
         <div className="md:col-span-2">
           <Label htmlFor="title">
             Title <span className="text-red-500">*</span>
           </Label>
-          <TextField
-            id="title"
-            value={form.title}
-            onChange={(e, newValue) => onTitleChange(newValue || "")}
-            placeholder="Enter project title"
-            disabled={formType === "view"}
-          />
+          <div className="mt-1">
+            <TextField
+              id="title"
+              value={form.title}
+              onChange={(e, newValue) => onTitleChange(newValue || "")}
+              placeholder="Enter project title"
+              disabled={formType === "view"}
+              borderless
+            />
+          </div>
         </div>
         <div className="md:col-span-2">
           <Label htmlFor="abstract">Abstract</Label>
-          <TextField
-            id="abstract"
-            value={form.abstract}
-            onChange={(e, newValue) => onAbstractChange(newValue || "")}
-            multiline
-            rows={5}
-            disabled={formType === "view"}
-            placeholder="Provide a concise abstract"
-          />
-        </div>
-        <div>
-          <Label>Grant Cycle</Label>
-
-          <LookupPicker
-            key={`grant-cycle-${grantCycleIdFromState || "none"}`}
-            displayField={GrantCycleKeys.CYCLENAME}
-            keyField={GrantCycleKeys.GRANTCYCLEID}
-            secondaryField={GrantCycleKeys.CYCLEDESCRIPTION}
-            searchField={GrantCycleKeys.CYCLENAME}
-            tableName={TableName.GRANTCYCLES}
-            maxSelection={1}
-            disabled={formType === "view"}
-            label="Grant Cycle"
-            cascadeField={GrantCycleKeys.GRANTCYCLEID}
-            cascadeValue={grantCycleIdFromState}
-            isDefaultSelected={
-              grantCycleIdFromState && grantCycleIdFromState != null
-            }
-            onSelect={(values) => {
-              onGrantCycleChange(
-                values && values.length > 0
-                  ? values[0][GrantCycleKeys.GRANTCYCLEID]
-                  : null,
-              );
-            }}
-          />
-        </div>
-        <div>
-          <Label>Research Area</Label>
-          <LookupPicker
-            key={`research-area-${researchAreaIdFromState || "none"}`}
-            displayField={ResearchAreaKeys.AREANAME}
-            keyField={ResearchAreaKeys.RESEARCHAREAID}
-            secondaryField={ResearchAreaKeys.AREADESCRIPTION}
-            searchField={ResearchAreaKeys.AREANAME}
-            tableName={TableName.RESEARCHAREAS}
-            maxSelection={1}
-            label="Research Area"
-            cascadeField={ResearchAreaKeys.RESEARCHAREAID}
-            cascadeValue={researchAreaIdFromState}
-            isDefaultSelected={
-              researchAreaIdFromState && researchAreaIdFromState != null
-            }
-            disabled={formType === "view"}
-            onSelect={(values) => {
-              onResearchAreaChange(
-                values && values.length > 0
-                  ? values[0][ResearchAreaKeys.RESEARCHAREAID]
-                  : null,
-              );
-            }}
-          />
-        </div>
-        <div>
-          <Label>Main Applicant</Label>
-          <LookupPicker
-            key={`main-applicant-${userAdxUserId || "none"}`}
-            displayField={ContactKeys.FULLNAME}
-            keyField={ContactKeys.CONTACTID}
-            secondaryField={ContactKeys.EMAILADDRESS1}
-            searchField={ContactKeys.FULLNAME}
-            tableName={TableName.CONTACTS}
-            maxSelection={1}
-            label="Contact"
-            cascadeField={ContactKeys.FULLNAME}
-            cascadeValue={user?.contact?.[ContactFields.FULLNAME]}
-            isDefaultSelected={true}
-            disabled={true}
-            onSelect={(values) => {}}
-          />
-        </div>
-        {formType !== "new" && (
-          <div>
-            <Label>Submission Date</Label>
-            <TextField value={form.submissionDate} readOnly />
+          <div className="mt-1">
+            <TextField
+              id="abstract"
+              value={form.abstract}
+              onChange={(e, newValue) => onAbstractChange(newValue || "")}
+              multiline
+              rows={5}
+              disabled={formType === "view"}
+              placeholder="Provide a concise abstract"
+              borderless
+            />
           </div>
-        )}
+        </div>
       </div>
     </Reveal>
   );
@@ -1284,6 +1263,14 @@ export default function FormApplication() {
                   Grant : {applicationNumber}
                 </div>
               )}
+              {formType !== "new" && (
+                <div className="text-sm text-white">
+                  <span className="opacity-80">Submission Date:</span>
+                  <span className="ml-2 font-semibold text-[#F7D85C]">
+                    {form.submissionDate}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Hero Collage */}
@@ -1299,19 +1286,30 @@ export default function FormApplication() {
       </section>
       <section className="bg-white">
         <div className="container py-4">
-          <div className="flex justify-end gap-4">
-            {formType !== "view" && (
+          {formType !== "view" && (
+            <div className="flex justify-end gap-4">
               <button
                 onClick={() => handleSubmitClick(status)}
-                disabled={formType === "view"}
                 className="flex items-center gap-2 px-4 py-1 border border-[#7BAAA3] text-[#7BAAA3] rounded text-sm hover:bg-[#7BAAA3]/10 transition"
               >
                 <Icon iconName="SingleBookmark" />
                 SAVE DRAFT
               </button>
-            )}
 
-            {status !== "Draft" && (
+              {status !== "Draft" && (
+                <button
+                  onClick={() => loadWorkFlowHistory(applicationId as string)}
+                  className="flex items-center gap-2 px-4 py-1 border border-[#7BAAA3] text-[#7BAAA3] rounded text-sm hover:bg-[#7BAAA3]/10 transition"
+                >
+                  <Icon iconName="MailReminder" />
+                  History
+                </button>
+              )}
+            </div>
+          )}
+
+          {formType === "view" && status !== "Draft" && (
+            <div className="flex justify-end gap-4">
               <button
                 onClick={() => loadWorkFlowHistory(applicationId as string)}
                 className="flex items-center gap-2 px-4 py-1 border border-[#7BAAA3] text-[#7BAAA3] rounded text-sm hover:bg-[#7BAAA3]/10 transition"
@@ -1319,8 +1317,8 @@ export default function FormApplication() {
                 <Icon iconName="MailReminder" />
                 History
               </button>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* General Information Section */}
           <div className="mt-8 rounded-xl border bg-white p-6">
@@ -1336,7 +1334,7 @@ export default function FormApplication() {
             </div>
             {showGeneral && (
               <GeneralInformationSection
-                key={`${form.grantCycle}-${form.researchArea}-${user?.adxUserId}`}
+                key={`${user?.adxUserId}`}
                 form={form}
                 onTitleChange={(value) =>
                   setForm((prev) => ({ ...prev, title: value }))
@@ -1344,17 +1342,14 @@ export default function FormApplication() {
                 onAbstractChange={(value) =>
                   setForm((prev) => ({ ...prev, abstract: value }))
                 }
-                onGrantCycleChange={(cycleId) =>
-                  setForm((prev) => ({ ...prev, grantCycle: cycleId }))
+                onGrantCycleChange={(value) =>
+                  setForm((prev) => ({ ...prev, grantCycle: value }))
                 }
-                onResearchAreaChange={(areaId) =>
-                  setForm((prev) => ({ ...prev, researchArea: areaId }))
+                onResearchAreaChange={(value) =>
+                  setForm((prev) => ({ ...prev, researchArea: value }))
                 }
-                onMainApplicantChange={(contactId) =>
-                  setForm((prev) => ({ ...prev, mainApplicant: contactId }))
-                }
-                grantCycleIdFromState={form.grantCycle || grantCycleId}
-                researchAreaIdFromState={form.researchArea || researchAreaId}
+                grantCycleId={grantCycleId}
+                researchAreaId={researchAreaId}
                 userAdxUserId={user && user.contact?.[ContactKeys.CONTACTID]}
               />
             )}
@@ -1601,4 +1596,3 @@ export default function FormApplication() {
     </>
   );
 }
-

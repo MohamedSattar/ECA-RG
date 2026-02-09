@@ -6,7 +6,6 @@
 @tailwind utilities;
 
 @layer base {
-
   /**
    * Tailwind CSS theme
    * tailwind.config.ts expects the following color variables to be expressed as HSL values.
@@ -99,7 +98,17 @@
   }
 
   html {
-    font-family: "Graphik Arabic", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    font-family:
+      "Graphik Arabic",
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      Segoe UI,
+      Roboto,
+      "Helvetica Neue",
+      Arial,
+      "Apple Color Emoji",
+      "Segoe UI Emoji";
   }
 
   body {
@@ -123,75 +132,75 @@
 }
 
 svg.rdp-chevron {
-  fill: #e78f6a!important;
+  fill: #e78f6a !important;
 }
 
-.rdp-selected .rdp-day_button{
-  border-color: #e78f6a!important;
-  background: #e78f6a!important;
-  color: #fff!important;;
+.rdp-selected .rdp-day_button {
+  border-color: #e78f6a !important;
+  background: #e78f6a !important;
+  color: #fff !important;
 }
 
 .rdp-today {
-  color: #e78f6a!important;;
+  color: #e78f6a !important;
 }
 .hover\:bg-accent:hover {
-    background-color: transparent!important;
-    color: inherit!important;
+  background-color: transparent !important;
+  color: inherit !important;
 }
-.text-blue{
-    color: #1D2054!important;
+.text-blue {
+  color: #1d2054 !important;
 }
-.text-brown{
-    color: #391400!important;
+.text-brown {
+  color: #391400 !important;
 }
-.text-light-brown{
-    color: #391400A3!important;
+.text-light-brown {
+  color: #391400a3 !important;
 }
-.text-orange{
-  color:#EF6D58!important;
+.text-orange {
+  color: #ef6d58 !important;
 }
-.text-white{
-  color:#FFFFFF!important;
+.text-white {
+  color: #ffffff !important;
 }
-.text-yellow{
-  color:#F7D85C!important;
+.text-yellow {
+  color: #f7d85c !important;
 }
-.bg-blue{
-  background-color:#1D2054!important;
+.bg-blue {
+  background-color: #1d2054 !important;
 }
-.bg-orange{
-  background-color:#EF6D58!important;
+.bg-orange {
+  background-color: #ef6d58 !important;
 }
-.bg-lightorange{
-  background-color:#F3D1BF!important;
+.bg-lightorange {
+  background-color: #f3d1bf !important;
 }
-.bg-light{
-  background-color:#FFF8F3!important;
+.bg-light {
+  background-color: #fff8f3 !important;
 }
-.border-dotted{
-  border-style: dotted!important;
+.border-dotted {
+  border-style: dotted !important;
 }
 .ms-Persona .ms-Persona-primaryText {
-    color: #ffff !important;
+  color: #ffff !important;
 }
 button.ms-Button.ms-Button--commandBar {
-    background: #0f1840 !important;
-    height: 4rem !important;
+  background: #0f1840 !important;
+  height: 4rem !important;
 }
 .ms-Persona i.ms-Icon.ms-Button-menuIcon {
-    color: #ffff !important;
-    background: #0f1840 !important;
+  color: #ffff !important;
+  background: #0f1840 !important;
 }
 .borderLeftthink {
-    border-left-width: 4px !important;
-    border-color: #EF6D58 !important;
+  border-left-width: 4px !important;
+  border-color: #ef6d58 !important;
 }
-.border-color-orange{
-  border-color: #F3D1BF!important;
+.border-color-orange {
+  border-color: #f3d1bf !important;
 }
-#spa-root{
-  font-family:sans-serif!important;
+#spa-root {
+  font-family: sans-serif !important;
 }
 
 /* RTL Support for Arabic */
@@ -230,10 +239,195 @@ html[dir="ltr"] body {
 }
 
 @media (min-width: 768px) {
-    .col-last {
-        order: 1 !important;
-    }
-    .col-first {
-      order: 99999!important;
+  .col-last {
+    order: 1 !important;
   }
+  .col-first {
+    order: 99999 !important;
+  }
+}
+
+/* Form Field Styling - Unified */
+.ms-TextField {
+  width: 100%;
+}
+
+.ms-TextField-wrapper {
+  width: 100%;
+}
+
+.ms-TextField-field {
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 0.5rem !important;
+  padding: 0.75rem 0.75rem !important;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.ms-TextField-field:focus {
+  border-color: #1d2054 !important;
+  box-shadow: 0 0 0 3px rgba(29, 32, 84, 0.1) !important;
+}
+
+.ms-TextField-field:disabled {
+  background-color: #f8fafc !important;
+  color: #94a3b8 !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* TextArea specific styling */
+.ms-TextField-field[data-is-multiline="true"] {
+  padding: 0.75rem !important;
+  min-height: 100px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+/* Label styling */
+.ms-Label {
+  font-weight: 500 !important;
+  color: #1e293b !important;
+  margin-bottom: 0.5rem !important;
+  font-size: 14px;
+}
+
+/* LookupPicker / TagPicker styling */
+.ms-BasePicker {
+  width: 100%;
+}
+
+.ms-BasePicker-text {
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 0.5rem !important;
+  min-height: 38px;
+  padding: 0.5rem !important;
+  transition: all 0.2s ease;
+}
+
+.ms-BasePicker-text:focus-within {
+  border-color: #1d2054 !important;
+  box-shadow: 0 0 0 3px rgba(29, 32, 84, 0.1) !important;
+}
+
+.ms-BasePicker-text.is-disabled {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+.ms-BasePicker-tag {
+  background-color: #f0f4f8 !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 0.375rem !important;
+  padding: 0.25rem 0.5rem !important;
+  color: #1e293b !important;
+}
+
+.ms-BasePicker-tag .ms-Button {
+  color: #64748b !important;
+}
+
+.ms-BasePicker-tag .ms-Button:hover {
+  color: #1e293b !important;
+}
+
+/* TagPicker suggestions dropdown */
+.ms-Suggestions {
+  border: 1px solid #e2e8f0 !important;
+  border-top: none;
+  border-radius: 0 0 0.5rem 0.5rem !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+.ms-Suggestions-item {
+  padding: 0.75rem !important;
+  transition: background-color 0.15s ease;
+}
+
+.ms-Suggestions-item:hover {
+  background-color: #f0f4f8 !important;
+}
+
+.ms-Suggestions-item.is-selected {
+  background-color: #e0e7ff !important;
+  color: #1d2054 !important;
+}
+
+/* DatePicker styling */
+.ms-DatePicker {
+  width: 100%;
+}
+
+.ms-DatePicker-input {
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 0.5rem !important;
+  padding: 0.75rem !important;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  background-color: #ffffff !important;
+}
+
+.ms-DatePicker-input:focus {
+  border-color: #1d2054 !important;
+  box-shadow: 0 0 0 3px rgba(29, 32, 84, 0.1) !important;
+}
+
+.ms-DatePicker-input:disabled {
+  background-color: #f8fafc !important;
+  color: #94a3b8 !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* Dropdown styling */
+.ms-Dropdown {
+  width: 100%;
+}
+
+.ms-Dropdown-caretDownWrapper {
+  right: 8px;
+}
+
+.ms-Dropdown-title {
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 0.5rem !important;
+  padding: 0.75rem !important;
+  min-height: 38px;
+  transition: all 0.2s ease;
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+}
+
+.ms-Dropdown-title:hover:not(.is-disabled) {
+  border-color: #cbd5e1 !important;
+}
+
+.ms-Dropdown-title.is-open {
+  border-color: #1d2054 !important;
+  box-shadow: 0 0 0 3px rgba(29, 32, 84, 0.1) !important;
+}
+
+.ms-Dropdown-title.is-disabled {
+  background-color: #f8fafc !important;
+  color: #94a3b8 !important;
+  border-color: #e2e8f0 !important;
+}
+
+.ms-Dropdown-callout {
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 0.5rem !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+.ms-Dropdown-item,
+.ms-Dropdown-divider {
+  padding: 0.75rem !important;
+  color: #1e293b !important;
+}
+
+.ms-Dropdown-item:hover {
+  background-color: #f0f4f8 !important;
+}
+
+.ms-Dropdown-item.is-selected {
+  background-color: #e0e7ff !important;
+  color: #1d2054 !important;
 }

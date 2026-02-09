@@ -2,7 +2,11 @@ import * as React from "react";
 import { useMemo, useState } from "react";
 import Reveal from "@/motion/Reveal";
 import { toast } from "@/ui/use-toast";
-import { Dialog as FluentDialog, DialogFooter as FluentDialogFooter, DialogType } from "@fluentui/react/lib/Dialog";
+import {
+  Dialog as FluentDialog,
+  DialogFooter as FluentDialogFooter,
+  DialogType,
+} from "@fluentui/react/lib/Dialog";
 import { PrimaryButton, DefaultButton } from "@fluentui/react/lib/Button";
 import { Label } from "@fluentui/react/lib/Label";
 import { Dropdown, IDropdownOption } from "@fluentui/react/lib/Dropdown";
@@ -110,14 +114,13 @@ export const TeamMemberSection: React.FC<TeamMemberSectionProps> = ({
   return (
     <Reveal className="mt-6">
       <>
-        <div className="flex items-center justify-end">
-          <PrimaryButton
-            onClick={() => setIsDialogOpen(true)}
-            disabled={form.type === "view"}
-          >
-            Add member
-          </PrimaryButton>
-        </div>
+        {form.type !== "view" && (
+          <div className="flex items-center justify-end">
+            <PrimaryButton onClick={() => setIsDialogOpen(true)}>
+              Add member
+            </PrimaryButton>
+          </div>
+        )}
         <FluentDialog
           hidden={!isDialogOpen}
           onDismiss={handleDialogDismiss}
@@ -198,60 +201,67 @@ export const TeamMemberSection: React.FC<TeamMemberSectionProps> = ({
         </FluentDialog>
       </>
 
-      <div className="mt-4 rounded-lg border overflow-hidden">
+      <div className="mt-4 rounded-lg border border-[#e2e8f0] overflow-hidden">
         <table className="min-w-full text-sm">
-          <thead className="bg-[#f6e4d8]">
+          <thead className="bg-[#1D2054]">
             <tr className="text-left">
-              <th className="px-4 py-2 font-semibold text-[#2b201a]">
+              <th className="px-6 py-3 font-semibold text-white">
                 Member name
               </th>
-              <th className="px-4 py-2 font-semibold text-[#2b201a]">Role</th>
-              <th className="px-4 py-2 font-semibold text-[#2b201a]">
+              <th className="px-6 py-3 font-semibold text-white">Role</th>
+              <th className="px-6 py-3 font-semibold text-white">
                 Education Level
               </th>
-              <th className="px-4 py-2 font-semibold text-[#2b201a] text-right">
+              <th className="px-6 py-3 font-semibold text-white text-right">
                 Actions
               </th>
             </tr>
           </thead>
           <tbody>
-            {team.map((m) => (
-              <tr key={m.id} className="border-t">
-                <td className="px-4 py-2 font-medium text-[#2b201a]">
+            {team.map((m, index) => (
+              <tr
+                key={m.id}
+                className={`border-t border-[#e2e8f0] hover:bg-[#f0f4f8] transition-colors ${
+                  index % 2 === 0 ? "bg-white" : "bg-[#f8fafc]"
+                }`}
+              >
+                <td className="px-6 py-3 font-medium text-[#1e293b]">
                   {m.name}
                 </td>
-                <td className="px-4 py-2">
+                <td className="px-6 py-3 text-[#475569]">
                   {m.role === "5" && m.customRoleName
                     ? m.customRoleName
                     : dropdownOptions.find((role) => role.key == m.role)
                         ?.text || m.role}
                 </td>
-                <td className="px-4 py-2">{m.educationLevel || "N/A"}</td>
-                <td className="px-4 py-2 text-right">
+                <td className="px-6 py-3 text-[#475569]">
+                  {m.educationLevel || "N/A"}
+                </td>
+                <td className="px-6 py-3 text-right">
                   {m.action === "remove" ? (
-                    <span className="text-muted-foreground">Removed</span>
-                  ) : (
+                    <span className="text-[#94a3b8]">Removed</span>
+                  ) : form.type !== "view" ? (
                     <>
                       <IconButton
-                        disabled={form.type === "view"}
                         onClick={() => handleEditClick(m)}
                         iconProps={{ iconName: "Edit" }}
                         title="Edit"
                         ariaLabel="Edit"
-                      >
-                        Edit
-                      </IconButton>
+                        styles={{
+                          root: { color: "#1D2054" },
+                        }}
+                      />
                       <IconButton
-                        disabled={form.type === "view"}
                         onClick={() => onRemoveMember(m.id)}
                         iconProps={{ iconName: "Delete" }}
                         title="Remove"
                         ariaLabel="Remove"
-                      >
-                        Remove
-                      </IconButton>
+                        styles={{
+                          root: { color: "#dc2626" },
+                        }}
+                      />
                     </>
-                  )}
+                  ) : null}
                 </td>
               </tr>
             ))}
@@ -259,7 +269,7 @@ export const TeamMemberSection: React.FC<TeamMemberSectionProps> = ({
               <tr>
                 <td
                   colSpan={4}
-                  className="px-4 py-6 text-center text-muted-foreground"
+                  className="px-6 py-8 text-center text-[#94a3b8]"
                 >
                   No team members added.
                 </td>
