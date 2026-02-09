@@ -42,7 +42,10 @@ export interface ApiOptions extends RequestInit {
 // };;
 const fetchRequestVerificationToken = async (forceRefresh: boolean = false) => {
   try {
-    console.log("[Token] Fetching verification token...", forceRefresh ? "(force refresh)" : "(cached allowed)");
+    console.log(
+      "[Token] Fetching verification token...",
+      forceRefresh ? "(force refresh)" : "(cached allowed)",
+    );
     const response = await fetch(`/_layout/tokenhtml`, {
       credentials: "include",
       cache: forceRefresh ? "no-cache" : "default",
@@ -140,7 +143,9 @@ export function useDataverseApi() {
 
       cachedBearerToken = response.accessToken;
       bearerTokenExpiryTime = response.expiresOn.getTime() - 5 * 60 * 1000;
-      console.log("[Bearer] Successfully obtained bearer token (silent, no popup)");
+      console.log(
+        "[Bearer] Successfully obtained bearer token (silent, no popup)",
+      );
       return cachedBearerToken;
     } catch (err) {
       console.warn("[Bearer] Unable to obtain bearer token silently:", err);
@@ -169,7 +174,8 @@ export function useDataverseApi() {
       // Add request verification token for CSRF protection (required by Power Apps Portals)
       if (!options.skipAuth) {
         // For PATCH requests (updates), always force a fresh token to avoid 401 errors
-        const shouldForceRefresh = options.forceRefreshToken || options.method === "PATCH";
+        const shouldForceRefresh =
+          options.forceRefreshToken || options.method === "PATCH";
 
         const token = await getToken(shouldForceRefresh);
         if (token) {
@@ -188,7 +194,9 @@ export function useDataverseApi() {
             headers.Authorization = `Bearer ${bearerToken}`;
             console.log("[API] Bearer token added to Authorization header");
           } else {
-            console.warn("[API] Bearer token not available - will send only verification token");
+            console.warn(
+              "[API] Bearer token not available - will send only verification token",
+            );
           }
         } catch (err) {
           console.warn("[API] Error acquiring bearer token:", err);
@@ -200,11 +208,16 @@ export function useDataverseApi() {
 
       // Log both authentication headers
       const authHeadersLog = {
-        "__RequestVerificationToken": headers.__RequestVerificationToken ? "Present" : "Missing",
-        "Authorization": headers.Authorization ? "Bearer ***" : "Missing",
+        __RequestVerificationToken: headers.__RequestVerificationToken
+          ? "Present"
+          : "Missing",
+        Authorization: headers.Authorization ? "Bearer ***" : "Missing",
       };
       console.log(`[API] Authentication headers:`, authHeadersLog);
-      console.log(`[API] All request headers:`, { ...headers, Authorization: headers.Authorization ? "Bearer ***" : "none" });
+      console.log(`[API] All request headers:`, {
+        ...headers,
+        Authorization: headers.Authorization ? "Bearer ***" : "none",
+      });
 
       if (options.data) {
         console.log(`[API] Request body:`, options.data);
@@ -213,9 +226,13 @@ export function useDataverseApi() {
       // Confirm headers being sent
       console.log("[API] Final headers being sent:", {
         "Content-Type": headers["Content-Type"] || "none",
-        "__RequestVerificationToken": headers.__RequestVerificationToken ? "✓ SENT" : "✗ MISSING",
-        "Authorization": headers.Authorization ? "✓ SENT (Bearer token)" : "✗ MISSING",
-        "Accept": headers.Accept || "none",
+        __RequestVerificationToken: headers.__RequestVerificationToken
+          ? "✓ SENT"
+          : "✗ MISSING",
+        Authorization: headers.Authorization
+          ? "✓ SENT (Bearer token)"
+          : "✗ MISSING",
+        Accept: headers.Accept || "none",
       });
 
       const res = await fetch(options.url, {

@@ -145,7 +145,8 @@ export default function FormApplication() {
           console.log("[Profile] Update successful with status:", res.status);
         } else {
           console.error("[Profile] API Error - Status:", res.status);
-          const errorDetail = typeof res === 'object' ? JSON.stringify(res) : res;
+          const errorDetail =
+            typeof res === "object" ? JSON.stringify(res) : res;
           throw new Error(`API Error ${res.status}: ${errorDetail}`);
         }
       } else {
