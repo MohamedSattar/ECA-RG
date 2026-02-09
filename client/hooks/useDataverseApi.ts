@@ -164,7 +164,7 @@ export function useDataverseApi() {
         ...(options.headers || {}),
       };
 
-      // Add request verification token only if not skipped (for public APIs)
+      // Add request verification token for CSRF protection (required by Power Apps Portals)
       if (!options.skipAuth) {
         const token = await getToken();
         if (token) {
@@ -172,17 +172,21 @@ export function useDataverseApi() {
           console.log("[API] Request verification token added to headers");
         } else {
           console.error(
-            "[API] Failed to obtain request verification token - request will likely fail",
+            "[API] CRITICAL: Failed to obtain request verification token - request will fail",
           );
         }
 
-        // Add Azure Bearer token for authenticated API calls
-        const bearerToken = await getBearerToken();
-        if (bearerToken) {
-          headers.Authorization = `Bearer ${bearerToken}`;
-          console.log("[API] Bearer token added to Authorization header");
-        } else {
-          console.warn("[API] Failed to obtain bearer token - continuing without it");
+        // For Power Apps Portals, Bearer token is typically not needed
+        // The portal uses Request Verification Token + Cookies for authentication
+        // Attempt to get bearer token if available, but don't fail if it's not
+        try {
+          const bearerToken = await getBearerToken();
+          if (bearerToken) {
+            headers.Authorization = `Bearer ${bearerToken}`;
+            console.log("[API] Bearer token added (optional for portals)");
+          }
+        } catch (err) {
+          console.log("[API] Bearer token not available - using Request Verification Token only");
         }
       }
 
