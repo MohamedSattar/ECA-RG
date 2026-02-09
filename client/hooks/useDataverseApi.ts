@@ -181,23 +181,31 @@ export function useDataverseApi() {
           );
         }
 
-        // For Power Apps Portals, Bearer token is typically not needed
-        // The portal uses Request Verification Token + Cookies for authentication
-        // Attempt to get bearer token if available, but don't fail if it's not
+        // Always attempt to get Bearer token for complete authentication
         try {
           const bearerToken = await getBearerToken();
           if (bearerToken) {
             headers.Authorization = `Bearer ${bearerToken}`;
-            console.log("[API] Bearer token added (optional for portals)");
+            console.log("[API] Bearer token added to Authorization header");
+          } else {
+            console.warn("[API] Bearer token not available - will send only verification token");
           }
         } catch (err) {
-          console.log("[API] Bearer token not available - using Request Verification Token only");
+          console.warn("[API] Error acquiring bearer token:", err);
         }
       }
 
       // Call through backend proxy (/_api/* routes to Dataverse API)
       console.log(`[API] ${options.method || "GET"} ${options.url}`);
-      console.log(`[API] Request headers:`, { ...headers, Authorization: headers.Authorization ? "Bearer ***" : "none" });
+
+      // Log both authentication headers
+      const authHeadersLog = {
+        "__RequestVerificationToken": headers.__RequestVerificationToken ? "Present" : "Missing",
+        "Authorization": headers.Authorization ? "Bearer ***" : "Missing",
+      };
+      console.log(`[API] Authentication headers:`, authHeadersLog);
+      console.log(`[API] All request headers:`, { ...headers, Authorization: headers.Authorization ? "Bearer ***" : "none" });
+
       if (options.data) {
         console.log(`[API] Request body:`, options.data);
       }
