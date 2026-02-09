@@ -224,6 +224,33 @@ export default function FormApplication() {
                       </div>
                       <div>
                         <Label
+                          htmlFor="mobilePhone"
+                          className="text-[#1e293b] font-semibold"
+                        >
+                          Mobile Phone
+                        </Label>
+                        <div className="mt-2">
+                          <TextField
+                            id="mobilePhone"
+                            type="tel"
+                            value={form?.mobilePhone}
+                            onChange={(_, value) => {
+                              const cleanValue = (value || "").replace(
+                                /[^\d+]/g,
+                                "",
+                              );
+                              setForm((prev) => ({
+                                ...prev,
+                                mobilePhone: cleanValue,
+                              }));
+                            }}
+                            borderless
+                            placeholder="Enter your mobile phone (e.g., +971501234567)"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label
                           htmlFor="email"
                           className="text-[#1e293b] font-semibold"
                         >
@@ -251,33 +278,6 @@ export default function FormApplication() {
                             disabled
                             value={form?.Institute}
                             borderless
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <Label
-                          htmlFor="mobilePhone"
-                          className="text-[#1e293b] font-semibold"
-                        >
-                          Mobile Phone
-                        </Label>
-                        <div className="mt-2">
-                          <TextField
-                            id="mobilePhone"
-                            type="tel"
-                            value={form?.mobilePhone}
-                            onChange={(_, value) => {
-                              const cleanValue = (value || "").replace(
-                                /[^\d+]/g,
-                                "",
-                              );
-                              setForm((prev) => ({
-                                ...prev,
-                                mobilePhone: cleanValue,
-                              }));
-                            }}
-                            borderless
-                            placeholder="Enter your mobile phone (e.g., +971501234567)"
                           />
                         </div>
                       </div>
