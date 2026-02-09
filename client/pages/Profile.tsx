@@ -84,12 +84,6 @@ export default function FormApplication() {
         contactId: app[ContactKeys.CONTACTID] || "",
         Institute: app[ContactKeys.institute] || "",
       }));
-      // setDialogMessage("Profile loaded successfully!");
-      // setShowSuccessDialog(true);
-      toast({
-        title: "Success",
-        description: "Profile loaded successfully!",
-      });
       setShowLoader(false);
     } catch (error) {
       console.error("Failed to load application details:", error);
