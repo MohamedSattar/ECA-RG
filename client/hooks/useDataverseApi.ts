@@ -40,11 +40,12 @@ export interface ApiOptions extends RequestInit {
 //   const token = input.getAttribute("value");
 //   return token;
 // };;
-const fetchRequestVerificationToken = async () => {
+const fetchRequestVerificationToken = async (forceRefresh: boolean = false) => {
   try {
-    console.log("[Token] Fetching verification token...");
+    console.log("[Token] Fetching verification token...", forceRefresh ? "(force refresh)" : "(cached allowed)");
     const response = await fetch(`/_layout/tokenhtml`, {
       credentials: "include",
+      cache: forceRefresh ? "no-cache" : "default",
     });
 
     console.log(`[Token] Response: ${response.status} ${response.statusText}`);
