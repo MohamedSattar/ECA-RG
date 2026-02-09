@@ -2406,21 +2406,21 @@ export default function FormResearch() {
       <div className="container py-16">
         <Reveal>
           <div>
-            <div className="text-xs tracking-[0.25em] text-[#8c5a3d] uppercase">
+            <div className="text-xs tracking-[0.25em] text-[#475569] uppercase">
               Research
             </div>
-            <h1 className="mt-1 text-3xl md:text-4xl font-bold tracking-tight text-[#2b201a]">
+            <h1 className="mt-1 text-3xl md:text-4xl font-bold tracking-tight text-[#1e293b]">
               {form.type === "new"
                 ? "New Application"
                 : `Research : ${state?.item?.[ResearchKeys.RESEARCHNUMBER] || ""}`}
             </h1>
-            <p className="mt-2 text-muted-foreground">
+            <p className="mt-2 text-[#475569]">
               Complete the sections below and submit your proposal.
             </p>
             {form.type !== "new" && (
-              <div className="mt-3 text-sm text-gray-600">
+              <div className="mt-3 text-sm text-[#475569]">
                 <span className="opacity-80">Submission Date:</span>
-                <span className="ml-2 font-semibold text-[#2b201a]">
+                <span className="ml-2 font-semibold text-[#1e293b]">
                   {form.submissionDate}
                 </span>
               </div>
