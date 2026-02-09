@@ -95,7 +95,7 @@ const fetchRequestVerificationToken = async () => {
 };
 
 export function useDataverseApi() {
-  const { instance, accounts } = useMsal();
+  const { instance, accounts, inProgress } = useMsal();
   let cachedToken: string | null = null;
   let cachedBearerToken: string | null = null;
   let bearerTokenExpiryTime: number = 0;
@@ -117,7 +117,7 @@ export function useDataverseApi() {
 
   const getBearerToken = async () => {
     try {
-      // Check if cached token is still valid
+      // Check if cached token is still valid (with 5 minute buffer)
       if (cachedBearerToken && bearerTokenExpiryTime > Date.now()) {
         console.log("[Bearer] Using cached bearer token");
         return cachedBearerToken;
@@ -128,16 +128,32 @@ export function useDataverseApi() {
         return null;
       }
 
-      const response = await instance.acquireTokenSilent({
-        scopes: ["https://service.crm.dynamics.com/.default"],
-        account: accounts[0],
-      });
+      // For Azure AD B2C, we get the access token using the ID token request
+      // The token endpoint will issue an access token for this application
+      try {
+        const response = await instance.acquireTokenSilent({
+          scopes: ["openid", "offline_access"],
+          account: accounts[0],
+        });
 
-      cachedBearerToken = response.accessToken;
-      // Set expiry time to token expiration minus 5 minutes
-      bearerTokenExpiryTime = response.expiresOn.getTime() - 5 * 60 * 1000;
-      console.log("[Bearer] Successfully obtained bearer token");
-      return cachedBearerToken;
+        cachedBearerToken = response.accessToken;
+        bearerTokenExpiryTime = response.expiresOn.getTime() - 5 * 60 * 1000;
+        console.log("[Bearer] Successfully obtained bearer token from B2C");
+        return cachedBearerToken;
+      } catch (silentErr) {
+        console.warn("[Bearer] Silent token acquisition failed, trying interactive:", silentErr);
+
+        // Fallback to interactive token acquisition
+        const response = await instance.acquireTokenPopup({
+          scopes: ["openid", "offline_access"],
+          account: accounts[0],
+        });
+
+        cachedBearerToken = response.accessToken;
+        bearerTokenExpiryTime = response.expiresOn.getTime() - 5 * 60 * 1000;
+        console.log("[Bearer] Successfully obtained bearer token via popup");
+        return cachedBearerToken;
+      }
     } catch (err) {
       console.error("[Bearer] Failed to get bearer token:", err);
       cachedBearerToken = null;
