@@ -101,13 +101,13 @@ export function useDataverseApi() {
   let cachedBearerToken: string | null = null;
   let bearerTokenExpiryTime: number = 0;
 
-  const getToken = async () => {
+  const getToken = async (forceRefresh: boolean = false) => {
     try {
-      if (cachedToken) {
+      if (!forceRefresh && cachedToken) {
         console.log("[Token] Using cached verification token");
         return cachedToken;
       }
-      cachedToken = await fetchRequestVerificationToken();
+      cachedToken = await fetchRequestVerificationToken(forceRefresh);
       return cachedToken;
     } catch (err) {
       console.error("[Token] Failed to get verification token:", err);
