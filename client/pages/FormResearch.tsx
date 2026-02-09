@@ -942,7 +942,7 @@ export default function FormResearch() {
         setShowLoader(false);
       }
     },
-    [callApi, triggerFlow, state?.type, user],
+    [callApi, formType, triggerFlow, state?.type, user],
   );
 
   const loadApplicationFiles = async (
