@@ -2525,7 +2525,7 @@ export default function FormResearch() {
         </div>
 
         {/* Budget Details Section */}
-        <div className="mt-8 rounded-xl border bg-white p-6">
+        <div className="mt-8 rounded-xl border border-[#e2e8f0] bg-white p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <h2 className={HEADING_TEXT}>Budget Management</h2>
