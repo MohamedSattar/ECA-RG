@@ -25,11 +25,15 @@ export const msalConfig = {
 };
 
 export const loginRequest = {
-  scopes: ["openid", "profile", "offline_access"], // Add other scopes as needed
+  scopes: ["openid", "profile", "offline_access"],
+  responseType: "code",
+  codeChallenge: undefined,
 };
 
 export const signupRequest = {
   scopes: ["openid", "profile", "offline_access"],
+  responseType: "code",
+  codeChallenge: undefined,
   extraQueryParameters: {
     local: "signup", // Force signup experience in Azure B2C
   },
