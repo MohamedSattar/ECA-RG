@@ -120,8 +120,12 @@ export default function FormApplication() {
         mobilePhone: form.mobilePhone,
       });
 
+      // Format the API URL - Contact ID should be wrapped in single quotes and parentheses
+      const apiUrl = `/_api/${TableName.CONTACTS}('${form.contactId}')`;
+      console.log("[Profile] API URL:", apiUrl);
+
       const res = await callApi({
-        url: `/_api/${TableName.CONTACTS}(${form.contactId})`,
+        url: apiUrl,
         method: "PATCH",
         data: {
           [ContactKeys.FIRSTNAME]: form.firstName,
