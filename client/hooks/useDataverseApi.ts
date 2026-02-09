@@ -157,6 +157,7 @@ export function useDataverseApi() {
     data?: any;
     headers?: Record<string, string>;
     skipAuth?: boolean;
+    forceRefreshToken?: boolean;
   }): Promise<T> => {
     try {
       const headers: Record<string, string> = {
@@ -167,7 +168,10 @@ export function useDataverseApi() {
 
       // Add request verification token for CSRF protection (required by Power Apps Portals)
       if (!options.skipAuth) {
-        const token = await getToken();
+        // For PATCH requests (updates), always force a fresh token to avoid 401 errors
+        const shouldForceRefresh = options.forceRefreshToken || options.method === "PATCH";
+
+        const token = await getToken(shouldForceRefresh);
         if (token) {
           headers.__RequestVerificationToken = token;
           console.log("[API] Request verification token added to headers");
