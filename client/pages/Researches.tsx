@@ -127,47 +127,49 @@ export default function Researches() {
             <div className="rounded-xl border overflow-hidden bg-white">
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
-                  <thead className="bg-[#f6e4d8]">
+                  <thead className="bg-[#1D2054]">
                     <tr className="text-left">
-                      <th className="px-3 py-3 font-semibold text-[#2b201a]">
+                      <th className="px-6 py-3 font-semibold text-white">
                         Research Title
                       </th>
-                      <th className="px-3 py-3 font-semibold text-[#2b201a]">
+                      <th className="px-6 py-3 font-semibold text-white">
                         Application Reference
                       </th>
-                      <th className="px-3 py-3 font-semibold text-[#2b201a]">
+                      <th className="px-6 py-3 font-semibold text-white">
                         Research Area
                       </th>
-                      <th className="px-3 py-3 font-semibold text-[#2b201a]">
+                      <th className="px-6 py-3 font-semibold text-white">
                         Principal Investigator
                       </th>
-                      <th className="px-3 py-3 font-semibold text-[#2b201a]">
+                      <th className="px-6 py-3 font-semibold text-white">
                         Status
                       </th>
-                      <th className="px-3 py-3 font-semibold text-[#2b201a]">
+                      <th className="px-6 py-3 font-semibold text-white">
                         Actions
                       </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {researches.map((item) => (
+                    {researches.map((item, idx) => (
                       <tr
                         key={item[ResearchKeys.RESEARCHID]}
-                        className="border-t hover:bg-slate-50"
+                        className={`border-t ${
+                          idx % 2 === 0 ? "bg-white" : "bg-[#f8fafc]"
+                        } hover:shadow-sm transition-shadow`}
                       >
-                        <td className="px-3 py-3 font-medium text-[#2b201a]">
+                        <td className="px-6 py-3 font-medium text-[#1e293b]">
                           {item[ResearchKeys.RESEARCHTITLE]}
                         </td>
-                        <td className="px-3 py-3 font-medium text-[#2b201a]">
+                        <td className="px-6 py-3 font-medium text-[#1e293b]">
                           {item[ResearchKeys.APPLICATIONREFERENCE_FORMATTED]}
                         </td>
-                        <td className="px-3 py-3 font-medium text-[#2b201a]">
+                        <td className="px-6 py-3 font-medium text-[#1e293b]">
                           {item[ResearchKeys.RESEARCHAREA_FORMATTED]}
                         </td>
-                        <td className="px-3 py-3 font-medium text-[#2b201a]">
+                        <td className="px-6 py-3 font-medium text-[#1e293b]">
                           {item[ResearchKeys.PRINCIPALINVESTIGATOR_FORMATTED]}
                         </td>
-                        <td className="px-3 py-3">
+                        <td className="px-6 py-3">
                           {item[ResearchKeys.RESEARCHSTATUS_FORMATTED] &&
                             item[ResearchKeys.RESEARCHSTATUS_FORMATTED] !=
                               null && (
@@ -178,19 +180,16 @@ export default function Researches() {
                               />
                             )}
                         </td>
-                        <td className="px-3 py-3">
+                        <td className="px-6 py-3">
                           <div className="flex items-center gap-2">
-                            {/* <IconButton
-                            onClick={() => onView(item)}
-                            title="View Research"
-                            aria-label={`View ${item.title}`}
-                            iconProps={{iconName:"View"}}
-                          /> */}
                             <IconButton
                               onClick={() => onEdit(item)}
                               title="Edit Research"
                               aria-label={`Edit ${item.title}`}
                               iconProps={{ iconName: "Edit" }}
+                              styles={{
+                                root: { color: "#1D2054" },
+                              }}
                             />
                           </div>
                         </td>
@@ -199,8 +198,8 @@ export default function Researches() {
                     {researches.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={4}
-                          className="px-5 py-10 text-center text-muted-foreground"
+                          colSpan={6}
+                          className="px-6 py-10 text-center text-[#475569]"
                         >
                           No researches yet.
                         </td>
