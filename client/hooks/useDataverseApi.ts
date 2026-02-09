@@ -223,12 +223,15 @@ export function useDataverseApi() {
         (returnvalue as any).headers = res.headers;
         return returnvalue;
       } catch (parseErr) {
-        // Non-JSON response — return raw text
+        // Non-JSON response — return empty object with status attached
         console.warn(
           `[API] Non-JSON response from ${options.url}:`,
           text?.substring(0, 200),
         );
-        return text as unknown as T;
+        const result = {} as T;
+        (result as any).status = res.status;
+        (result as any).headers = res.headers;
+        return result;
       }
     } catch (err) {
       console.error(`[API] Error calling ${options.url}:`, err);
