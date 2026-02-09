@@ -2489,7 +2489,7 @@ export default function FormResearch() {
         </div>
 
         {/* General Information Section */}
-        <div className="mt-8 rounded-xl border bg-white p-6">
+        <div className="mt-8 rounded-xl border border-[#e2e8f0] bg-white p-6">
           <div className="flex items-center justify-between">
             <h2 className={HEADING_TEXT}>General information</h2>
             <IconButton
