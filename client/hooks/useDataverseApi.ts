@@ -182,12 +182,16 @@ export function useDataverseApi() {
           headers.Authorization = `Bearer ${bearerToken}`;
           console.log("[API] Bearer token added to Authorization header");
         } else {
-          console.warn("[API] Failed to obtain bearer token");
+          console.warn("[API] Failed to obtain bearer token - continuing without it");
         }
       }
 
       // Call through backend proxy (/_api/* routes to Dataverse API)
       console.log(`[API] ${options.method || "GET"} ${options.url}`);
+      console.log(`[API] Request headers:`, { ...headers, Authorization: headers.Authorization ? "Bearer ***" : "none" });
+      if (options.data) {
+        console.log(`[API] Request body:`, options.data);
+      }
 
       const res = await fetch(options.url, {
         credentials: "include",
