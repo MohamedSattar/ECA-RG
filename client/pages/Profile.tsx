@@ -132,12 +132,20 @@ export default function FormApplication() {
 
       console.log("[Profile] API Response:", res);
       console.log("[Profile] Response status:", res?.status);
+      console.log("[Profile] Full response object:", JSON.stringify(res));
 
       // For PATCH requests to Dataverse, we expect 204 (No Content) or 200 (OK)
-      // If no status is set, the request may have failed
-      if (res?.status && res.status !== 204 && res.status !== 200) {
-        console.error("[Profile] Unexpected status code:", res.status);
-        throw new Error(`API returned status ${res.status}. Please try again.`);
+      // If status is present and not 204/200, it's an error
+      if (res?.status) {
+        if (res.status === 204 || res.status === 200) {
+          console.log("[Profile] Update successful with status:", res.status);
+        } else {
+          console.error("[Profile] API Error - Status:", res.status);
+          const errorDetail = typeof res === 'object' ? JSON.stringify(res) : res;
+          throw new Error(`API Error ${res.status}: ${errorDetail}`);
+        }
+      } else {
+        console.warn("[Profile] No status in response, but no error thrown");
       }
 
       console.log("[Profile] Profile updated successfully");
