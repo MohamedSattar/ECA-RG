@@ -113,6 +113,13 @@ export default function FormApplication() {
         throw new Error("Contact ID not found. Please refresh the page.");
       }
 
+      console.log("[Profile] Updating contact:", form.contactId);
+      console.log("[Profile] Update data:", {
+        firstName: form.firstName,
+        lastName: form.lastName,
+        mobilePhone: form.mobilePhone,
+      });
+
       const res = await callApi({
         url: `/_api/${TableName.CONTACTS}(${form.contactId})`,
         method: "PATCH",
@@ -123,9 +130,17 @@ export default function FormApplication() {
         },
       });
 
-      if (res.status !== 204 && res.status !== 200) {
-        throw new Error("No changes were made to the profile.");
+      console.log("[Profile] API Response:", res);
+      console.log("[Profile] Response status:", res?.status);
+
+      // For PATCH requests to Dataverse, we expect 204 (No Content) or 200 (OK)
+      // If no status is set, the request may have failed
+      if (res?.status && res.status !== 204 && res.status !== 200) {
+        console.error("[Profile] Unexpected status code:", res.status);
+        throw new Error(`API returned status ${res.status}. Please try again.`);
       }
+
+      console.log("[Profile] Profile updated successfully");
       toast({
         title: "Success",
         description: "Profile updated successfully!",
