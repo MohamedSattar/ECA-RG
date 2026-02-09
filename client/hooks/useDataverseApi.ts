@@ -210,6 +210,14 @@ export function useDataverseApi() {
         console.log(`[API] Request body:`, options.data);
       }
 
+      // Confirm headers being sent
+      console.log("[API] Final headers being sent:", {
+        "Content-Type": headers["Content-Type"] || "none",
+        "__RequestVerificationToken": headers.__RequestVerificationToken ? "✓ SENT" : "✗ MISSING",
+        "Authorization": headers.Authorization ? "✓ SENT (Bearer token)" : "✗ MISSING",
+        "Accept": headers.Accept || "none",
+      });
+
       const res = await fetch(options.url, {
         credentials: "include",
         method: options.method || "GET",
