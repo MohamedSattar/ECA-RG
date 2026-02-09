@@ -928,7 +928,7 @@ export default function FormResearch() {
           principalInvestigator:
             research[ResearchKeys.PRINCIPALINVESTIGATOR] || "",
           submissionDate: prev.submissionDate, // Keep original submission date
-          type: state?.formType === "view" ? "view" : "edit",
+          type: formType === "view" ? "view" : "edit",
           files: files || [],
           researchNumber: research[ResearchKeys.RESEARCHNUMBER] || null,
         }));
