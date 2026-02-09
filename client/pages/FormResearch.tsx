@@ -2470,9 +2470,8 @@ export default function FormResearch() {
                 tableName={TableName.RESEARCHAREAS}
                 maxSelection={1}
                 label="Research Area"
-                cascadeField={ResearchAreaKeys.RESEARCHAREAID}
-                cascadeValue={researchAreaId}
-                isDefaultSelected={researchAreaId != null}
+                cascadeValue={form.researchArea}
+                isDefaultSelected={form.researchArea != null}
                 disabled={form.type === "view"}
                 onSelect={(values) => {
                   setForm((prev) => ({
