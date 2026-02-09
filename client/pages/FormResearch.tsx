@@ -2799,7 +2799,27 @@ export default function FormResearch() {
 
         <Reveal className="mt-8">
           <div className="flex items-center justify-end gap-3">
-            <PrimaryButton onClick={submit} disabled={!canSubmit}>
+            <PrimaryButton
+              onClick={submit}
+              disabled={!canSubmit}
+              styles={{
+                root: {
+                  backgroundColor: "#1D2054",
+                  borderColor: "#1D2054",
+                  height: "44px",
+                  fontSize: "16px",
+                  fontWeight: "600",
+                },
+                rootHovered: {
+                  backgroundColor: "#151b41",
+                  borderColor: "#151b41",
+                },
+                rootDisabled: {
+                  backgroundColor: "#cbd5e1",
+                  borderColor: "#cbd5e1",
+                },
+              }}
+            >
               {form.type === "edit" ? "Update Research" : "Submit Research"}
             </PrimaryButton>
           </div>
