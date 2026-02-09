@@ -2764,7 +2764,7 @@ export default function FormResearch() {
         />
 
         {/* Team Members Section */}
-        <div className="mt-6 rounded-sm border bg-white p-6">
+        <div className="mt-6 rounded-xl border border-[#e2e8f0] bg-white p-6">
           <div className="flex items-center justify-between">
             <h2 className={HEADING_TEXT}>Team members</h2>
             <IconButton
