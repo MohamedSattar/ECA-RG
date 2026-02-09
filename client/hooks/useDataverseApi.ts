@@ -128,34 +128,22 @@ export function useDataverseApi() {
         return null;
       }
 
-      // For Azure AD B2C, we get the access token using the ID token request
-      // The token endpoint will issue an access token for this application
-      try {
-        const response = await instance.acquireTokenSilent({
-          scopes: ["openid", "offline_access"],
-          account: accounts[0],
-        });
+      // For Azure AD B2C, we get the access token from the cached tokens obtained during login
+      // This is a silent operation - NO POPUPS will appear
+      // The tokens were already requested during the initial login/SSO flow
+      const response = await instance.acquireTokenSilent({
+        scopes: ["openid", "offline_access"],
+        account: accounts[0],
+        forceRefresh: false, // Use cached tokens if available
+      });
 
-        cachedBearerToken = response.accessToken;
-        bearerTokenExpiryTime = response.expiresOn.getTime() - 5 * 60 * 1000;
-        console.log("[Bearer] Successfully obtained bearer token from B2C");
-        return cachedBearerToken;
-      } catch (silentErr) {
-        console.warn("[Bearer] Silent token acquisition failed, trying interactive:", silentErr);
-
-        // Fallback to interactive token acquisition
-        const response = await instance.acquireTokenPopup({
-          scopes: ["openid", "offline_access"],
-          account: accounts[0],
-        });
-
-        cachedBearerToken = response.accessToken;
-        bearerTokenExpiryTime = response.expiresOn.getTime() - 5 * 60 * 1000;
-        console.log("[Bearer] Successfully obtained bearer token via popup");
-        return cachedBearerToken;
-      }
+      cachedBearerToken = response.accessToken;
+      bearerTokenExpiryTime = response.expiresOn.getTime() - 5 * 60 * 1000;
+      console.log("[Bearer] Successfully obtained bearer token (silent, no popup)");
+      return cachedBearerToken;
     } catch (err) {
-      console.error("[Bearer] Failed to get bearer token:", err);
+      console.warn("[Bearer] Unable to obtain bearer token silently:", err);
+      console.warn("[Bearer] Token will not be included in API request");
       cachedBearerToken = null;
       bearerTokenExpiryTime = 0;
       return null;
