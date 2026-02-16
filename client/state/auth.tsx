@@ -248,9 +248,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
           const requestType = isSignup ? "signup" : "login";
           console.log(`[Auth] Starting SSO ${requestType}...`);
 
-          // Use redirect for full page navigation
+          // Use popup for iframe compatibility
           const request = isSignup ? signupRequest : loginRequest;
-          await instance.loginRedirect(request);
+          await instance.loginPopup(request);
         } catch (error: any) {
           // Handle specific MSAL errors
           if (error?.errorCode === "user_cancelled") {
