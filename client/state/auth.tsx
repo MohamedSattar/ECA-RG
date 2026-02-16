@@ -175,10 +175,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
   ------------------------------------------------ */
 
   useEffect(() => {
-    //handleRedirect();
-    if (inProgress !== InteractionStatus.None) return;
-    if (inProgress !== InteractionStatus.None) return;
-
     const handle = async () => {
       setIsLoading(true);
 
@@ -226,22 +222,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
               "[Auth] Login already in progress, ignoring duplicate request",
             );
             return;
-          }
-
-          // Wait for any previous interactions to complete
-          if (inProgress !== InteractionStatus.None) {
-            console.log(
-              "[Auth] Waiting for previous interaction to complete...",
-            );
-            // Wait up to 3 seconds for the previous interaction to finish
-            let waitCount = 0;
-            while (inProgress !== InteractionStatus.None && waitCount < 30) {
-              await new Promise((resolve) => setTimeout(resolve, 100));
-              waitCount++;
-            }
-            if (inProgress !== InteractionStatus.None) {
-              throw new Error("Previous interaction still in progress");
-            }
           }
 
           setIsInteractionInProgress(true);

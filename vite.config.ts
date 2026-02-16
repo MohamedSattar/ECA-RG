@@ -62,7 +62,7 @@ function expressPlugin(): Plugin {
       server.middlewares.use((req, res, next) => {
         if (req.url.startsWith("/_api") || req.url.startsWith("/_layout")) {
           console.log(`[Vite] Proxying to Express: ${req.method} ${req.url}`);
-          expressApp(req, res, next);
+          expressApp(req as any, res as any, next);
         } else {
           next();
         }
