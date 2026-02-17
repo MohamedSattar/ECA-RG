@@ -18,7 +18,7 @@ import { useDataverseApi } from "@/hooks/useDataverseApi";
 export function SiteHeader() {
   const location = useLocation();
   const { t } = useTranslation();
-  const { user, login, logout, isAuthed } = useAuth();
+  const { user, login, logout, isAuthed, isLoading } = useAuth();
   const navigate = useNavigate();
   const { callApi } = useDataverseApi();
   const [unreadCount, setUnreadCount] = useState<number>(0);
@@ -114,12 +114,50 @@ export function SiteHeader() {
         </nav>
         <div className="hidden md:flex items-center gap-3">
           {!isAuthed && (
-            <button
-              onClick={login}
-              className="inline-flex items-center rounded-md border border-white/40 px-4 py-1.5 text-sm font-medium text-white hover:bg-white/10"
-            >
-              {t("header.login")}
-            </button>
+            <>
+              <button
+                disabled={isLoading}
+                onClick={async () => {
+                  try {
+                    await login();
+                  } catch (error: any) {
+                    // Error is already handled and logged in auth.tsx
+                    // Only log here if it's an unexpected error
+                    if (error?.errorCode !== "user_cancelled") {
+                      console.error("Login failed:", error);
+                    }
+                  }
+                }}
+                className={`inline-flex items-center rounded-md border border-white/40 px-4 py-1.5 text-sm font-medium text-white transition-colors ${
+                  isLoading
+                    ? "opacity-60 cursor-not-allowed"
+                    : "hover:bg-white/10 cursor-pointer"
+                }`}
+              >
+                {isLoading ? "Authenticating..." : t("header.login")}
+              </button>
+              <button
+                disabled={isLoading}
+                onClick={async () => {
+                  try {
+                    await login(true);
+                  } catch (error: any) {
+                    // Error is already handled and logged in auth.tsx
+                    // Only log here if it's an unexpected error
+                    if (error?.errorCode !== "user_cancelled") {
+                      console.error("Sign up failed:", error);
+                    }
+                  }
+                }}
+                className={`inline-flex items-center rounded-md bg-white px-4 py-1.5 text-sm font-medium text-[#1D2054] transition-colors ${
+                  isLoading
+                    ? "opacity-60 cursor-not-allowed"
+                    : "hover:bg-white/90 cursor-pointer"
+                }`}
+              >
+                {isLoading ? "Authenticating..." : t("header.signup")}
+              </button>
+            </>
           )}
           {isAuthed && (
             <>

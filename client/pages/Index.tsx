@@ -142,9 +142,21 @@ function GrantCard({
           className="absolute bottom-[-4rem] right-12 w-32 h-40 z-0"
         />
         <img
-          src={`/${image}&full=true`}
+          src={
+            image
+              ? (() => {
+                  // Ensure full=true is appended for better image quality
+                  return image.includes("full=true")
+                    ? image
+                    : `${image}${image.includes("?") ? "&" : "?"}full=true`;
+                })()
+              : ""
+          }
           alt={`${title} visual`}
           className="absolute inset-0 w-80 rounded-2xl m-auto z-20"
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = "none";
+          }}
         />
       </div>
       <div className="space-y-4">
@@ -384,7 +396,7 @@ export default function Index() {
   const [grantTemplate, setGrantTemplate] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { user, login, logout, isAuthed } = useAuth();
+  const { user, login, logout, isAuthed, isLoading: isAuthLoading } = useAuth();
   const [isCreatingApplication, setIsCreatingApplication] = useState(false);
   // Helper: Format date to YYYY-MM-DD
   const getTodayDateString = (date?: Date): string => {
@@ -409,13 +421,18 @@ export default function Index() {
   const loadGrantTemplate = async () => {
     try {
       const url = `/_api/prmtk_granttemplates`;
-      const res = await callApi<{ value: any[] }>({ url, method: "GET" });
+      const res = await callApi<{ value: any[] }>({
+        url,
+        method: "GET",
+        skipAuth: true, // Public API - no authentication needed
+      });
       const templates = res?.value ?? [];
       if (templates.length > 0) {
         setGrantTemplate(templates[0]);
       }
     } catch (err) {
       console.error("Failed to load grant template:", err);
+      // Gracefully continue - FAQ is optional
     }
   };
 
@@ -458,6 +475,15 @@ export default function Index() {
     () => grant?.[ExpandRelations.RESEARCH_AREAS] || [],
     [grant],
   );
+
+  // Calculate total funding from research areas
+  const totalAllocatedBudget = useMemo(() => {
+    return researchAreas.reduce((sum, area) => {
+      const budget = area?.prmtk_allocatedbudget || 0;
+      return sum + budget;
+    }, 0);
+  }, [researchAreas]);
+
   const navigate = useNavigate();
 
   // Function to check for existing application or create a draft
@@ -593,21 +619,32 @@ export default function Index() {
                 />*/}
                 {!isAuthed && (
                   <DefaultButton
-                    onClick={() => (
-                      toast.success("Redirecting to sign up..."),
-                      login()
-                    )}
-                    text="Sign up now"
+                    disabled={isAuthLoading}
+                    onClick={async () => {
+                      try {
+                        await login();
+                      } catch (error: any) {
+                        // Error is already handled and logged in auth.tsx
+                        // Only log here if it's an unexpected error
+                        if (error?.errorCode !== "user_cancelled") {
+                          console.error("Sign up failed:", error);
+                        }
+                      }
+                    }}
+                    text={isAuthLoading ? "Authenticating..." : "Sign up now"}
                     styles={{
                       root: {
                         border: "1px solid rgba(255,255,255,0.4)",
                         backgroundColor: "transparent",
                         color: "rgba(255,255,255,0.9)",
+                        opacity: isAuthLoading ? 0.6 : 1,
                       },
-                      rootHovered: {
-                        backgroundColor: "rgba(255,255,255,0.1)",
-                        color: "rgba(255,255,255,0.9)",
-                      },
+                      rootHovered: isAuthLoading
+                        ? {}
+                        : {
+                            backgroundColor: "rgba(255,255,255,0.1)",
+                            color: "rgba(255,255,255,0.9)",
+                          },
                     }}
                   />
                 )}
@@ -686,7 +723,9 @@ export default function Index() {
                       number={idx + 1}
                       ResearchAreaKeyId={area[ResearchAreaKeys.RESEARCHAREAID]}
                       title={area[ResearchAreaKeys.AREANAME]}
-                      image={normalizeImageUrl(area[ResearchAreaKeys.THUMBNAIL_URL])}
+                      image={normalizeImageUrl(
+                        area[ResearchAreaKeys.THUMBNAIL_URL],
+                      )}
                       description={area[ResearchAreaKeys.AREADESCRIPTION]}
                       reverse={idx % 2 === 0}
                       navigate={navigate}
@@ -703,7 +742,7 @@ export default function Index() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x">
                     <div className="p-6 animate-in fade-in-50 duration-700">
                       <div className="text-2xl md:text-3xl font-extrabold tracking-tight">
-                        {formatAedMillion(grant[GrantCycleKeys.CYCLEBUDGET])}
+                        {formatAedMillion(totalAllocatedBudget)}
                       </div>
                       <div className="text-sm text-muted-foreground mt-1">
                         Total Funding Available
@@ -882,4 +921,4 @@ export default function Index() {
       )}
     </>
   );
-};
+}

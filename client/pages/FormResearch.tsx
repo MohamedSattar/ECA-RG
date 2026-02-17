@@ -448,129 +448,86 @@ const viewFile = (fileData: {
 interface GeneralInformationSectionProps {
   form: FormState;
   onTitleChange: (value: string) => void;
-  onApplicationChange: (applicationId: string | null) => void;
-  onResearchAreaChange: (areaId: string | null) => void;
   onPrincipalInvestigatorChange: (contactId: string) => void;
   onStartDateChange: (date?: Date) => void;
   onEndDateChange: (date?: Date) => void;
-  applicationIdFromState: string | undefined;
-  researchAreaIdFromState: string | undefined;
   userAdxUserId?: string;
 }
 
 const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
   form,
   onTitleChange,
-  onApplicationChange,
-  onResearchAreaChange,
   onPrincipalInvestigatorChange,
   onStartDateChange,
   onEndDateChange,
-  applicationIdFromState,
-  researchAreaIdFromState,
   userAdxUserId,
 }) => (
   <Reveal className="mt-8">
-    <div className="mt-4 grid gap-4 md:grid-cols-2">
+    <div className="mt-4 grid gap-6 md:grid-cols-2">
       <div className="md:col-span-2">
-        <Label htmlFor="title">Research Title</Label>
-        <TextField
-          id="title"
-          value={form.title}
-          onChange={(e, newValue) => onTitleChange(newValue || "")}
-          placeholder="Enter project title"
-          disabled={form.type === "view"}
-        />
+        <Label htmlFor="title" className="text-sm font-medium text-[#1e293b]">
+          Research Title
+        </Label>
+        <div className="mt-2">
+          <TextField
+            id="title"
+            value={form.title}
+            onChange={(e, newValue) => onTitleChange(newValue || "")}
+            placeholder="Enter project title"
+            disabled={form.type === "view"}
+            borderless
+            styles={{
+              root: {
+                border: "1px solid #e2e8f0",
+                borderRadius: "6px",
+                backgroundColor: form.type === "view" ? "#f8fafc" : "#ffffff",
+                paddingLeft: "12px",
+                paddingRight: "12px",
+              },
+              field: {
+                fontSize: "14px",
+                color: "#1e293b",
+                "::placeholder": {
+                  color: "#94a3b8",
+                },
+              },
+            }}
+          />
+        </div>
       </div>
       <div>
-        <Label>Application Reference</Label>
-        <LookupPicker
-          key={`application-${applicationIdFromState || "none"}`}
-          displayField={ApplicationKeys.APPLICATIONTITLE}
-          keyField={ApplicationKeys.APPLICATIONID}
-          secondaryField={ApplicationKeys.ABSTRACT}
-          searchField={ApplicationKeys.APPLICATIONTITLE}
-          tableName={TableName.APPLICATIONS}
-          maxSelection={1}
-          label="Application"
-          cascadeField={ApplicationKeys.APPLICATIONID}
-          cascadeValue={applicationIdFromState}
-          isDefaultSelected={applicationIdFromState != null}
-          disabled={form.type === "view"}
-          onSelect={(values) => {
-            onApplicationChange(
-              values && values.length > 0
-                ? values[0][ApplicationKeys.APPLICATIONID]
-                : null,
-            );
-          }}
-        />
+        <Label className="text-sm font-medium text-[#1e293b]">Start Date</Label>
+        <div className="mt-2">
+          <DatePicker
+            value={form.startDate}
+            onSelectDate={onStartDateChange}
+            disabled={form.type === "view"}
+            styles={{
+              root: {
+                border: "1px solid #e2e8f0",
+                borderRadius: "6px",
+                backgroundColor: form.type === "view" ? "#f8fafc" : "#ffffff",
+              },
+            }}
+          />
+        </div>
       </div>
       <div>
-        <Label>Research Area</Label>
-        <LookupPicker
-          key={`research-area-${researchAreaIdFromState || "none"}`}
-          displayField={ResearchAreaKeys.AREANAME}
-          keyField={ResearchAreaKeys.RESEARCHAREAID}
-          secondaryField={ResearchAreaKeys.AREADESCRIPTION}
-          searchField={ResearchAreaKeys.AREANAME}
-          tableName={TableName.RESEARCHAREAS}
-          maxSelection={1}
-          label="Research Area"
-          cascadeField={ResearchAreaKeys.RESEARCHAREAID}
-          cascadeValue={researchAreaIdFromState}
-          isDefaultSelected={researchAreaIdFromState != null}
-          disabled={form.type === "view"}
-          onSelect={(values) => {
-            onResearchAreaChange(
-              values && values.length > 0
-                ? values[0][ResearchAreaKeys.RESEARCHAREAID]
-                : null,
-            );
-          }}
-        />
-      </div>
-      <div>
-        <Label>Principal Investigator</Label>
-        <LookupPicker
-          key={`principal-investigator-${userAdxUserId || "none"}`}
-          displayField={ContactKeys.FULLNAME}
-          keyField={ContactKeys.CONTACTID}
-          secondaryField={ContactKeys.EMAILADDRESS1}
-          searchField={ContactKeys.FULLNAME}
-          tableName={TableName.CONTACTS}
-          maxSelection={1}
-          label="Contact"
-          cascadeField={ContactKeys.ADX_USERID}
-          cascadeValue={userAdxUserId}
-          isDefaultSelected={true}
-          disabled={form.type === "view"}
-          onSelect={(value) => {
-            if (value && value.length > 0) {
-              onPrincipalInvestigatorChange(value[0][ContactKeys.CONTACTID]);
-            }
-          }}
-        />
-      </div>
-      <div>
-        <Label>Submission Date</Label>
-        <TextField value={form.submissionDate} readOnly />
-      </div>
-      <div>
-        <Label>Start Date</Label>
-        <DatePicker
-          value={form.startDate}
-          onSelectDate={onStartDateChange}
-          disabled={form.type === "view"}
-        />
-      </div>
-      <div>
-        <Label>End Date</Label>
-        <DatePicker
-          value={form.endDate}
-          onSelectDate={onEndDateChange}
-          disabled={form.type === "view"}
-        />
+        <Label className="text-sm font-medium text-[#1e293b]">End Date</Label>
+        <div className="mt-2">
+          <DatePicker
+            value={form.endDate}
+            onSelectDate={onEndDateChange}
+            disabled={form.type === "view"}
+            styles={{
+              root: {
+                border: "1px solid #e2e8f0",
+                borderRadius: "6px",
+                backgroundColor: form.type === "view" ? "#f8fafc" : "#ffffff",
+              },
+            }}
+          />
+        </div>
       </div>
     </div>
   </Reveal>
@@ -592,6 +549,11 @@ export default function FormResearch() {
   const [showLoader, setShowLoader] = useState(false);
   const [dialogMessage, setDialogMessage] = useState("");
   const [teamMemberRoles, setTeamMemberRoles] = useState<IDropdownOption[]>([]);
+
+  // Lazy loading states for optional sections
+  const [reportsLoaded, setReportsLoaded] = useState(false);
+  const [disseminationLoaded, setDisseminationLoaded] = useState(false);
+  const [deliverablesLoaded, setDeliverablesLoaded] = useState(false);
   const { callApi } = useDataverseApi();
   const { triggerFlow } = useFlowApi();
   const [searchParams] = useSearchParams();
@@ -632,8 +594,13 @@ export default function FormResearch() {
       return;
     }
     try {
+      // Fetch budget header with expanded line items in a single call
+      // Only select necessary fields to reduce payload size
+      const budgetHeaderSelect = `${BudgetHeaderFields.BUDGETHEADERID},${BudgetHeaderFields.BUDGETNAME},${BudgetHeaderFields.RESEARCH},${BudgetHeaderFields.TOTALBUDGET},${BudgetHeaderFields.VERSIONNUMBER_BUDGET},${BudgetHeaderFields.STATUS}`;
+      const budgetLineItemSelect = `${BudgetLineItemFields.BUDGETLINEITEMID},${BudgetLineItemFields.LINEITEMNAME},${BudgetLineItemFields.CATEGORY},${BudgetLineItemFields.DESCRIPTION},${BudgetLineItemFields.AMOUNT},${BudgetLineItemFields.BUDGETHEADER}`;
+
       const res = await callApi<{ value: any[] }>({
-        url: `/_api/${TableName.BUDGETHEADERS}?$filter=${BudgetHeaderFields.RESEARCH} eq ${applicationId}`,
+        url: `/_api/${TableName.BUDGETHEADERS}?$filter=${BudgetHeaderFields.RESEARCH} eq ${applicationId}&$select=${budgetHeaderSelect}&$expand=${ExpandRelations.BUDGET_LINE_ITEMS}($select=${budgetLineItemSelect})`,
         method: "GET",
       });
       const budgetData = res.value?.[0];
@@ -642,22 +609,10 @@ export default function FormResearch() {
         return;
       }
 
-      const res2 = await callApi<{ value: any[] }>({
-        url: `/_api/${TableName.BUDGETLINEITEMS}?$filter=${BudgetLineItemFields.BUDGETHEADER} eq ${budgetData[BudgetHeaderFields.BUDGETHEADERID]}`,
-        method: "GET",
-      });
-      const filteredArray = res2.value || [];
-
-      // console.log(budgetData, "budgetData");
-      // console.log(filteredArray, "filteredArray");
-      // console.log(filtered, "filtered");
-      // console.log(applicationId, "applicationId");
+      // Use expanded line items from the header response instead of making a separate call
       const lineItems = budgetData[ExpandRelations.BUDGET_LINE_ITEMS] || [];
       const budgetHeader = mapBudgetHeader(budgetData);
-      const budgetLineItems = mapBudgetLineItems(filteredArray);
-      // console.log(budgetHeader);
-      // console.log(budgetLineItems);
-      // console.log(lineItems);
+      const budgetLineItems = mapBudgetLineItems(lineItems);
 
       setForm((prev) => ({
         ...prev,
@@ -675,8 +630,11 @@ export default function FormResearch() {
       return;
     }
     try {
+      // Select only necessary fields to reduce payload
+      const reportSelect = `${StatusReportFields.STATUSREPORTID},${StatusReportFields.REPORTTITLE},${StatusReportFields.REPORTINGYEAR},${StatusReportFields.REPORTINGMONTH},${StatusReportFields.REPORTINGDATE},${StatusReportFields.BUDGETSPENT_BASE},${StatusReportFields.RESEARCHHEALTHINDICATOR},${StatusReportFields.ACHIEVEMENTS},${StatusReportFields.CHALLENGES},${StatusReportFields.KEYACTIVITIES},${StatusReportFields.UPCOMINGACTIVITIES},${StatusReportFields.JOURNALPUBLICATIONS},${StatusReportFields.WORKFORCEDEVELOPMENT}`;
+
       const res2 = await callApi<{ value: any[] }>({
-        url: `/_api/${TableName.STATUSREPORT}?$filter=${StatusReportFields.RESEARCH} eq ${researchId}`,
+        url: `/_api/${TableName.STATUSREPORT}?$filter=${StatusReportFields.RESEARCH} eq ${researchId}&$select=${reportSelect}`,
         method: "GET",
       });
 
@@ -747,8 +705,11 @@ export default function FormResearch() {
       return;
     }
     try {
+      // Select only necessary fields to reduce payload
+      const disseminationSelect = `${DisseminationRequestFields.DISSEMINATIONAPPLICANTID},${DisseminationRequestFields.TITLE},${DisseminationRequestFields.JOURNALNAME},${DisseminationRequestFields.ABSTRACT},${DisseminationRequestFields.BUDGETNEEDED_BASE},${DisseminationRequestFields.SUBMISSIONDATE},${DisseminationRequestFields.REQUESTSTATUS}`;
+
       const res = await callApi<{ value: any[] }>({
-        url: `/_api/${TableName.DISSEMINATIONAPPLICANTS}?$filter=${DisseminationRequestFields.RESEARCH} eq ${researchId}`,
+        url: `/_api/${TableName.DISSEMINATIONAPPLICANTS}?$filter=${DisseminationRequestFields.RESEARCH} eq ${researchId}&$select=${disseminationSelect}`,
         method: "GET",
       });
 
@@ -808,8 +769,11 @@ export default function FormResearch() {
       return;
     }
     try {
+      // Select only necessary fields to reduce payload
+      const deliverableSelect = `${DeliverableFields.DELIVERABLEID},${DeliverableFields.DELIVERABLENAME},${DeliverableFields.DESCRIPTION},${DeliverableFields.DELIVERABLETYPE},${DeliverableFields.SUBMISSIONDATE},${DeliverableFields.FILEURL}`;
+
       const res = await callApi<{ value: any[] }>({
-        url: `/_api/${TableName.DELIVERABLES}?$filter=${DeliverableFields.RESEARCH} eq ${researchId}`,
+        url: `/_api/${TableName.DELIVERABLES}?$filter=${DeliverableFields.RESEARCH} eq ${researchId}&$select=${deliverableSelect}`,
         method: "GET",
       });
 
@@ -869,8 +833,11 @@ export default function FormResearch() {
       return;
     }
     try {
+      // Select only necessary fields to reduce payload
+      const teamMemberSelect = `${ResearchTeamMemberKeys.RESEARCHTEAMMEMBERID},${ResearchTeamMemberKeys.TEAMMEMBERNAME},${ResearchTeamMemberKeys.ROLE},${ResearchTeamMemberKeys.CUSTOMROLE},${ResearchTeamMemberKeys.EDUCATIONLEVEL}`;
+
       const res = await callApi<{ value: any[] }>({
-        url: `/_api/${TableName.RESEARCHTEAMMEMBER}?$filter=_prmtk_research_value eq ${researchId}`,
+        url: `/_api/${TableName.RESEARCHTEAMMEMBER}?$filter=_prmtk_research_value eq ${researchId}&$select=${teamMemberSelect}`,
         method: "GET",
       });
 
@@ -901,7 +868,8 @@ export default function FormResearch() {
     async (researchId: string) => {
       setShowLoader(true);
       try {
-        const select = "*";
+        // Select only necessary fields to reduce payload
+        const select = `${ResearchKeys.RESEARCHID},${ResearchKeys.RESEARCHTITLE},${ResearchKeys.STARTDATE},${ResearchKeys.ENDDATE},${ResearchKeys.RESEARCHAREA},${ResearchKeys.APPLICATIONREFERENCE},${ResearchKeys.PRINCIPALINVESTIGATOR},${ResearchKeys.RESEARCHNUMBER}`;
         const expand = ExpandRelations.RESEARCH_TEAM_MEMBER;
         const currentUserContactId = user?.contact?.[ContactFields.CONTACTID];
 
@@ -939,12 +907,12 @@ export default function FormResearch() {
         // Load files from SharePoint
         const files = await loadApplicationFiles(researchNumber);
 
-        // Load budget details in parallel
-        await loadBudgetDetails(researchAreaId);
-        await loadReportStatus(researchId);
-        await loadDisseminationRequests(researchId);
-        await loadDeliverables(researchId);
-        await loadTeamMembers(researchId);
+        // Load only critical data (budget and team members) in parallel
+        // Optional data (reports, dissemination, deliverables) will be loaded lazily
+        await Promise.all([
+          loadBudgetDetails(researchAreaId),
+          loadTeamMembers(researchId),
+        ]);
         // Update form state
         setForm((prev) => ({
           ...prev,
@@ -960,7 +928,7 @@ export default function FormResearch() {
           principalInvestigator:
             research[ResearchKeys.PRINCIPALINVESTIGATOR] || "",
           submissionDate: prev.submissionDate, // Keep original submission date
-          type: state?.formType === "view" ? "view" : "edit",
+          type: formType === "view" ? "view" : "edit",
           files: files || [],
           researchNumber: research[ResearchKeys.RESEARCHNUMBER] || null,
         }));
@@ -974,7 +942,7 @@ export default function FormResearch() {
         setShowLoader(false);
       }
     },
-    [callApi, triggerFlow, state?.type, user],
+    [callApi, formType, triggerFlow, state?.type, user],
   );
 
   const loadApplicationFiles = async (
@@ -1014,12 +982,42 @@ export default function FormResearch() {
     }
   }, []);
 
+  // Lazy load optional sections
+  const loadOptionalReportData = useCallback(
+    async (researchId: string) => {
+      if (reportsLoaded || formType === "new") return;
+      await loadReportStatus(researchId);
+      setReportsLoaded(true);
+    },
+    [formType, reportsLoaded],
+  );
+
+  const loadOptionalDisseminationData = useCallback(
+    async (researchId: string) => {
+      if (disseminationLoaded || formType === "new") return;
+      await loadDisseminationRequests(researchId);
+      setDisseminationLoaded(true);
+    },
+    [formType, disseminationLoaded],
+  );
+
+  const loadOptionalDeliverableData = useCallback(
+    async (researchId: string) => {
+      if (deliverablesLoaded || formType === "new") return;
+      await loadDeliverables(researchId);
+      setDeliverablesLoaded(true);
+    },
+    [formType, deliverablesLoaded],
+  );
+
   // Load all budget versions for research
   const loadBudgetVersions = useCallback(
     async (researchId: string) => {
       try {
+        // Select only necessary fields to reduce payload and use top 20 for performance
+        const budgetVersionSelect = `${BudgetHeaderFields.BUDGETHEADERID},${BudgetHeaderFields.BUDGETNAME},${BudgetHeaderFields.VERSIONNUMBER_BUDGET},${BudgetHeaderFields.STATUS}`;
         const res = await callApi<{ value: any[] }>({
-          url: `/_api/${TableName.BUDGETHEADERS}?$filter=${BudgetHeaderFields.RESEARCH} eq ${researchId}&$select=${BudgetHeaderFields.BUDGETHEADERID},${BudgetHeaderFields.BUDGETNAME},${BudgetHeaderFields.VERSIONNUMBER_BUDGET},${BudgetHeaderFields.STATUS}&$orderby=${BudgetHeaderFields.VERSIONNUMBER_BUDGET} desc`,
+          url: `/_api/${TableName.BUDGETHEADERS}?$filter=${BudgetHeaderFields.RESEARCH} eq ${researchId}&$select=${budgetVersionSelect}&$orderby=${BudgetHeaderFields.VERSIONNUMBER_BUDGET} desc&$top=20`,
           method: "GET",
         });
 
@@ -1052,23 +1050,24 @@ export default function FormResearch() {
   const loadBudgetByVersion = useCallback(
     async (budgetHeaderId: string) => {
       try {
-        // Fetch budget header
+        // Select only necessary fields and fetch header with expanded line items
+        const budgetHeaderSelect = `${BudgetHeaderFields.BUDGETHEADERID},${BudgetHeaderFields.BUDGETNAME},${BudgetHeaderFields.RESEARCH},${BudgetHeaderFields.TOTALBUDGET},${BudgetHeaderFields.VERSIONNUMBER_BUDGET},${BudgetHeaderFields.STATUS}`;
+        const budgetLineItemSelect = `${BudgetLineItemFields.BUDGETLINEITEMID},${BudgetLineItemFields.LINEITEMNAME},${BudgetLineItemFields.CATEGORY},${BudgetLineItemFields.DESCRIPTION},${BudgetLineItemFields.AMOUNT},${BudgetLineItemFields.BUDGETHEADER}`;
+
+        // Fetch budget header with expanded line items
         const headerRes = await callApi<{ value: any[] }>({
-          url: `/_api/${TableName.BUDGETHEADERS}?$filter=${BudgetHeaderFields.BUDGETHEADERID} eq ${budgetHeaderId}`,
+          url: `/_api/${TableName.BUDGETHEADERS}?$filter=${BudgetHeaderFields.BUDGETHEADERID} eq ${budgetHeaderId}&$select=${budgetHeaderSelect}&$expand=${ExpandRelations.BUDGET_LINE_ITEMS}($select=${budgetLineItemSelect})`,
           method: "GET",
         });
 
         const budgetData = headerRes?.value?.[0];
         if (!budgetData) return;
 
-        // Fetch budget line items
-        const lineItemsRes = await callApi<{ value: any[] }>({
-          url: `/_api/${TableName.BUDGETLINEITEMS}?$filter=${BudgetLineItemFields.BUDGETHEADER} eq ${budgetHeaderId}`,
-          method: "GET",
-        });
+        // Use expanded line items instead of separate call
+        const lineItems = budgetData[ExpandRelations.BUDGET_LINE_ITEMS] || [];
 
         const budgetHeader = mapBudgetHeader(budgetData);
-        const budgetLineItems = mapBudgetLineItems(lineItemsRes?.value || []);
+        const budgetLineItems = mapBudgetLineItems(lineItems);
 
         setForm((prev) => ({
           ...prev,
@@ -1211,6 +1210,29 @@ export default function FormResearch() {
     };
     initialize();
   }, [researchAreaId]);
+
+  // Lazy load optional sections after main data loads (with a slight delay to prioritize main content)
+  useEffect(() => {
+    if (formType !== "new" && researchAreaId && form.title) {
+      // Delay lazy loading to prioritize initial render
+      const timer = setTimeout(async () => {
+        await Promise.all([
+          loadOptionalReportData(researchAreaId),
+          loadOptionalDisseminationData(researchAreaId),
+          loadOptionalDeliverableData(researchAreaId),
+        ]);
+      }, 500); // Load optional sections 500ms after main content
+
+      return () => clearTimeout(timer);
+    }
+  }, [
+    researchAreaId,
+    form.title,
+    formType,
+    loadOptionalReportData,
+    loadOptionalDisseminationData,
+    loadOptionalDeliverableData,
+  ]);
 
   const canSubmit = useMemo(() => form.title.trim().length > 0, [form.title]);
 
@@ -2416,22 +2438,90 @@ export default function FormResearch() {
       <div className="container py-16">
         <Reveal>
           <div>
-            <div className="text-xs tracking-[0.25em] text-[#8c5a3d] uppercase">
+            <div className="text-xs tracking-[0.25em] text-[#475569] uppercase">
               Research
             </div>
-            <h1 className="mt-1 text-3xl md:text-4xl font-bold tracking-tight text-[#2b201a]">
+            <h1 className="mt-1 text-3xl md:text-4xl font-bold tracking-tight text-[#1e293b]">
               {form.type === "new"
                 ? "New Application"
                 : `Research : ${state?.item?.[ResearchKeys.RESEARCHNUMBER] || ""}`}
             </h1>
-            <p className="mt-2 text-muted-foreground">
+            <p className="mt-2 text-[#475569]">
               Complete the sections below and submit your proposal.
             </p>
+            {form.type !== "new" && (
+              <div className="mt-3 text-sm text-[#475569]">
+                <span className="opacity-80">Submission Date:</span>
+                <span className="ml-2 font-semibold text-[#1e293b]">
+                  {form.submissionDate}
+                </span>
+              </div>
+            )}
           </div>
         </Reveal>
 
+        {/* Application Reference and Research Area Section */}
+        <div className="mt-8 grid gap-6 md:grid-cols-2">
+          <div>
+            <Label>Application Reference</Label>
+            <div className="mt-1">
+              <LookupPicker
+                key={`application-${form.application || "none"}`}
+                displayField={ApplicationKeys.APPLICATIONTITLE}
+                keyField={ApplicationKeys.APPLICATIONID}
+                secondaryField={ApplicationKeys.ABSTRACT}
+                searchField={ApplicationKeys.APPLICATIONTITLE}
+                tableName={TableName.APPLICATIONS}
+                maxSelection={1}
+                label="Application"
+                cascadeField={ApplicationKeys.APPLICATIONID}
+                cascadeValue={applicationId}
+                isDefaultSelected={applicationId != null}
+                disabled={form.type === "view"}
+                onSelect={(values) => {
+                  setForm((prev) => ({
+                    ...prev,
+                    application:
+                      values && values.length > 0
+                        ? values[0][ApplicationKeys.APPLICATIONID]
+                        : null,
+                  }));
+                }}
+              />
+            </div>
+          </div>
+          <div>
+            <Label>Research Area</Label>
+            <div className="mt-1">
+              <LookupPicker
+                key={`research-area-${form.researchArea || "none"}`}
+                displayField={ResearchAreaKeys.AREANAME}
+                keyField={ResearchAreaKeys.RESEARCHAREAID}
+                secondaryField={ResearchAreaKeys.AREADESCRIPTION}
+                searchField={ResearchAreaKeys.AREANAME}
+                tableName={TableName.RESEARCHAREAS}
+                maxSelection={1}
+                label="Research Area"
+                cascadeField={ResearchAreaKeys.RESEARCHAREAID}
+                cascadeValue={form.researchArea || undefined}
+                isDefaultSelected={form.researchArea != null}
+                disabled={form.type === "view"}
+                onSelect={(values) => {
+                  setForm((prev) => ({
+                    ...prev,
+                    researchArea:
+                      values && values.length > 0
+                        ? values[0][ResearchAreaKeys.RESEARCHAREAID]
+                        : null,
+                  }));
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
         {/* General Information Section */}
-        <div className="mt-8 rounded-xl border bg-white p-6">
+        <div className="mt-8 rounded-xl border border-[#e2e8f0] bg-white p-6">
           <div className="flex items-center justify-between">
             <h2 className={HEADING_TEXT}>General information</h2>
             <IconButton
@@ -2444,16 +2534,10 @@ export default function FormResearch() {
           </div>
           {showGeneral && (
             <GeneralInformationSection
-              key={`${applicationId}-${researchAreaId}-${user?.adxUserId}`}
+              key={`${user?.adxUserId}`}
               form={form}
               onTitleChange={(value) =>
                 setForm((prev) => ({ ...prev, title: value }))
-              }
-              onApplicationChange={(applicationId) =>
-                setForm((prev) => ({ ...prev, application: applicationId }))
-              }
-              onResearchAreaChange={(areaId) =>
-                setForm((prev) => ({ ...prev, researchArea: areaId }))
               }
               onPrincipalInvestigatorChange={(contactId) =>
                 setForm((prev) => ({
@@ -2467,15 +2551,13 @@ export default function FormResearch() {
               onEndDateChange={(date) =>
                 setForm((prev) => ({ ...prev, endDate: date }))
               }
-              applicationIdFromState={applicationId}
-              researchAreaIdFromState={researchAreaId}
               userAdxUserId={user?.adxUserId}
             />
           )}
         </div>
 
         {/* Budget Details Section */}
-        <div className="mt-8 rounded-xl border bg-white p-6">
+        <div className="mt-8 rounded-xl border border-[#e2e8f0] bg-white p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <h2 className={HEADING_TEXT}>Budget Management</h2>
@@ -2714,7 +2796,7 @@ export default function FormResearch() {
         />
 
         {/* Team Members Section */}
-        <div className="mt-6 rounded-sm border bg-white p-6">
+        <div className="mt-6 rounded-xl border border-[#e2e8f0] bg-white p-6">
           <div className="flex items-center justify-between">
             <h2 className={HEADING_TEXT}>Team members</h2>
             <IconButton
@@ -2749,7 +2831,27 @@ export default function FormResearch() {
 
         <Reveal className="mt-8">
           <div className="flex items-center justify-end gap-3">
-            <PrimaryButton onClick={submit} disabled={!canSubmit}>
+            <PrimaryButton
+              onClick={submit}
+              disabled={!canSubmit}
+              styles={{
+                root: {
+                  backgroundColor: "#1D2054",
+                  borderColor: "#1D2054",
+                  height: "44px",
+                  fontSize: "16px",
+                  fontWeight: "600",
+                },
+                rootHovered: {
+                  backgroundColor: "#151b41",
+                  borderColor: "#151b41",
+                },
+                rootDisabled: {
+                  backgroundColor: "#cbd5e1",
+                  borderColor: "#cbd5e1",
+                },
+              }}
+            >
               {form.type === "edit" ? "Update Research" : "Submit Research"}
             </PrimaryButton>
           </div>

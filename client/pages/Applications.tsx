@@ -140,73 +140,84 @@ export default function Applications() {
     return (
       <div
         className="
-      bg-[#FFF8F3] border border-[#FAE7DD] rounded-lg p-4 
-      grid grid-cols-1 
-      lg:grid-cols-[100px_1fr_1fr_200px_80px]
-      items-start gap-4
+      bg-white border border-[#e2e8f0] rounded-lg p-6
+      hover:shadow-md transition-all
     "
       >
-        {/* Number */}
-        <div className="text-sm font-semibold text-orange-500 space-y-2 self-center">
-          {number}
+        {/* Top Row: Number, Title, Status, Action */}
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="flex items-start gap-4 flex-1">
+            {/* Application Number */}
+            <div className="flex-shrink-0">
+              <span className="inline-block bg-[#f0f4f8] text-[#1D2054] font-bold text-sm px-3 py-1 rounded">
+                {number}
+              </span>
+            </div>
+
+            {/* Title */}
+            <div className="flex-1">
+              <h3 className="font-semibold text-lg text-[#1e293b]">{title}</h3>
+            </div>
+          </div>
+
+          {/* Status and Action */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <div
+              className={`px-3 py-1.5 rounded-full text-xs font-bold text-center whitespace-nowrap ${mapStatusToColor(status)}`}
+            >
+              {status}
+            </div>
+            <IconButton
+              iconProps={{ iconName: "Edit" }}
+              title="Edit Application"
+              onClick={() => {
+                if (
+                  status.toLowerCase() === "draft" ||
+                  status.toLowerCase() === "return for updates"
+                ) {
+                  onEdit(app);
+                } else {
+                  onView(app);
+                }
+              }}
+              aria-label={`Edit ${title}`}
+              styles={{
+                root: { color: "#1D2054" },
+                rootDisabled: { color: "#cbd5e1" },
+              }}
+            />
+          </div>
         </div>
 
-        {/* Main Title + Description */}
-        <div className="space-y-2">
-          <h3 className="font-semibold text-lg">{title}</h3>
+        {/* Description */}
+        <p className="text-sm text-[#475569] mb-4 line-clamp-2">{desc}</p>
 
-          <p className="text-base text-gray-500 mt-2">{desc}</p>
-        </div>
-        {/* Sub Info */}
-        <div className="space-y-2">
+        {/* Metadata Row: Grant Cycle, Research Area, Submitted Date */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-[#e2e8f0]">
           <div>
-            <b className="text-brown">Grant Cycle:</b>
-            {grantCycle}
+            <p className="text-xs font-medium text-[#64748b] uppercase tracking-wide">
+              Grant Cycle
+            </p>
+            <p className="text-sm text-[#1e293b] mt-1 font-medium">
+              {grantCycle}
+            </p>
           </div>
           <div>
-            <b className="text-brown">Research Area:</b>
-            {researchArea}
+            <p className="text-xs font-medium text-[#64748b] uppercase tracking-wide">
+              Research Area
+            </p>
+            <p className="text-sm text-[#1e293b] mt-1 font-medium">
+              {researchArea}
+            </p>
           </div>
           <div>
-            <b className="text-brown">Submitted on:</b>
-            {submittedDate}
+            <p className="text-xs font-medium text-[#64748b] uppercase tracking-wide">
+              Submitted
+            </p>
+            <p className="text-sm text-[#1e293b] mt-1 font-medium">
+              {submittedDate}
+            </p>
           </div>
-        </div>
-        {/* Status Pill */}
-        <div
-          className={`px-2 py-2 rounded text-sm font-bold text-center self-center ${mapStatusToColor(status)}`}
-        >
-          {status}
-        </div>
-
-        {/* Comment 
-        <div className="text-sm text-gray-500">
-          {comment || ""}
-        </div>
-*/}
-        {/* File Download Button */}
-        <div className="flex gap-2 justify-end self-center">
-          {/* <IconButton
-            iconProps={{ iconName: "View" }}
-            title="View Application"
-            onClick={() => onView(app)}
-            aria-label={`View ${title}`}
-          /> */}
-          <IconButton
-            iconProps={{ iconName: "Edit" }}
-            title="Edit Application"
-            onClick={() => {
-              if (
-                status.toLowerCase() === "draft" ||
-                status.toLowerCase() === "return for updates"
-              ) {
-                onEdit(app);
-              } else {
-                onView(app);
-              }
-            }}
-            aria-label={`Edit ${title}`}
-          />
         </div>
       </div>
     );
@@ -221,8 +232,8 @@ export default function Applications() {
         </div>
 
         <div>
-          <p className="font-semibold">{label}</p>
-          <a href="#" className="text-sm text-gray-500 underline">
+          <p className="font-semibold text-[#1e293b]">{label}</p>
+          <a href="#" className="text-sm text-[#475569] underline">
             {link}
           </a>
         </div>
@@ -231,12 +242,12 @@ export default function Applications() {
   };
   const SummaryCards = () => {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-white p-6 border border-[#FAE7DD] rounded-xl mt-10 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-white p-6 border border-[#e2e8f0] rounded-xl mt-10 mb-6">
         <SummaryCard
           number={applications.length.toString()}
           label="Total Requests"
           link="Check all requests"
-          color="bg-[#1D2153]"
+          color="bg-[#1D2054]"
         />
 
         <SummaryCard
@@ -299,7 +310,9 @@ export default function Applications() {
           <div className="container py-8 md:py-8">
             {/* Header Row */}
             <div className="flex flex-wrap justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Applications</h2>
+              <h2 className="text-xl font-semibold text-[#1e293b]">
+                Applications
+              </h2>
 
               {/* <Link
                 to="/applyapplication"
@@ -319,7 +332,7 @@ export default function Applications() {
             ) : error ? (
               <div className="px-5 py-10 text-center text-red-600">{error}</div>
             ) : applications.length === 0 ? (
-              <div className="px-5 py-10 text-center text-muted-foreground">
+              <div className="px-5 py-10 text-center text-[#94a3b8]">
                 No applications yet. Click "Apply for a Grant" to start your
                 first application.
               </div>
@@ -369,7 +382,7 @@ export default function Applications() {
                 }
               </div>
             )}
-            <div className="border border-[#FAE7DD] my-8"></div>
+            <div className="border border-[#e2e8f0] my-8"></div>
             {/* Summary Section */}
             <SummaryCards />
           </div>

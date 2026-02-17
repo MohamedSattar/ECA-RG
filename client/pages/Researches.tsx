@@ -1,26 +1,12 @@
-import Reveal from "@/motion/Reveal";
 import { Link, useNavigate } from "react-router-dom";
-import { toast } from "@/ui/use-toast";
+import Reveal from "@/motion/Reveal";
 import { useDataverseApi } from "@/hooks/useDataverseApi";
-import { ApplicationKeys, ContactKeys, ResearchKeys, TableName } from "@/constants/index";
+import { ContactKeys, ResearchKeys, TableName } from "@/constants/index";
 import { useAuth } from "@/state/auth";
 import { useEffect, useMemo, useState } from "react";
 import { IconButton } from "@fluentui/react/lib/Button";
 
-interface ResearchItem {
-  id: string;
-  title: string;
-  submittedAt: string;
-  status: "Draft" | "Submitted" | "In Review" | "Approved" | "Rejected";
-}
-
-const researches: ResearchItem[] = [
-  { id: "res-101", title: "Cognitive Development Patterns in Preschoolers", submittedAt: "2025-01-05", status: "In Review" },
-  { id: "res-102", title: "Impact of Outdoor Activities on Early Learning", submittedAt: "2024-12-27", status: "Submitted" },
-  { id: "res-103", title: "Digital Tools for Early Literacy", submittedAt: "2024-12-03", status: "Draft" },
-];
-
-function StatusBadge({ value }: { value: ResearchItem["status"] }) {
+function StatusBadge({ value }: { value?: string | null }) {
   const cls =
     value === "Approved"
       ? "bg-green-100 text-green-800 border-green-200"
@@ -31,15 +17,16 @@ function StatusBadge({ value }: { value: ResearchItem["status"] }) {
           : value === "Submitted"
             ? "bg-blue-100 text-blue-800 border-blue-200"
             : "bg-slate-100 text-slate-800 border-slate-200";
-  return <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${cls}`}>{value}</span>;
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${cls}`}
+    >
+      {value}
+    </span>
+  );
 }
 
-
-
-
 export default function Researches() {
-
-
   const { callApi } = useDataverseApi();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -47,19 +34,21 @@ export default function Researches() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-    const currentUserId = user?.contact?.[ContactKeys.CONTACTID] || "";
+  const currentUserId = user?.contact?.[ContactKeys.CONTACTID] || "";
 
   const select = `*,${ResearchKeys.PRINCIPALINVESTIGATOR}`;
   const filter = `${ResearchKeys.PRINCIPALINVESTIGATOR} eq ${currentUserId}`;
   const currentUserApplicationURL = `/_api/${TableName.RESEARCHES}?$select=${select}&$filter=${filter}`;
 
   const loadResearches = async () => {
-
     setLoading(true);
     setError(null);
 
     try {
-      const res = await callApi<{ value: any }>({ url: currentUserApplicationURL, method: "GET" });
+      const res = await callApi<{ value: any }>({
+        url: currentUserApplicationURL,
+        method: "GET",
+      });
       const list = res?.value ?? [];
       console.log("Fetched applications:", list);
       setResearches(list);
@@ -78,7 +67,7 @@ export default function Researches() {
 
   const applicationResearches = useMemo(() => researches || [], [researches]);
 
-  const onView = (item: ResearchItem) => {
+  const onView = (item: any) => {
     navigate(
       `/applyresearch?applicationId=${item[ResearchKeys.APPLICATIONREFERENCE]}&researchId=${item[ResearchKeys.RESEARCHID]}&formType=view`,
       {
@@ -91,7 +80,8 @@ export default function Researches() {
       },
     );
   };
-  const onEdit = (item: ResearchItem) => {
+
+  const onEdit = (item: any) => {
     navigate(
       `/applyresearch?applicationId=${item[ResearchKeys.APPLICATIONREFERENCE]}&researchId=${item[ResearchKeys.RESEARCHID]}&formType=edit`,
       {
@@ -105,79 +95,81 @@ export default function Researches() {
     );
   };
 
+
   return (
-    <div>
-      <section className="bg-white"></section>
+    <>
+      {/* Header Banner */}
+      <section className="relative overflow-hidden bg-[#1D2054]">
+        <Reveal>
+          <div className="container py-4 md:py-4 grid gap-10 md:grid-cols-2 items-center">
+            <div className="max-w-2xl">
+              <h1 className="text-4xl md:text-6xl font-extrabold leading-tight tracking-tight text-white">
+                My Research Status
+              </h1>
+            </div>
+
+            {/* Hero Collage */}
+            <div className="relative flex justify-center md:justify-end">
+              <img
+                src="/images/application.png"
+                alt="Illustration"
+                className="h-auto w-auto max-w-none"
+              />
+            </div>
+          </div>
+        </Reveal>
+      </section>
+
+      {/* Page Content */}
       <section className="bg-white">
         <div className="container py-16">
-          <Reveal>
-            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-              <div>
-                <div className="text-xs tracking-[0.25em] text-[#8c5a3d] uppercase">
-                  Dashboard
-                </div>
-                <h1 className="mt-1 text-3xl md:text-4xl font-bold tracking-tight text-[#2b201a]">
-                  Researches
-                </h1>
-                <p className="mt-2 text-muted-foreground">
-                  Track your submitted research proposals and their review
-                  status.
-                </p>
-              </div>
-              {/*<Link
-              to="/applyresearch"
-              className="inline-flex shrink-0 items-center rounded-md bg-[#e78f6a] px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-[#de835c]"
-            >
-              Apply for a Grant
-            </Link>*/}
-            </div>
-          </Reveal>
-
           <Reveal className="mt-8">
             <div className="rounded-xl border overflow-hidden bg-white">
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
-                  <thead className="bg-[#f6e4d8]">
+                  <thead className="bg-[#1D2054]">
                     <tr className="text-left">
-                      <th className="px-3 py-3 font-semibold text-[#2b201a]">
+                      <th className="px-6 py-3 font-semibold text-white">
                         Research Title
                       </th>
-                      <th className="px-3 py-3 font-semibold text-[#2b201a]">
+                      <th className="px-6 py-3 font-semibold text-white">
                         Application Reference
                       </th>
-                      <th className="px-3 py-3 font-semibold text-[#2b201a]">
+                      <th className="px-6 py-3 font-semibold text-white">
                         Research Area
                       </th>
-                      <th className="px-3 py-3 font-semibold text-[#2b201a]">
+                      <th className="px-6 py-3 font-semibold text-white">
                         Principal Investigator
                       </th>
-                      <th className="px-3 py-3 font-semibold text-[#2b201a]">
+                      <th className="px-6 py-3 font-semibold text-white">
                         Status
                       </th>
-                      <th className="px-3 py-3 font-semibold text-[#2b201a]">
+                      <th className="px-6 py-3 font-semibold text-white">
                         Actions
                       </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {researches.map((item) => (
+                    {researches.map((item, idx) => (
                       <tr
                         key={item[ResearchKeys.RESEARCHID]}
-                        className="border-t hover:bg-slate-50"
+                        className={`border-t ${
+                          idx % 2 === 0 ? "bg-white" : "bg-[#f8fafc]"
+                        } hover:shadow-sm transition-shadow`}
                       >
-                        <td className="px-3 py-3 font-medium text-[#2b201a]">
+                        <td className="px-6 py-3 font-medium text-[#1e293b]">
                           {item[ResearchKeys.RESEARCHTITLE]}
                         </td>
-                        <td className="px-3 py-3 font-medium text-[#2b201a]">
+                        <td className="px-6 py-3 font-medium text-[#1e293b]">
                           {item[ResearchKeys.APPLICATIONREFERENCE_FORMATTED]}
                         </td>
-                        <td className="px-3 py-3 font-medium text-[#2b201a]">
+                        <td className="px-6 py-3 font-medium text-[#1e293b]">
                           {item[ResearchKeys.RESEARCHAREA_FORMATTED]}
                         </td>
-                        <td className="px-3 py-3 font-medium text-[#2b201a]">
+                        <td className="px-6 py-3 font-medium text-[#1e293b]">
                           {item[ResearchKeys.PRINCIPALINVESTIGATOR_FORMATTED]}
                         </td>
-                        <td className="px-3 py-3">
+                        <td className="px-6 py-3">
                           {item[ResearchKeys.RESEARCHSTATUS_FORMATTED] &&
                             item[ResearchKeys.RESEARCHSTATUS_FORMATTED] !=
                               null && (
@@ -188,19 +180,16 @@ export default function Researches() {
                               />
                             )}
                         </td>
-                        <td className="px-3 py-3">
+                        <td className="px-6 py-3">
                           <div className="flex items-center gap-2">
-                            {/* <IconButton
-                            onClick={() => onView(item)}
-                            title="View Research"
-                            aria-label={`View ${item.title}`}
-                            iconProps={{iconName:"View"}}
-                          /> */}
                             <IconButton
                               onClick={() => onEdit(item)}
                               title="Edit Research"
                               aria-label={`Edit ${item.title}`}
                               iconProps={{ iconName: "Edit" }}
+                              styles={{
+                                root: { color: "#1D2054" },
+                              }}
                             />
                           </div>
                         </td>
@@ -209,8 +198,8 @@ export default function Researches() {
                     {researches.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={4}
-                          className="px-5 py-10 text-center text-muted-foreground"
+                          colSpan={6}
+                          className="px-6 py-10 text-center text-[#475569]"
                         >
                           No researches yet.
                         </td>
@@ -223,8 +212,6 @@ export default function Researches() {
           </Reveal>
         </div>
       </section>
-    </div>
+    </>
   );
 }
-
-

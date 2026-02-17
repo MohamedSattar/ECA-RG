@@ -10,9 +10,10 @@ import {
 
 import { useMsal, useIsAuthenticated } from "@azure/msal-react";
 import { InteractionStatus } from "@azure/msal-browser";
-import { loginRequest } from "./azureConfig";
+import { loginRequest, signupRequest } from "./azureConfig";
 import { useDataverseApi } from "@/hooks/useDataverseApi";
 import { ContactKeys, TableName } from "@/constants";
+import { toast } from "sonner";
 
 interface UserProfile {
   name: string;
@@ -24,9 +25,10 @@ interface UserProfile {
 interface AuthContextShape {
   isAuthed: boolean;
   user: UserProfile | null;
-  login: () => void;
+  login: (isSignup?: boolean) => void;
   logout: () => void;
   isLoading: boolean;
+  isLoggingIn?: boolean;
 }
 
 const AuthContext = createContext<AuthContextShape | null>(null);
@@ -72,7 +74,10 @@ const authStorage = {
    FETCH USER CONTACT FROM DATAVERSE
 ------------------------------------------------------- */
 
-async function getCurrentUserContact(email: string, callApi: ReturnType<typeof useDataverseApi>['callApi']) {
+async function getCurrentUserContact(
+  email: string,
+  callApi: ReturnType<typeof useDataverseApi>["callApi"],
+) {
   if (!email) return null;
 
   try {
@@ -93,9 +98,13 @@ async function getCurrentUserContact(email: string, callApi: ReturnType<typeof u
    CREATE USER PROFILE
 ------------------------------------------------------- */
 
-async function createUserProfile(account: any, callApi: ReturnType<typeof useDataverseApi>['callApi']): Promise<UserProfile> {
+async function createUserProfile(
+  account: any,
+  callApi: ReturnType<typeof useDataverseApi>["callApi"],
+): Promise<UserProfile> {
   const adxUserId = (account?.idTokenClaims?.sub as string) || "";
-  const email= (account?.idTokenClaims?.email as string) || account?.username || "";
+  const email =
+    (account?.idTokenClaims?.email as string) || account?.username || "";
 
   return {
     name: (account?.idTokenClaims?.name as string) || account?.username || "",
@@ -111,7 +120,7 @@ async function createUserProfile(account: any, callApi: ReturnType<typeof useDat
 
 const clearAuthState = (
   setAuthed: (value: boolean) => void,
-  setUser: (value: UserProfile | null) => void
+  setUser: (value: UserProfile | null) => void,
 ): void => {
   authStorage.clearAuth();
   setAuthed(false);
@@ -129,6 +138,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [isAuthed, setAuthed] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isInteractionInProgress, setIsInteractionInProgress] = useState(false);
 
   /* -----------------------------------------------
      HANDLE REDIRECT LOGIN
@@ -139,7 +149,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     try {
       const response = await instance.handleRedirectPromise();
-      const accounts = response ? [response.account] : instance.getAllAccounts();
+      const accounts = response
+        ? [response.account]
+        : instance.getAllAccounts();
 
       if (accounts?.length && accounts[0]) {
         const loggedUser = await createUserProfile(accounts[0], callApi);
@@ -163,36 +175,32 @@ export function AuthProvider({ children }: PropsWithChildren) {
   ------------------------------------------------ */
 
   useEffect(() => {
-    //handleRedirect();
-    if (inProgress !== InteractionStatus.None) return;
-    if (inProgress !== InteractionStatus.None) return;
+    const handle = async () => {
+      setIsLoading(true);
 
-  const handle = async () => {
-    setIsLoading(true);
+      try {
+        const response = await instance.handleRedirectPromise();
+        const accounts = response
+          ? [response.account]
+          : instance.getAllAccounts();
 
-    try {
-      const response = await instance.handleRedirectPromise();
-      const accounts = response
-        ? [response.account]
-        : instance.getAllAccounts();
-
-      if (accounts.length > 0) {
-        const loggedUser = await createUserProfile(accounts[0], callApi);
-        authStorage.setUser(loggedUser);
-        setUser(loggedUser);
-        setAuthed(true);
-      } else {
+        if (accounts.length > 0) {
+          const loggedUser = await createUserProfile(accounts[0], callApi);
+          authStorage.setUser(loggedUser);
+          setUser(loggedUser);
+          setAuthed(true);
+        } else {
+          clearAuthState(setAuthed, setUser);
+        }
+      } catch (e) {
+        console.error("Redirect handling failed", e);
         clearAuthState(setAuthed, setUser);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (e) {
-      console.error("Redirect handling failed", e);
-      clearAuthState(setAuthed, setUser);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
 
-  handle();
+    handle();
   }, [inProgress, instance]);
 
   /* -----------------------------------------------
@@ -204,32 +212,75 @@ export function AuthProvider({ children }: PropsWithChildren) {
       isAuthed,
       user,
       isLoading,
-      
-      login: async () => {
+      isLoggingIn: isInteractionInProgress,
+
+      login: async (isSignup?: boolean) => {
         try {
-          await instance.loginRedirect(loginRequest);
-        } catch (error) {
-          console.error("Login error:", error);
+          // Prevent concurrent login attempts
+          if (isInteractionInProgress) {
+            console.warn(
+              "[Auth] Login already in progress, ignoring duplicate request",
+            );
+            return;
+          }
+
+          setIsInteractionInProgress(true);
+          const requestType = isSignup ? "signup" : "login";
+          console.log(`[Auth] Starting SSO ${requestType}...`);
+
+          // Use redirect for full page navigation
+          const request = isSignup ? signupRequest : loginRequest;
+          await instance.loginRedirect(request);
+        } catch (error: any) {
+          // Handle specific MSAL errors
+          if (error?.errorCode === "user_cancelled") {
+            console.log("[Auth] User cancelled the login request");
+            // Don't show error toast or re-throw for user cancellation - it's normal behavior
+          } else if (error?.errorCode === "endpoints_resolution_error") {
+            console.error(
+              "[Auth] Azure B2C endpoint resolution failed. Check authority configuration.",
+              error,
+            );
+            toast.error(
+              "Authentication service unavailable. Please try again later.",
+            );
+            throw error;
+          } else if (error?.errorCode === "network_error") {
+            console.error("[Auth] Network error during authentication", error);
+            toast.error("Network error. Please check your connection.");
+            throw error;
+          } else if (error?.errorCode === "interaction_in_progress") {
+            console.error("[Auth] Interaction already in progress", error);
+            toast.error(
+              "An authentication request is already in progress. Please wait.",
+            );
+            throw error;
+          } else {
+            console.error("[Auth] Login error:", error);
+            toast.error("Authentication failed. Please try again.");
+            throw error;
+          }
+        } finally {
+          setIsInteractionInProgress(false);
         }
       },
 
       logout: async () => {
         try {
+          console.log("[Auth] Logging out...");
           clearAuthState(setAuthed, setUser);
-
-          await instance.logoutRedirect({
-            onRedirectNavigate: () => {
-              window.location.href = "/";
-              return false;
-            },
-          });
+          // Use popup for iframe compatibility (vs redirect which doesn't work in iframes)
+          await instance.logoutPopup();
+          console.log("[Auth] Logout successful");
+          toast.success("You have been logged out.");
         } catch (error) {
           console.error("Logout error:", error);
           clearAuthState(setAuthed, setUser);
+          toast.success("You have been logged out.");
         }
       },
     }),
-    [isAuthed, user, isLoading, instance]
+    [isAuthed, user, isLoading, instance],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
