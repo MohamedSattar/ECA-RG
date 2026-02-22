@@ -30,6 +30,7 @@ export {
 export { StatusReportFields } from "./statusReport";
 export { DisseminationRequestFields } from "./disseminationRequest";
 export { DisseminationActivityFields } from "./disseminationActivity";
+export { WorkforceDevelopmentFields } from "./workforceDevelopment";
 export { DeliverablesFields as DeliverableFields, DeliverableTypeOptions } from "./deliverables";
 
 // Tables & Metadata
