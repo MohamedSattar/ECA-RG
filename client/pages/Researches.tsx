@@ -3,7 +3,7 @@ import Reveal from "@/motion/Reveal";
 import { useDataverseApi } from "@/hooks/useDataverseApi";
 import { ContactKeys, ResearchKeys, TableName } from "@/constants/index";
 import { useAuth } from "@/state/auth";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { IconButton } from "@fluentui/react/lib/Button";
 
 function StatusBadge({ value }: { value?: string | null }) {
@@ -40,7 +40,7 @@ export default function Researches() {
   const filter = `${ResearchKeys.PRINCIPALINVESTIGATOR} eq ${currentUserId}`;
   const currentUserApplicationURL = `/_api/${TableName.RESEARCHES}?$select=${select}&$filter=${filter}`;
 
-  const loadResearches = async () => {
+  const loadResearches = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -59,11 +59,13 @@ export default function Researches() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [callApi, currentUserApplicationURL]);
 
   useEffect(() => {
+    if (!currentUserId) return;
     loadResearches();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only run when contact ID is available
+  }, [currentUserId]);
 
   const applicationResearches = useMemo(() => researches || [], [researches]);
 

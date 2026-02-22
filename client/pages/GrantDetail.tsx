@@ -37,8 +37,11 @@ export default function GrantDetail() {
 
   const select = `${ApplicationKeys.APPLICATIONID},${ApplicationKeys.APPLICATIONTITLE},${ApplicationKeys.SUBMISSIONDATE_FORMATTED},
   ${ApplicationKeys.RESEARCHAREA_FORMATTED},${ApplicationKeys.GRANTCYCLE_FORMATTED},${ApplicationKeys.STATUS_FORMATTED}`;
-  const filter = `${ApplicationKeys.MAINAPPLICANT} eq ${currentUserId}`;
-  const currentUserApplicationURL = `/_api/${TableName.APPLICATIONS}?$select=*&$filter=${filter}`;
+  // Filter requires GUIDs to be quoted in OData
+  const filter = currentUserId ? `${ApplicationKeys.MAINAPPLICANT} eq '${currentUserId}'` : "";
+  const currentUserApplicationURL = filter
+    ? `/_api/${TableName.APPLICATIONS}?$select=*&$filter=${filter}`
+    : `/_api/${TableName.APPLICATIONS}?$select=*`;
 
   const loadResearchArea = async () => {
     if (!id) {
@@ -553,14 +556,14 @@ export default function GrantDetail() {
                 <h3 className="text-lg font-semibold mb-3">Key Information</h3>
 
                 <div className="bg-[#92CBE8] p-6 rounded-xl space-y-3">
-                  <InfoRow
+                  {/* <InfoRow
                     label="Grant Amount:"
                     value={
                       researchArea?.[
                         "prmtk_allocatedbudget@OData.Community.Display.V1.FormattedValue"
                       ] || "AED 50,000 - 200,000"
                     }
-                  />
+                  /> */}
                   <InfoRow
                     label="Duration:"
                     value={

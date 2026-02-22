@@ -26,6 +26,7 @@ import {
   ApplicationTeamMemberFields,
   StatusReportFields,
   DisseminationRequestFields,
+  DisseminationActivityFields,
   DeliverableFields,
   ContactFields,
 } from "@/constants";
@@ -37,11 +38,12 @@ import { fileToBase64, getFileKey } from "@/services/utility";
 import { APIURL } from "@/constants/url";
 import {
   processReportFileUploads,
-  processDisseminationFileUploads,
+  // processDisseminationFileUploads, // commented: dissemination not needed for now
   processDeliverableFileUploads,
   loadReportFiles,
-  loadDisseminationFiles,
+  // loadDisseminationFiles, // commented: dissemination not needed for now
   loadDeliverableFiles,
+  loadDisseminationActivityFiles,
 } from "@/services/reportFileUpload";
 import { BudgetHeaderFields } from "@/constants/budgetHeader";
 import {
@@ -55,9 +57,14 @@ import { FileUploadSection } from "@/components/FileUploadSection";
 import { HEADING_TEXT } from "@/styles/constants";
 import { ReportingSection, ReportItem } from "@/components/ReportingSection";
 import {
-  DisseminationRequestSection,
+  // DisseminationRequestSection, // commented: dissemination not needed for now
   DisseminationRequest,
 } from "@/components/DisseminationRequestSection";
+import {
+  DisseminationActivitiesSection,
+  DisseminationActivity,
+  AddDisseminationActivityForm,
+} from "@/components/DisseminationActivitiesSection";
 import {
   DeliverablesSection,
   Deliverable,
@@ -88,6 +95,7 @@ interface FormState {
   selectedBudgetVersion: string | null;
   reportItems: ReportItem[];
   disseminationRequests: DisseminationRequest[];
+  disseminationActivities: DisseminationActivity[];
   deliverables: Deliverable[];
   title: string;
   submissionDate: string;
@@ -130,6 +138,7 @@ const INITIAL_FORM_STATE: FormState = {
   selectedBudgetVersion: null,
   reportItems: [],
   disseminationRequests: [],
+  disseminationActivities: [],
   deliverables: [],
   type: "new",
 };
@@ -552,7 +561,9 @@ export default function FormResearch() {
 
   // Lazy loading states for optional sections
   const [reportsLoaded, setReportsLoaded] = useState(false);
-  const [disseminationLoaded, setDisseminationLoaded] = useState(false);
+  // const [disseminationLoaded, setDisseminationLoaded] = useState(false); // commented: dissemination not needed for now
+  const [disseminationActivitiesLoaded, setDisseminationActivitiesLoaded] =
+    useState(false);
   const [deliverablesLoaded, setDeliverablesLoaded] = useState(false);
   const { callApi } = useDataverseApi();
   const { triggerFlow } = useFlowApi();
@@ -594,13 +605,12 @@ export default function FormResearch() {
       return;
     }
     try {
-      // Fetch budget header with expanded line items in a single call
-      // Only select necessary fields to reduce payload size
+      // Only select necessary fields (no $expand - fetch line items separately to avoid 400 on navigation property name)
       const budgetHeaderSelect = `${BudgetHeaderFields.BUDGETHEADERID},${BudgetHeaderFields.BUDGETNAME},${BudgetHeaderFields.RESEARCH},${BudgetHeaderFields.TOTALBUDGET},${BudgetHeaderFields.VERSIONNUMBER_BUDGET},${BudgetHeaderFields.STATUS}`;
       const budgetLineItemSelect = `${BudgetLineItemFields.BUDGETLINEITEMID},${BudgetLineItemFields.LINEITEMNAME},${BudgetLineItemFields.CATEGORY},${BudgetLineItemFields.DESCRIPTION},${BudgetLineItemFields.AMOUNT},${BudgetLineItemFields.BUDGETHEADER}`;
 
       const res = await callApi<{ value: any[] }>({
-        url: `/_api/${TableName.BUDGETHEADERS}?$filter=${BudgetHeaderFields.RESEARCH} eq ${applicationId}&$select=${budgetHeaderSelect}&$expand=${ExpandRelations.BUDGET_LINE_ITEMS}($select=${budgetLineItemSelect})`,
+        url: `/_api/${TableName.BUDGETHEADERS}?$filter=${BudgetHeaderFields.RESEARCH} eq ${applicationId}&$select=${budgetHeaderSelect}`,
         method: "GET",
       });
       const budgetData = res.value?.[0];
@@ -609,8 +619,13 @@ export default function FormResearch() {
         return;
       }
 
-      // Use expanded line items from the header response instead of making a separate call
-      const lineItems = budgetData[ExpandRelations.BUDGET_LINE_ITEMS] || [];
+      // Fetch line items in a separate call (navigation property name varies by Dataverse schema)
+      const budgetHeaderId = budgetData[BudgetHeaderFields.BUDGETHEADERID];
+      const lineItemsRes = await callApi<{ value: any[] }>({
+        url: `/_api/${TableName.BUDGETLINEITEMS}?$filter=${BudgetLineItemFields.BUDGETHEADER} eq ${budgetHeaderId}&$select=${budgetLineItemSelect}`,
+        method: "GET",
+      });
+      const lineItems = lineItemsRes?.value ?? [];
       const budgetHeader = mapBudgetHeader(budgetData);
       const budgetLineItems = mapBudgetLineItems(lineItems);
 
@@ -698,6 +713,7 @@ export default function FormResearch() {
     }
   };
 
+  /* commented: prmtk_disseminationapplicants API and dissemination not needed for now
   const loadDisseminationRequests = async (
     researchId: string,
   ): Promise<void> => {
@@ -705,7 +721,6 @@ export default function FormResearch() {
       return;
     }
     try {
-      // Select only necessary fields to reduce payload
       const disseminationSelect = `${DisseminationRequestFields.DISSEMINATIONAPPLICANTID},${DisseminationRequestFields.TITLE},${DisseminationRequestFields.JOURNALNAME},${DisseminationRequestFields.ABSTRACT},${DisseminationRequestFields.BUDGETNEEDED_BASE},${DisseminationRequestFields.SUBMISSIONDATE},${DisseminationRequestFields.REQUESTSTATUS}`;
 
       const res = await callApi<{ value: any[] }>({
@@ -715,11 +730,9 @@ export default function FormResearch() {
 
       const filteredRequests = res.value || [];
 
-      // Get research number for file loading
       const researchNumber =
         form.researchNumber || state?.item?.[ResearchKeys.RESEARCHNUMBER];
 
-      // Load files for each dissemination request in parallel
       const requestsWithFiles = await Promise.all(
         filteredRequests.map(async (item: any) => {
           let files: { file: File; action: "existing" }[] = [];
@@ -760,7 +773,53 @@ export default function FormResearch() {
       }));
     } catch (error) {
       console.error("Failed to load dissemination requests:", error);
-      // Don't throw error - dissemination requests are optional
+    }
+  };
+  */
+
+  const loadDisseminationActivities = async (
+    researchId: string,
+  ): Promise<DisseminationActivity[]> => {
+    if (formType === "new") return [];
+    try {
+      const activitySelect = `${DisseminationActivityFields.DISSEMINATIONACTIVITYID},${DisseminationActivityFields.NAME},${DisseminationActivityFields.PRESENTER},${DisseminationActivityFields.DATE},${DisseminationActivityFields.TYPE},${DisseminationActivityFields.MATERIALSUSED}`;
+      const res = await callApi<{ value: any[] }>({
+        url: `/_api/${TableName.DISSEMINATIONACTIVITIES}?$filter=${DisseminationActivityFields.RESEARCH} eq ${researchId}&$select=${activitySelect}&$top=100`,
+        method: "GET",
+      });
+      const researchNumber =
+        form.researchNumber || state?.item?.[ResearchKeys.RESEARCHNUMBER];
+      const rawList = res?.value ?? [];
+      const listWithFiles = await Promise.all(
+        rawList.map(async (item: any) => {
+          const id = item[DisseminationActivityFields.DISSEMINATIONACTIVITYID];
+          const name = item[DisseminationActivityFields.NAME] || "";
+          let files: { file: File; action: "existing" }[] = [];
+          if (researchNumber && name && id) {
+            files = await loadDisseminationActivityFiles(
+              researchNumber,
+              name,
+              id,
+              triggerFlow,
+            );
+          }
+          return {
+            id,
+            name,
+            presenter: item[DisseminationActivityFields.PRESENTER] || "",
+            date: item[DisseminationActivityFields.DATE] || "",
+            type: item[DisseminationActivityFields.TYPE] ?? 0,
+            materialsUsed:
+              item[DisseminationActivityFields.MATERIALSUSED] ?? null,
+            files,
+          };
+        }),
+      );
+      setForm((prev) => ({ ...prev, disseminationActivities: listWithFiles }));
+      return listWithFiles;
+    } catch (error) {
+      console.error("Failed to load dissemination activities:", error);
+      return [];
     }
   };
 
@@ -992,6 +1051,7 @@ export default function FormResearch() {
     [formType, reportsLoaded],
   );
 
+  /* commented: dissemination not needed for now
   const loadOptionalDisseminationData = useCallback(
     async (researchId: string) => {
       if (disseminationLoaded || formType === "new") return;
@@ -999,6 +1059,16 @@ export default function FormResearch() {
       setDisseminationLoaded(true);
     },
     [formType, disseminationLoaded],
+  );
+  */
+
+  const loadOptionalDisseminationActivitiesData = useCallback(
+    async (researchId: string) => {
+      if (disseminationActivitiesLoaded || formType === "new") return;
+      await loadDisseminationActivities(researchId);
+      setDisseminationActivitiesLoaded(true);
+    },
+    [formType, disseminationActivitiesLoaded],
   );
 
   const loadOptionalDeliverableData = useCallback(
@@ -1050,21 +1120,23 @@ export default function FormResearch() {
   const loadBudgetByVersion = useCallback(
     async (budgetHeaderId: string) => {
       try {
-        // Select only necessary fields and fetch header with expanded line items
+        // Select only necessary fields; fetch header then line items separately (no $expand)
         const budgetHeaderSelect = `${BudgetHeaderFields.BUDGETHEADERID},${BudgetHeaderFields.BUDGETNAME},${BudgetHeaderFields.RESEARCH},${BudgetHeaderFields.TOTALBUDGET},${BudgetHeaderFields.VERSIONNUMBER_BUDGET},${BudgetHeaderFields.STATUS}`;
         const budgetLineItemSelect = `${BudgetLineItemFields.BUDGETLINEITEMID},${BudgetLineItemFields.LINEITEMNAME},${BudgetLineItemFields.CATEGORY},${BudgetLineItemFields.DESCRIPTION},${BudgetLineItemFields.AMOUNT},${BudgetLineItemFields.BUDGETHEADER}`;
 
-        // Fetch budget header with expanded line items
         const headerRes = await callApi<{ value: any[] }>({
-          url: `/_api/${TableName.BUDGETHEADERS}?$filter=${BudgetHeaderFields.BUDGETHEADERID} eq ${budgetHeaderId}&$select=${budgetHeaderSelect}&$expand=${ExpandRelations.BUDGET_LINE_ITEMS}($select=${budgetLineItemSelect})`,
+          url: `/_api/${TableName.BUDGETHEADERS}?$filter=${BudgetHeaderFields.BUDGETHEADERID} eq ${budgetHeaderId}&$select=${budgetHeaderSelect}`,
           method: "GET",
         });
 
         const budgetData = headerRes?.value?.[0];
         if (!budgetData) return;
 
-        // Use expanded line items instead of separate call
-        const lineItems = budgetData[ExpandRelations.BUDGET_LINE_ITEMS] || [];
+        const lineItemsRes = await callApi<{ value: any[] }>({
+          url: `/_api/${TableName.BUDGETLINEITEMS}?$filter=${BudgetLineItemFields.BUDGETHEADER} eq ${budgetHeaderId}&$select=${budgetLineItemSelect}`,
+          method: "GET",
+        });
+        const lineItems = lineItemsRes?.value ?? [];
 
         const budgetHeader = mapBudgetHeader(budgetData);
         const budgetLineItems = mapBudgetLineItems(lineItems);
@@ -1218,7 +1290,8 @@ export default function FormResearch() {
       const timer = setTimeout(async () => {
         await Promise.all([
           loadOptionalReportData(researchAreaId),
-          loadOptionalDisseminationData(researchAreaId),
+          // loadOptionalDisseminationData(researchAreaId), // commented: dissemination not needed for now
+          loadOptionalDisseminationActivitiesData(researchAreaId),
           loadOptionalDeliverableData(researchAreaId),
         ]);
       }, 500); // Load optional sections 500ms after main content
@@ -1230,7 +1303,8 @@ export default function FormResearch() {
     form.title,
     formType,
     loadOptionalReportData,
-    loadOptionalDisseminationData,
+    // loadOptionalDisseminationData, // commented: dissemination not needed for now
+    loadOptionalDisseminationActivitiesData,
     loadOptionalDeliverableData,
   ]);
 
@@ -1712,6 +1786,7 @@ export default function FormResearch() {
     [formType, callApi],
   );
 
+  /* commented: dissemination handlers not needed for now
   // Dissemination Request handlers
   const handleAddDisseminationRequest = useCallback(
     async (item: {
@@ -1969,6 +2044,305 @@ export default function FormResearch() {
     },
     [formType, callApi],
   );
+  */ // end commented: dissemination handlers
+
+  // File handlers (used by Dissemination Activities and other sections)
+  const handleDeleteFile = useCallback(
+    async (fileName: string, folder: string): Promise<void> => {
+      try {
+        await triggerFlow(APIURL.FileDeleteEndpoint, {
+          FileName: fileName,
+          Library: "Researches",
+          Folder: folder,
+        });
+      } catch (error) {
+        console.error(`Failed to delete file ${fileName}:`, error);
+        throw error;
+      }
+    },
+    [triggerFlow],
+  );
+
+  const handleUploadFile = useCallback(
+    async (files: File[], folder: string): Promise<void> => {
+      try {
+        const uploadPromises = files.map(async (file) => {
+          const base64Content = await fileToBase64(file);
+          const payload: any = {
+            FileContent: base64Content,
+            FileName: file.name,
+            Library: "Researches",
+            Folder: folder,
+            FileType: "other",
+            UserEmail: user?.contact?.[ContactFields.EMAILADDRESS1] || "",
+          };
+
+          const response = await triggerFlow(
+            APIURL.FileUploadEndpoint,
+            payload,
+          );
+
+          if (!response.success) {
+            throw new Error(`Failed to upload ${file.name}`);
+          }
+        });
+
+        await Promise.all(uploadPromises);
+      } catch (error) {
+        console.error(`Failed to upload files:`, error);
+        throw error;
+      }
+    },
+    [triggerFlow, user],
+  );
+
+  // Dissemination Activities handlers
+  const handleAddDisseminationActivity = useCallback(
+    async (item: AddDisseminationActivityForm) => {
+      if (formType !== "new") {
+        setShowLoader(true);
+        try {
+          const payload: Record<string, unknown> = {
+            [DisseminationActivityFields.NAME]: item.name,
+            [DisseminationActivityFields.PRESENTER]: item.presenter || null,
+            [DisseminationActivityFields.DATE]: item.date || null,
+            [DisseminationActivityFields.TYPE]: item.type
+              ? parseInt(item.type, 10)
+              : null,
+            [DisseminationActivityFields.MATERIALSUSED]:
+              item.materialsUsed || null,
+            [DisseminationActivityFields.RESEARCH_ID]: `/${TableName.RESEARCHES}(${researchAreaId})`,
+          };
+          await callApi({
+            url: `/_api/${TableName.DISSEMINATIONACTIVITIES}`,
+            method: "POST",
+            data: payload,
+          });
+          const list = await loadDisseminationActivities(researchAreaId);
+          const researchNumber =
+            form.researchNumber || state?.item?.[ResearchKeys.RESEARCHNUMBER];
+          const newFiles = (item.files || []).filter((f) => f.action === "new");
+          if (
+            researchNumber &&
+            newFiles.length > 0 &&
+            list.length > 0 &&
+            handleUploadFile
+          ) {
+            const newActivity = list.find((a) => a.name === item.name) || list[list.length - 1];
+            const sanitizedName = newActivity.name.replace(/[<>:"/\\|?*]/g, "-");
+            const folder = `${researchNumber}/Dissemination Activities/${sanitizedName}-${newActivity.id}`;
+            await handleUploadFile(
+              newFiles.map((f) => f.file),
+              folder,
+            );
+            const existingFiles = newFiles.map((f) => ({
+              file: f.file,
+              action: "existing" as const,
+            }));
+            const mergedActivities = list.map((a) =>
+              a.id === newActivity.id
+                ? { ...a, files: [...(a.files || []), ...existingFiles] }
+                : a,
+            );
+            setForm((prev) => ({
+              ...prev,
+              disseminationActivities: mergedActivities,
+            }));
+          }
+          toast({
+            title: "Success",
+            description: "Dissemination activity added successfully.",
+          });
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: "Failed to add dissemination activity.",
+            variant: "destructive",
+          });
+        } finally {
+          setShowLoader(false);
+        }
+      } else {
+        setForm((prev) => ({
+          ...prev,
+          disseminationActivities: [
+            ...prev.disseminationActivities,
+            {
+              id: crypto.randomUUID(),
+              name: item.name,
+              presenter: item.presenter,
+              date: item.date,
+              type: item.type ? parseInt(item.type, 10) : 0,
+              materialsUsed: item.materialsUsed || null,
+              files: item.files || [],
+            },
+          ],
+        }));
+      }
+    },
+    [
+      formType,
+      researchAreaId,
+      callApi,
+      form.researchNumber,
+      state?.item,
+      handleUploadFile,
+    ],
+  );
+
+  const handleRemoveDisseminationActivity = useCallback(
+    async (id: string) => {
+      if (formType !== "new") {
+        setShowLoader(true);
+        try {
+          await callApi({
+            url: `/_api/${TableName.DISSEMINATIONACTIVITIES}(${id})`,
+            method: "DELETE",
+          });
+          await loadDisseminationActivities(researchAreaId);
+          toast({
+            title: "Success",
+            description: "Dissemination activity removed successfully.",
+          });
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: "Failed to remove dissemination activity.",
+            variant: "destructive",
+          });
+        } finally {
+          setShowLoader(false);
+        }
+      }
+      setForm((prev) => ({
+        ...prev,
+        disseminationActivities: prev.disseminationActivities.filter(
+          (a) => a.id !== id,
+        ),
+      }));
+    },
+    [formType, researchAreaId, callApi],
+  );
+
+  const handleEditDisseminationActivity = useCallback(
+    async (id: string, item: AddDisseminationActivityForm) => {
+      const researchNumber =
+        form.researchNumber || state?.item?.[ResearchKeys.RESEARCHNUMBER];
+      const sanitizedName = (item.name || "").replace(/[<>:"/\\|?*]/g, "-");
+      const folder = researchNumber
+        ? `${researchNumber}/Dissemination Activities/${sanitizedName}-${id}`
+        : "";
+
+      if (formType !== "new") {
+        setShowLoader(true);
+        try {
+          if (item.files && folder && handleDeleteFile) {
+            const toDelete = item.files.filter((f) => f.action === "remove");
+            for (const f of toDelete) {
+              try {
+                await handleDeleteFile(f.file.name, folder);
+              } catch (err) {
+                console.error(`Failed to delete file ${f.file.name}:`, err);
+              }
+            }
+          }
+
+          await callApi({
+            url: `/_api/${TableName.DISSEMINATIONACTIVITIES}(${id})`,
+            method: "PATCH",
+            data: {
+              [DisseminationActivityFields.NAME]: item.name,
+              [DisseminationActivityFields.PRESENTER]: item.presenter || null,
+              [DisseminationActivityFields.DATE]: item.date || null,
+              [DisseminationActivityFields.TYPE]: item.type
+                ? parseInt(item.type, 10)
+                : null,
+              [DisseminationActivityFields.MATERIALSUSED]:
+                item.materialsUsed || null,
+            },
+          });
+
+          if (item.files && folder && handleUploadFile) {
+            const newFiles = item.files.filter((f) => f.action === "new");
+            if (newFiles.length > 0) {
+              await handleUploadFile(
+                newFiles.map((x) => x.file),
+                folder,
+              );
+            }
+          }
+
+          const keptExisting = (item.files || []).filter(
+            (f) => f.action !== "remove",
+          );
+          const newAsExisting = (item.files || [])
+            .filter((f) => f.action === "new")
+            .map((f) => ({ file: f.file, action: "existing" as const }));
+          const mergedFiles = [
+            ...keptExisting.filter((f) => f.action === "existing"),
+            ...newAsExisting,
+          ];
+
+          setForm((prev) => ({
+            ...prev,
+            disseminationActivities: prev.disseminationActivities.map((a) =>
+              a.id === id
+                ? {
+                    ...a,
+                    name: item.name,
+                    presenter: item.presenter,
+                    date: item.date,
+                    type: item.type ? parseInt(item.type, 10) : 0,
+                    materialsUsed: item.materialsUsed || null,
+                    files: mergedFiles,
+                  }
+                : a,
+            ),
+          }));
+
+          toast({
+            title: "Success",
+            description: "Dissemination activity updated successfully.",
+          });
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: "Failed to update dissemination activity.",
+            variant: "destructive",
+          });
+        } finally {
+          setShowLoader(false);
+        }
+      } else {
+        setForm((prev) => ({
+          ...prev,
+          disseminationActivities: prev.disseminationActivities.map((a) =>
+            a.id === id
+              ? {
+                  ...a,
+                  name: item.name,
+                  presenter: item.presenter,
+                  date: item.date,
+                  type: item.type ? parseInt(item.type, 10) : 0,
+                  materialsUsed: item.materialsUsed || null,
+                  files: item.files || [],
+                }
+              : a,
+          ),
+        }));
+      }
+    },
+    [
+      formType,
+      researchAreaId,
+      callApi,
+      form.researchNumber,
+      form.disseminationActivities,
+      state?.item,
+      handleDeleteFile,
+      handleUploadFile,
+    ],
+  );
 
   // Deliverables handlers
   const handleAddDeliverable = useCallback(
@@ -2137,57 +2511,6 @@ export default function FormResearch() {
     [formType, form.deliverables, callApi],
   );
 
-  // Handler for immediate file deletion
-  const handleDeleteFile = useCallback(
-    async (fileName: string, folder: string): Promise<void> => {
-      try {
-        await triggerFlow(APIURL.FileDeleteEndpoint, {
-          FileName: fileName,
-          Library: "Researches",
-          Folder: folder,
-        });
-      } catch (error) {
-        console.error(`Failed to delete file ${fileName}:`, error);
-        throw error;
-      }
-    },
-    [triggerFlow],
-  );
-
-  // Handler for immediate file upload
-  const handleUploadFile = useCallback(
-    async (files: File[], folder: string): Promise<void> => {
-      try {
-        const uploadPromises = files.map(async (file) => {
-          const base64Content = await fileToBase64(file);
-          const payload: any = {
-            FileContent: base64Content,
-            FileName: file.name,
-            Library: "Researches",
-            Folder: folder,
-            FileType: "other",
-            UserEmail: user?.contact?.[ContactFields.EMAILADDRESS1] || "",
-          };
-
-          const response = await triggerFlow(
-            APIURL.FileUploadEndpoint,
-            payload,
-          );
-
-          if (!response.success) {
-            throw new Error(`Failed to upload ${file.name}`);
-          }
-        });
-
-        await Promise.all(uploadPromises);
-      } catch (error) {
-        console.error(`Failed to upload files:`, error);
-        throw error;
-      }
-    },
-    [triggerFlow, user],
-  );
-
   // Handler to update files in form state after immediate operations
   const handleUpdateReportFiles = useCallback(
     (
@@ -2204,6 +2527,7 @@ export default function FormResearch() {
     [],
   );
 
+  /* commented: dissemination not needed for now
   const handleUpdateDisseminationFiles = useCallback(
     (
       itemId: string,
@@ -2218,6 +2542,7 @@ export default function FormResearch() {
     },
     [],
   );
+  */
 
   const handleUpdateDeliverableFiles = useCallback(
     (
@@ -2227,6 +2552,21 @@ export default function FormResearch() {
       setForm((prev) => ({
         ...prev,
         deliverables: prev.deliverables.map((item) =>
+          item.id === itemId ? { ...item, files } : item,
+        ),
+      }));
+    },
+    [],
+  );
+
+  const handleUpdateDisseminationActivityFiles = useCallback(
+    (
+      itemId: string,
+      files: { file: File; action: "new" | "existing" | "remove" }[],
+    ) => {
+      setForm((prev) => ({
+        ...prev,
+        disseminationActivities: prev.disseminationActivities.map((item) =>
           item.id === itemId ? { ...item, files } : item,
         ),
       }));
@@ -2769,7 +3109,7 @@ export default function FormResearch() {
           form={form}
         />
 
-        {/* Dissemination Request Section */}
+        {/* commented: DisseminationRequestSection not needed for now
         <DisseminationRequestSection
           disseminationRequests={form.disseminationRequests}
           edit={true}
@@ -2779,6 +3119,20 @@ export default function FormResearch() {
           onDeleteFile={handleDeleteFile}
           onUploadFile={handleUploadFile}
           onUpdateItemFiles={handleUpdateDisseminationFiles}
+          form={form}
+        />
+        */}
+
+        {/* Dissemination Activities Section */}
+        <DisseminationActivitiesSection
+          activities={form.disseminationActivities}
+          edit={true}
+          onAddActivity={handleAddDisseminationActivity}
+          onEditActivity={handleEditDisseminationActivity}
+          onRemoveActivity={handleRemoveDisseminationActivity}
+          onDeleteFile={handleDeleteFile}
+          onUploadFile={handleUploadFile}
+          onUpdateItemFiles={handleUpdateDisseminationActivityFiles}
           form={form}
         />
 

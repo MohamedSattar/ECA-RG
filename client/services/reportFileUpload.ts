@@ -278,6 +278,43 @@ export const loadDisseminationFiles = async (
 };
 
 /**
+ * Load files for a specific dissemination activity (Materials / Attachments)
+ * Fetches files from SharePoint under Researches/{researchNumber}/Dissemination Activities/{activityName-activityId}
+ */
+export const loadDisseminationActivityFiles = async (
+  researchNumber: string,
+  activityName: string,
+  activityId: string,
+  triggerFlow: (url: string, payload: any) => Promise<any>,
+): Promise<{ file: File; action: "existing" }[]> => {
+  if (!researchNumber || !activityName || !activityId) {
+    return [];
+  }
+
+  try {
+    const sanitizedActivityName = activityName.replace(/[<>:"/\\|?*]/g, "-");
+    const folderPath = `${researchNumber}/Dissemination Activities/${sanitizedActivityName}-${activityId}`;
+
+    const response = await triggerFlow(APIURL.FileGetEndpoint, {
+      Library: "Researches",
+      Folder: folderPath,
+    });
+
+    if (response?.success && response?.data) {
+      return response.data.map((f: any) => ({
+        file: getFile(f),
+        action: "existing" as const,
+      }));
+    }
+
+    return [];
+  } catch (error) {
+    console.error("Failed to load dissemination activity files:", error);
+    return [];
+  }
+};
+
+/**
  * Load files for a specific status report
  * Fetches files from SharePoint under Researches/{researchNumber}/Status Reports/{year-month}
  */

@@ -1,6 +1,6 @@
 import { RequestHandler } from "express";
 
-const DATAVERSE_BASE_URL = "https://research-grants-spa.powerappsportals.com";
+const DATAVERSE_BASE_URL = "https://researchgrants-dev.powerappsportals.com";
 
 export const handleDataverseProxy: RequestHandler = async (req, res) => {
   try {
