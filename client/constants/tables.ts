@@ -16,6 +16,7 @@ export const TableName = {
   BUDGETLINEITEMS: "prmtk_budgetlineitems",
   STATUSREPORT: "prmtk_statusreports",
   DISSEMINATIONAPPLICANTS: "prmtk_disseminationapplicants",
+  DISSEMINATIONACTIVITIES: "prmkt_disseminationactivities",
   DELIVERABLES: "prmtk_deliverables",
   CASESHISTORY: "prmtk_applicationcasehistories",
   NOTIFICATIONS: "prmtk_notifications",
