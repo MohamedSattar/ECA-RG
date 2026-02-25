@@ -32,6 +32,16 @@ export { DisseminationRequestFields } from "./disseminationRequest";
 export { DisseminationActivityFields } from "./disseminationActivity";
 export { WorkforceDevelopmentFields } from "./workforceDevelopment";
 export { DeliverablesFields as DeliverableFields, DeliverableTypeOptions } from "./deliverables";
+export {
+  ManuscriptFields,
+  ManuscriptStatusOptions,
+  getManuscriptStatusText,
+} from "./manuscripts";
+export {
+  ResearchActivityFields,
+  ResearchActivityStatusOptions,
+  getResearchActivityStatusText,
+} from "./researchActivity";
 
 // Tables & Metadata
 export { TableName, ColumnName, ExpandRelations } from './tables';
