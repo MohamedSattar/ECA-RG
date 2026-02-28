@@ -1,6 +1,11 @@
 import * as React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import {
+  useNavigate,
+  useLocation,
+  useSearchParams,
+  Outlet,
+} from "react-router-dom";
 import Reveal from "@/motion/Reveal";
 import { useAuth } from "@/state/auth";
 import { toast } from "@/ui/use-toast";
@@ -773,7 +778,7 @@ export default function FormResearch() {
       return;
     }
     try {
-      // Select only necessary fields to reduce payload
+      // are not yet on the Dataverse entity; omit from $select until backend adds them.
       const reportSelect = `${StatusReportFields.STATUSREPORTID},${StatusReportFields.REPORTTITLE},${StatusReportFields.REPORTINGYEAR},${StatusReportFields.REPORTINGMONTH},${StatusReportFields.REPORTINGDATE},${StatusReportFields.BUDGETSPENT_BASE},${StatusReportFields.RESEARCHHEALTHINDICATOR},${StatusReportFields.ACHIEVEMENTS},${StatusReportFields.CHALLENGES},${StatusReportFields.KEYACTIVITIES},${StatusReportFields.UPCOMINGACTIVITIES},${StatusReportFields.JOURNALPUBLICATIONS},${StatusReportFields.WORKFORCEDEVELOPMENT}`;
 
       const res2 = await callApi<{ value: any[] }>({
@@ -825,6 +830,10 @@ export default function FormResearch() {
               item[StatusReportFields.JOURNALPUBLICATIONS] || "",
             prmtk_workforcedevelopment:
               item[StatusReportFields.WORKFORCEDEVELOPMENT] || "",
+            // Not yet on entity: loaded as empty until backend adds these columns
+            prmtk_changes: "",
+            prmtk_lessonslearnedandimplications: "",
+            prmtk_feedback: "",
             files: files,
             action: "existing" as const,
           };
@@ -2264,6 +2273,9 @@ export default function FormResearch() {
       prmtk_upcomingactivities: string;
       prmtk_journalpublications: string;
       prmtk_workforcedevelopment: string;
+      prmtk_changes?: string;
+      prmtk_lessonslearnedandimplications?: string;
+      prmtk_feedback?: string;
       files?: { file: File; action: "new" | "existing" | "remove" }[];
     }) => {
       const newReport: ReportItem = {
@@ -2282,6 +2294,10 @@ export default function FormResearch() {
         prmtk_upcomingactivities: item.prmtk_upcomingactivities,
         prmtk_journalpublications: item.prmtk_journalpublications,
         prmtk_workforcedevelopment: item.prmtk_workforcedevelopment,
+        prmtk_changes: item.prmtk_changes ?? "",
+        prmtk_lessonslearnedandimplications:
+          item.prmtk_lessonslearnedandimplications ?? "",
+        prmtk_feedback: item.prmtk_feedback ?? "",
         files: item.files || [],
         action: "new",
       };
@@ -2329,6 +2345,8 @@ export default function FormResearch() {
             reportData[StatusReportFields.WORKFORCEDEVELOPMENT] =
               item.prmtk_workforcedevelopment;
           }
+          // Omit prmtk_changes, prmtk_lessonslearnedandimplications, prmtk_feedback
+          // until the Dataverse entity has these columns.
 
           await callApi({
             url: `/_api/${TableName.STATUSREPORT}`,
@@ -2428,6 +2446,9 @@ export default function FormResearch() {
         prmtk_upcomingactivities: string;
         prmtk_journalpublications: string;
         prmtk_workforcedevelopment: string;
+        prmtk_changes?: string;
+        prmtk_lessonslearnedandimplications?: string;
+        prmtk_feedback?: string;
         files?: { file: File; action: "new" | "existing" | "remove" }[];
       },
     ) => {
@@ -2501,6 +2522,8 @@ export default function FormResearch() {
             reportData[StatusReportFields.WORKFORCEDEVELOPMENT] =
               item.prmtk_workforcedevelopment;
           }
+          // Omit prmtk_changes, prmtk_lessonslearnedandimplications, prmtk_feedback
+          // until the Dataverse entity has these columns.
 
           await callApi({
             url: `/_api/${TableName.STATUSREPORT}(${id})`,
@@ -2563,6 +2586,10 @@ export default function FormResearch() {
                 prmtk_upcomingactivities: item.prmtk_upcomingactivities,
                 prmtk_journalpublications: item.prmtk_journalpublications,
                 prmtk_workforcedevelopment: item.prmtk_workforcedevelopment,
+                prmtk_changes: item.prmtk_changes ?? "",
+                prmtk_lessonslearnedandimplications:
+                  item.prmtk_lessonslearnedandimplications ?? "",
+                prmtk_feedback: item.prmtk_feedback ?? "",
                 files: item.files || [],
                 action: "existing" as const,
               }
@@ -3580,6 +3607,25 @@ export default function FormResearch() {
       setShowLoader(false);
     }
   };
+
+  const location = useLocation();
+  const isReportingSubRoute = location.pathname.includes("/reporting/");
+  if (isReportingSubRoute) {
+    return (
+      <Outlet
+        context={{
+          form,
+          reportItems: form.reportItems,
+          handleAddReport,
+          handleEditReport,
+          handleDeleteFile,
+          handleUploadFile,
+          handleUpdateReportFiles,
+        }}
+      />
+    );
+  }
+
   return (
     <section className="bg-white">
       <div className="container py-16">
