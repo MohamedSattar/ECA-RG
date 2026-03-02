@@ -277,23 +277,61 @@ export const loadDisseminationFiles = async (
   }
 };
 
+/** Type labels for dissemination activity folder naming (must match DisseminationActivitiesSection options) */
+const DISSEMINATION_ACTIVITY_TYPE_LABELS: Record<number, string> = {
+  1: "International",
+  2: "Local",
+  3: "Regional",
+  4: "Conference-or-Symposium",
+  5: "Webinar",
+  6: "Forum",
+  7: "Newsletter",
+  8: "Workshop",
+  9: "Local-Stakeholder-Academic-Presentation",
+  10: "Other",
+};
+
+/**
+ * Build folder path for a dissemination activity: Type + Date (no special chars) + activityId.
+ * Used for SharePoint under Researches/{researchNumber}/Dissemination Activities/{typeSlug}-{dateSlug}-{activityId}
+ */
+export const getDisseminationActivityFolderPath = (
+  researchNumber: string,
+  type: number,
+  date: string,
+  activityId: string,
+): string => {
+  const typeLabel = DISSEMINATION_ACTIVITY_TYPE_LABELS[type] ?? "Other";
+  const typeSlug = typeLabel.replace(/[^a-zA-Z0-9-]/g, "");
+  const dateStr = date
+    ? new Date(date).toISOString().slice(0, 10).replace(/-/g, "")
+    : "";
+  const dateSlug = dateStr || "nodate";
+  return `${researchNumber}/Dissemination Activities/${typeSlug}-${dateSlug}-${activityId}`;
+};
+
 /**
  * Load files for a specific dissemination activity (Materials / Attachments)
- * Fetches files from SharePoint under Researches/{researchNumber}/Dissemination Activities/{activityName-activityId}
+ * Fetches files from SharePoint under Researches/{researchNumber}/Dissemination Activities/{typeSlug}-{dateSlug}-{activityId}
  */
 export const loadDisseminationActivityFiles = async (
   researchNumber: string,
-  activityName: string,
+  type: number,
+  date: string,
   activityId: string,
   triggerFlow: (url: string, payload: any) => Promise<any>,
 ): Promise<{ file: File; action: "existing" }[]> => {
-  if (!researchNumber || !activityName || !activityId) {
+  if (!researchNumber || !activityId) {
     return [];
   }
 
   try {
-    const sanitizedActivityName = activityName.replace(/[<>:"/\\|?*]/g, "-");
-    const folderPath = `${researchNumber}/Dissemination Activities/${sanitizedActivityName}-${activityId}`;
+    const folderPath = getDisseminationActivityFolderPath(
+      researchNumber,
+      type,
+      date,
+      activityId,
+    );
 
     const response = await triggerFlow(APIURL.FileGetEndpoint, {
       Library: "Researches",

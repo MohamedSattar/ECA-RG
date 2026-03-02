@@ -15,6 +15,7 @@ import { IconButton } from "@fluentui/react/lib/Button";
 import { Icon } from "@fluentui/react/lib/Icon";
 import { Dropdown, IDropdownOption } from "@fluentui/react/lib/Dropdown";
 import { getFileKey } from "@/services/utility";
+import { getDisseminationActivityFolderPath } from "@/services/reportFileUpload";
 import { HEADING_TEXT } from "@/styles/constants";
 import {
   popupInputStyles,
@@ -142,11 +143,15 @@ export const DisseminationActivitiesSection: React.FC<
     return `${size.toFixed(1)} ${units[i]}`;
   };
 
-  const getActivityFolder = (activityId: string, activityName: string) => {
+  const getActivityFolder = (activityId: string, type: number, date: string) => {
     const researchNumber = form.researchNumber;
-    if (!researchNumber || !activityId || !activityName) return null;
-    const sanitized = activityName.replace(/[<>:"/\\|?*]/g, "-");
-    return `${researchNumber}/Dissemination Activities/${sanitized}-${activityId}`;
+    if (!researchNumber || !activityId) return null;
+    return getDisseminationActivityFolderPath(
+      researchNumber,
+      type,
+      date,
+      activityId,
+    );
   };
 
   const handleFilesSelect = async (newFiles: File[]) => {
@@ -154,7 +159,7 @@ export const DisseminationActivitiesSection: React.FC<
     if (editingActivityId && onUploadFile) {
       const activity = activities.find((a) => a.id === editingActivityId);
       const folder = activity
-        ? getActivityFolder(editingActivityId, activity.name)
+        ? getActivityFolder(editingActivityId, activity.type, activity.date)
         : null;
       if (activity && folder && form.researchNumber) {
         setIsUploading(true);
@@ -210,7 +215,7 @@ export const DisseminationActivitiesSection: React.FC<
     ) {
       const activity = activities.find((a) => a.id === editingActivityId);
       const folder = activity
-        ? getActivityFolder(editingActivityId, activity.name)
+        ? getActivityFolder(editingActivityId, activity.type, activity.date)
         : null;
       if (activity && folder && form.researchNumber) {
         setIsUploading(true);
@@ -488,17 +493,15 @@ export const DisseminationActivitiesSection: React.FC<
                                   </div>
                                 </div>
                                 <div className="flex gap-2">
-                                  {isExisting && (
-                                    <IconButton
-                                      iconProps={{ iconName: "Download" }}
-                                      onClick={() =>
-                                        handleFileDownload(fileItem.file)
-                                      }
-                                      title="Download file"
-                                      ariaLabel="Download file"
-                                      styles={popupInputStyles.iconButton}
-                                    />
-                                  )}
+                                  <IconButton
+                                    iconProps={{ iconName: "Download" }}
+                                    onClick={() =>
+                                      handleFileDownload(fileItem.file)
+                                    }
+                                    title="Download file"
+                                    ariaLabel="Download file"
+                                    styles={popupInputStyles.iconButton}
+                                  />
                                   <IconButton
                                     iconProps={{ iconName: "Delete" }}
                                     onClick={() =>
@@ -553,9 +556,9 @@ export const DisseminationActivitiesSection: React.FC<
                     <th className="px-6 py-3 font-semibold text-white">
                       Type
                     </th>
-                    {/* <th className="px-6 py-3 font-semibold text-white">
-                      Materials / Attachments
-                    </th> */}
+                    <th className="px-6 py-3 font-semibold text-white">
+                      Attachments
+                    </th>
                     {edit && (
                       <th className="px-6 py-3 font-semibold text-white text-right">
                         Actions
@@ -567,7 +570,7 @@ export const DisseminationActivitiesSection: React.FC<
                   {activities.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={edit ? 6 : 5}
+                        colSpan={edit ? 7 : 6}
                         className="px-6 py-8 text-center text-[#64748b]"
                       >
                         No dissemination activities yet. Add one using the
@@ -594,11 +597,40 @@ export const DisseminationActivitiesSection: React.FC<
                         <td className="px-6 py-4 text-[#475569]">
                           {getTypeLabel(item.type)}
                         </td>
-                        {/* <td className="px-6 py-4 text-[#475569]">
-                          {item.files && item.files.length > 0
-                            ? `${item.files.length} file(s)`
-                            : item.materialsUsed || "—"}
-                        </td> */}
+                        <td className="px-6 py-4 text-[#475569]">
+                          {item.files && item.files.length > 0 ? (
+                            <div className="flex flex-wrap gap-1 items-center">
+                              {item.files
+                                .filter((f) => f.action !== "remove")
+                                .map((fileItem) => {
+                                  const key = getFileKey(fileItem.file);
+                                  return (
+                                    <span
+                                      key={key}
+                                      className="inline-flex items-center gap-1"
+                                    >
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          handleFileDownload(fileItem.file)
+                                        }
+                                        className="text-[#1D2054] hover:underline text-left flex items-center gap-1"
+                                        title={`Download ${fileItem.file.name}`}
+                                      >
+                                        <Icon
+                                          iconName="Download"
+                                          className="text-sm"
+                                        />
+                                        {fileItem.file.name}
+                                      </button>
+                                    </span>
+                                  );
+                                })}
+                            </div>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
                         {edit && (
                           <td className="px-6 py-4 text-right">
                             <IconButton

@@ -20,6 +20,9 @@ export const TableName = {
   DELIVERABLES: "prmtk_deliverables",
   CASESHISTORY: "prmtk_applicationcasehistories",
   NOTIFICATIONS: "prmtk_notifications",
+  WORKFORCEDEVELOPMENTS: "prmkt_workforcedevelopments",
+  RESEARCHMANUSCRIPTSANDPUBLICATIONS: "prmkt_researchmanuscriptsandpublications",
+  RESEARCHACTIVITIES: "prmkt_researchactivities",
 } as const;
 
 /**

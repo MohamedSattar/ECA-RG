@@ -1,11 +1,28 @@
 import * as React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import {
+  useNavigate,
+  useLocation,
+  useSearchParams,
+  Outlet,
+} from "react-router-dom";
 import Reveal from "@/motion/Reveal";
 import { useAuth } from "@/state/auth";
 import { toast } from "@/ui/use-toast";
 import { LookupPicker } from "@/components/LookupPicker";
 import { TeamMemberSection } from "@/components/TeamMemberSection";
+import {
+  WorkforceDevelopmentSection,
+  WorkforceDevelopmentItem,
+} from "@/components/WorkforceDevelopmentSection";
+import {
+  ManuscriptsSection,
+  ManuscriptItem,
+} from "@/components/ManuscriptsSection";
+import {
+  CapacityBuildingSection,
+  ResearchActivityItem,
+} from "@/components/CapacityBuildingSection";
 import { useDataverseApi } from "@/hooks/useDataverseApi";
 import { TextField } from "@fluentui/react/lib/TextField";
 import { DatePicker } from "@fluentui/react/lib/DatePicker";
@@ -29,6 +46,9 @@ import {
   DisseminationActivityFields,
   DeliverableFields,
   ContactFields,
+  WorkforceDevelopmentFields,
+  ManuscriptFields,
+  ResearchActivityFields,
 } from "@/constants";
 import { getDeliverableTypeText } from "@/constants/deliverables";
 import { ConfirmDialog, ErrorDialog, SuccessDialog } from "@/components/Dialog";
@@ -44,6 +64,7 @@ import {
   // loadDisseminationFiles, // commented: dissemination not needed for now
   loadDeliverableFiles,
   loadDisseminationActivityFiles,
+  getDisseminationActivityFolderPath,
 } from "@/services/reportFileUpload";
 import { BudgetHeaderFields } from "@/constants/budgetHeader";
 import {
@@ -106,6 +127,9 @@ interface FormState {
   principalInvestigator: string;
   files: { file: File; action: "new" | "existing" | "remove" }[];
   team: TeamMember[];
+  workforceDevelopments: WorkforceDevelopmentItem[];
+  manuscripts: ManuscriptItem[];
+  researchActivities: ResearchActivityItem[];
   type: "new" | "edit" | "view";
   researchNumber?: string;
 }
@@ -132,6 +156,9 @@ const INITIAL_FORM_STATE: FormState = {
   principalInvestigator: "",
   files: [],
   team: [],
+  workforceDevelopments: [],
+  manuscripts: [],
+  researchActivities: [],
   budgetHeaders: null,
   budgetLineItems: [],
   budgetVersions: [],
@@ -193,6 +220,112 @@ const processTeamMembers = async (
     );
 
   await Promise.all([...upsertPromises, ...removePromises]);
+};
+
+/** Format date string (YYYY-MM-DD) to Dataverse ISO date-time (YYYY-MM-DDTHH:mm:ss.000Z). */
+const toDataverseDate = (dateStr: string | undefined): string | null => {
+  if (!dateStr || !dateStr.trim()) return null;
+  const d = new Date(dateStr.trim());
+  if (isNaN(d.getTime())) return null;
+  return d.toISOString();
+};
+
+const processWorkforceDevelopments = async (
+  items: WorkforceDevelopmentItem[],
+  researchId: string,
+  callApi: (options: any) => Promise<any>,
+): Promise<void> => {
+  const toUpsert = items.filter((i) => !i.removed);
+  const researchEntitySet = WorkforceDevelopmentFields.RESEARCH_ENTITY_SET;
+  const upsertPromises = toUpsert.map(async (item) => {
+    const isExisting = item.action === "existing";
+    const url = isExisting
+      ? `/_api/${TableName.WORKFORCEDEVELOPMENTS}(${item.id})`
+      : `/_api/${TableName.WORKFORCEDEVELOPMENTS}`;
+    const method = isExisting ? "PATCH" : "POST";
+    const data: Record<string, any> = {
+      [WorkforceDevelopmentFields.NAME]: item.fullName,
+      [WorkforceDevelopmentFields.JOININGDATE]:
+        toDataverseDate(item.joiningDate),
+      [WorkforceDevelopmentFields.ENDDATE]: toDataverseDate(item.endDate),
+      [WorkforceDevelopmentFields.ROLE]: item.roleInProject || null,
+      [WorkforceDevelopmentFields.EDUCATIONALLEVEL]:
+        item.educationalLevel || null,
+    };
+    if (!isExisting) {
+      data[WorkforceDevelopmentFields.RESEARCH_ID] =
+        `/${researchEntitySet}(${researchId})`;
+    }
+    const res = await callApi({ url, method, data });
+    const status = (res as any)?.status;
+    if (status >= 400) {
+      const errMsg =
+        (res as any)?.error?.message ||
+        (res as any)?.value?.error?.message ||
+        `Request failed with status ${status}`;
+      throw new Error(`Workforce development: ${errMsg}`);
+    }
+    return res;
+  });
+  const toRemove = items.filter(
+    (i) => i.removed && i.action === "existing" && i.id,
+  );
+  const removePromises = toRemove.map((item) =>
+    callApi({
+      url: `/_api/${TableName.WORKFORCEDEVELOPMENTS}(${item.id})`,
+      method: "DELETE",
+    }),
+  );
+  await Promise.all([...upsertPromises, ...removePromises]);
+};
+
+const processManuscripts = async (
+  items: ManuscriptItem[],
+  researchId: string,
+  callApi: (options: any) => Promise<any>,
+): Promise<void> => {
+  const toAdd = items.filter((i) => !i.removed && i.action === "new");
+  const researchEntitySet = ManuscriptFields.RESEARCH_ENTITY_SET;
+  const addPromises = toAdd.map((item) => {
+    const data: Record<string, any> = {
+      [ManuscriptFields.TITLE]: item.title,
+      [ManuscriptFields.AUTHORS]: item.authors || null,
+      [ManuscriptFields.JOURNAL]: item.journal || null,
+      [ManuscriptFields.STATUS]: item.status,
+      [ManuscriptFields.RESEARCH_ID]: `/${researchEntitySet}(${researchId})`,
+    };
+    return callApi({
+      url: `/_api/${TableName.RESEARCHMANUSCRIPTSANDPUBLICATIONS}`,
+      method: "POST",
+      data,
+    });
+  });
+  await Promise.all(addPromises);
+};
+
+const processResearchActivities = async (
+  items: ResearchActivityItem[],
+  researchId: string,
+  callApi: (options: any) => Promise<any>,
+): Promise<void> => {
+  const toAdd = items.filter((i) => !i.removed && i.action === "new");
+  const researchEntitySet = ResearchActivityFields.RESEARCH_ENTITY_SET;
+  const addPromises = toAdd.map((item) => {
+    const data: Record<string, any> = {
+      [ResearchActivityFields.TITLE]: item.title,
+      [ResearchActivityFields.DATE]: toDataverseDate(item.date),
+      [ResearchActivityFields.DELIVERY_FORMAT]: item.deliveryFormat || null,
+      [ResearchActivityFields.AUDIENCE]: item.audience || null,
+      [ResearchActivityFields.STATUS]: item.status,
+      [ResearchActivityFields.RESEARCH_ID]: `/${researchEntitySet}(${researchId})`,
+    };
+    return callApi({
+      url: `/_api/${TableName.RESEARCHACTIVITIES}`,
+      method: "POST",
+      data,
+    });
+  });
+  await Promise.all(addPromises);
 };
 
 // Helper function to get research number
@@ -645,7 +778,7 @@ export default function FormResearch() {
       return;
     }
     try {
-      // Select only necessary fields to reduce payload
+      // are not yet on the Dataverse entity; omit from $select until backend adds them.
       const reportSelect = `${StatusReportFields.STATUSREPORTID},${StatusReportFields.REPORTTITLE},${StatusReportFields.REPORTINGYEAR},${StatusReportFields.REPORTINGMONTH},${StatusReportFields.REPORTINGDATE},${StatusReportFields.BUDGETSPENT_BASE},${StatusReportFields.RESEARCHHEALTHINDICATOR},${StatusReportFields.ACHIEVEMENTS},${StatusReportFields.CHALLENGES},${StatusReportFields.KEYACTIVITIES},${StatusReportFields.UPCOMINGACTIVITIES},${StatusReportFields.JOURNALPUBLICATIONS},${StatusReportFields.WORKFORCEDEVELOPMENT}`;
 
       const res2 = await callApi<{ value: any[] }>({
@@ -697,6 +830,10 @@ export default function FormResearch() {
               item[StatusReportFields.JOURNALPUBLICATIONS] || "",
             prmtk_workforcedevelopment:
               item[StatusReportFields.WORKFORCEDEVELOPMENT] || "",
+            // Not yet on entity: loaded as empty until backend adds these columns
+            prmtk_changes: "",
+            prmtk_lessonslearnedandimplications: "",
+            prmtk_feedback: "",
             files: files,
             action: "existing" as const,
           };
@@ -794,11 +931,14 @@ export default function FormResearch() {
         rawList.map(async (item: any) => {
           const id = item[DisseminationActivityFields.DISSEMINATIONACTIVITYID];
           const name = item[DisseminationActivityFields.NAME] || "";
+          const type = item[DisseminationActivityFields.TYPE] ?? 0;
+          const date = item[DisseminationActivityFields.DATE] ?? "";
           let files: { file: File; action: "existing" }[] = [];
-          if (researchNumber && name && id) {
+          if (researchNumber && id) {
             files = await loadDisseminationActivityFiles(
               researchNumber,
-              name,
+              type,
+              date,
               id,
               triggerFlow,
             );
@@ -922,6 +1062,79 @@ export default function FormResearch() {
     }
   };
 
+  const loadWorkforceDevelopments = async (researchId: string): Promise<void> => {
+    if (formType === "new") return;
+    try {
+      const select = `${WorkforceDevelopmentFields.WORKFORCEDEVELOPMENTID},${WorkforceDevelopmentFields.NAME},${WorkforceDevelopmentFields.JOININGDATE},${WorkforceDevelopmentFields.ENDDATE},${WorkforceDevelopmentFields.ROLE},${WorkforceDevelopmentFields.EDUCATIONALLEVEL}`;
+      const res = await callApi<{ value: any[] }>({
+        url: `/_api/${TableName.WORKFORCEDEVELOPMENTS}?$filter=${WorkforceDevelopmentFields.RESEARCH} eq ${researchId}&$select=${select}&$top=500`,
+        method: "GET",
+      });
+      const value = res.value ?? [];
+      const items: WorkforceDevelopmentItem[] = value.map((row: any) => ({
+        id: row[WorkforceDevelopmentFields.WORKFORCEDEVELOPMENTID],
+        fullName: row[WorkforceDevelopmentFields.NAME] ?? "",
+        joiningDate: row[WorkforceDevelopmentFields.JOININGDATE] ?? "",
+        endDate: row[WorkforceDevelopmentFields.ENDDATE] ?? "",
+        roleInProject: row[WorkforceDevelopmentFields.ROLE] ?? "",
+        educationalLevel: row[WorkforceDevelopmentFields.EDUCATIONALLEVEL] ?? "",
+        action: "existing",
+      }));
+      setForm((prev) => ({ ...prev, workforceDevelopments: items }));
+    } catch (error) {
+      console.error("Failed to load workforce developments:", error);
+    }
+  };
+
+  const loadManuscripts = async (researchId: string): Promise<void> => {
+    if (formType === "new") return;
+    try {
+      const select = `${ManuscriptFields.MANUSCRIPTID},${ManuscriptFields.TITLE},${ManuscriptFields.AUTHORS},${ManuscriptFields.JOURNAL},${ManuscriptFields.STATUS}`;
+      const filter = `${ManuscriptFields.RESEARCH} eq ${researchId}`;
+      const res = await callApi<{ value: any[] }>({
+        url: `/_api/${TableName.RESEARCHMANUSCRIPTSANDPUBLICATIONS}?$filter=${filter}&$select=${select}&$top=500`,
+        method: "GET",
+      });
+      const value = res.value ?? [];
+      const items: ManuscriptItem[] = value.map((row: any) => ({
+        id: row[ManuscriptFields.MANUSCRIPTID],
+        title: row[ManuscriptFields.TITLE] ?? "",
+        authors: row[ManuscriptFields.AUTHORS] ?? "",
+        journal: row[ManuscriptFields.JOURNAL] ?? "",
+        status: row[ManuscriptFields.STATUS] ?? 1,
+        action: "existing",
+      }));
+      setForm((prev) => ({ ...prev, manuscripts: items }));
+    } catch (error) {
+      console.error("Failed to load manuscripts:", error);
+    }
+  };
+
+  const loadResearchActivities = async (researchId: string): Promise<void> => {
+    if (formType === "new") return;
+    try {
+      const select = `${ResearchActivityFields.ACTIVITYID},${ResearchActivityFields.TITLE},${ResearchActivityFields.DATE},${ResearchActivityFields.DELIVERY_FORMAT},${ResearchActivityFields.AUDIENCE},${ResearchActivityFields.STATUS}`;
+      const filter = `${ResearchActivityFields.RESEARCH} eq ${researchId}`;
+      const res = await callApi<{ value: any[] }>({
+        url: `/_api/${TableName.RESEARCHACTIVITIES}?$filter=${filter}&$select=${select}&$top=500`,
+        method: "GET",
+      });
+      const value = res.value ?? [];
+      const items: ResearchActivityItem[] = value.map((row: any) => ({
+        id: row[ResearchActivityFields.ACTIVITYID],
+        title: row[ResearchActivityFields.TITLE] ?? "",
+        date: row[ResearchActivityFields.DATE] ?? "",
+        deliveryFormat: row[ResearchActivityFields.DELIVERY_FORMAT] ?? "",
+        audience: row[ResearchActivityFields.AUDIENCE] ?? "",
+        status: row[ResearchActivityFields.STATUS] ?? 1,
+        action: "existing",
+      }));
+      setForm((prev) => ({ ...prev, researchActivities: items }));
+    } catch (error) {
+      console.error("Failed to load research activities:", error);
+    }
+  };
+
   // Load research details if editing
   const loadResearchDetails = useCallback(
     async (researchId: string) => {
@@ -971,6 +1184,9 @@ export default function FormResearch() {
         await Promise.all([
           loadBudgetDetails(researchAreaId),
           loadTeamMembers(researchId),
+          loadWorkforceDevelopments(researchId),
+          loadManuscripts(researchId),
+          loadResearchActivities(researchId),
         ]);
         // Update form state
         setForm((prev) => ({
@@ -1429,6 +1645,586 @@ export default function FormResearch() {
     [formType],
   );
 
+  const handleAddWorkforceDevelopment = useCallback(
+    async (payload: {
+      fullName: string;
+      joiningDate: string;
+      endDate: string;
+      roleInProject: string;
+      educationalLevel: string;
+    }) => {
+      if (formType !== "new" && researchAreaId) {
+        setShowLoader(true);
+        try {
+          const researchEntitySet =
+            WorkforceDevelopmentFields.RESEARCH_ENTITY_SET;
+          const data: Record<string, any> = {
+            [WorkforceDevelopmentFields.NAME]: payload.fullName,
+            [WorkforceDevelopmentFields.JOININGDATE]:
+              toDataverseDate(payload.joiningDate),
+            [WorkforceDevelopmentFields.ENDDATE]:
+              toDataverseDate(payload.endDate),
+            [WorkforceDevelopmentFields.ROLE]: payload.roleInProject || null,
+            [WorkforceDevelopmentFields.EDUCATIONALLEVEL]:
+              payload.educationalLevel || null,
+            [WorkforceDevelopmentFields.RESEARCH_ID]: `/${researchEntitySet}(${researchAreaId})`,
+          };
+          const res = await callApi<{ status?: number; headers?: Headers }>({
+            url: `/_api/${TableName.WORKFORCEDEVELOPMENTS}`,
+            method: "POST",
+            data,
+          });
+          const status = (res as any)?.status;
+          if (status >= 400) {
+            const errMsg =
+              (res as any)?.error?.message ||
+              (res as any)?.value?.error?.message ||
+              `Request failed with status ${status}`;
+            throw new Error(errMsg);
+          }
+          await loadWorkforceDevelopments(researchAreaId);
+          toast({
+            title: "Success",
+            description: "Emirates Workforce Development added successfully.",
+          });
+        } catch (error) {
+          console.error("Failed to add workforce development:", error);
+          toast({
+            title: "Error",
+            description:
+              error instanceof Error
+                ? error.message
+                : "Failed to add record.",
+            variant: "destructive",
+          });
+        } finally {
+          setShowLoader(false);
+        }
+      } else {
+        const newItem: WorkforceDevelopmentItem = {
+          id: crypto.randomUUID(),
+          fullName: payload.fullName,
+          joiningDate: payload.joiningDate,
+          endDate: payload.endDate,
+          roleInProject: payload.roleInProject,
+          educationalLevel: payload.educationalLevel,
+          action: "new",
+        };
+        setForm((prev) => ({
+          ...prev,
+          workforceDevelopments: [...prev.workforceDevelopments, newItem],
+        }));
+      }
+    },
+    [formType, researchAreaId, callApi, loadWorkforceDevelopments],
+  );
+
+  const handleRemoveWorkforceDevelopment = useCallback(
+    async (id: string) => {
+      const item = form.workforceDevelopments.find((i) => i.id === id);
+      if (formType !== "new" && item?.action === "existing") {
+        setShowLoader(true);
+        try {
+          await callApi({
+            url: `/_api/${TableName.WORKFORCEDEVELOPMENTS}(${id})`,
+            method: "DELETE",
+          });
+          setForm((prev) => ({
+            ...prev,
+            workforceDevelopments: prev.workforceDevelopments.filter(
+              (i) => i.id !== id,
+            ),
+          }));
+          toast({
+            title: "Success",
+            description: "Record removed successfully.",
+          });
+        } catch (error) {
+          console.error("Failed to remove workforce development:", error);
+          toast({
+            title: "Error",
+            description: "Failed to remove record.",
+            variant: "destructive",
+          });
+        } finally {
+          setShowLoader(false);
+        }
+      } else {
+        setForm((prev) => ({
+          ...prev,
+          workforceDevelopments: prev.workforceDevelopments.map((i) =>
+            i.id === id ? { ...i, removed: true } : i,
+          ),
+        }));
+      }
+    },
+    [formType, form.workforceDevelopments, callApi],
+  );
+
+  const handleEditWorkforceDevelopment = useCallback(
+    async (
+      id: string,
+      payload: {
+        fullName: string;
+        joiningDate: string;
+        endDate: string;
+        roleInProject: string;
+        educationalLevel: string;
+      },
+    ) => {
+      const item = form.workforceDevelopments.find((i) => i.id === id);
+      if (formType !== "new" && item?.action === "existing") {
+        setShowLoader(true);
+        try {
+          const data: Record<string, any> = {
+            [WorkforceDevelopmentFields.NAME]: payload.fullName,
+            [WorkforceDevelopmentFields.JOININGDATE]:
+              toDataverseDate(payload.joiningDate),
+            [WorkforceDevelopmentFields.ENDDATE]:
+              toDataverseDate(payload.endDate),
+            [WorkforceDevelopmentFields.ROLE]: payload.roleInProject || null,
+            [WorkforceDevelopmentFields.EDUCATIONALLEVEL]:
+              payload.educationalLevel || null,
+          };
+          const res = await callApi({
+            url: `/_api/${TableName.WORKFORCEDEVELOPMENTS}(${id})`,
+            method: "PATCH",
+            data,
+          });
+          const status = (res as any)?.status;
+          if (status >= 400) {
+            const errMsg =
+              (res as any)?.error?.message ||
+              (res as any)?.value?.error?.message ||
+              `Request failed with status ${status}`;
+            throw new Error(errMsg);
+          }
+          setForm((prev) => ({
+            ...prev,
+            workforceDevelopments: prev.workforceDevelopments.map((i) =>
+              i.id === id
+                ? {
+                    ...i,
+                    fullName: payload.fullName,
+                    joiningDate: payload.joiningDate,
+                    endDate: payload.endDate,
+                    roleInProject: payload.roleInProject,
+                    educationalLevel: payload.educationalLevel,
+                  }
+                : i,
+            ),
+          }));
+          toast({
+            title: "Success",
+            description: "Record updated successfully.",
+          });
+        } catch (error) {
+          console.error("Failed to update workforce development:", error);
+          toast({
+            title: "Error",
+            description:
+              error instanceof Error
+                ? error.message
+                : "Failed to update record.",
+            variant: "destructive",
+          });
+        } finally {
+          setShowLoader(false);
+        }
+      } else {
+        setForm((prev) => ({
+          ...prev,
+          workforceDevelopments: prev.workforceDevelopments.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  fullName: payload.fullName,
+                  joiningDate: payload.joiningDate,
+                  endDate: payload.endDate,
+                  roleInProject: payload.roleInProject,
+                  educationalLevel: payload.educationalLevel,
+                }
+              : item,
+          ),
+        }));
+      }
+    },
+    [formType, form.workforceDevelopments, callApi],
+  );
+
+  const handleAddManuscript = useCallback(
+    async (payload: {
+      title: string;
+      authors: string;
+      journal: string;
+      status: number;
+    }) => {
+      if (formType !== "new" && researchAreaId) {
+        setShowLoader(true);
+        try {
+          const researchEntitySet = ManuscriptFields.RESEARCH_ENTITY_SET;
+          const data: Record<string, any> = {
+            [ManuscriptFields.TITLE]: payload.title,
+            [ManuscriptFields.AUTHORS]: payload.authors || null,
+            [ManuscriptFields.JOURNAL]: payload.journal || null,
+            [ManuscriptFields.STATUS]: payload.status,
+            [ManuscriptFields.RESEARCH_ID]: `/${researchEntitySet}(${researchAreaId})`,
+          };
+          const res = await callApi<{ status?: number }>({
+            url: `/_api/${TableName.RESEARCHMANUSCRIPTSANDPUBLICATIONS}`,
+            method: "POST",
+            data,
+          });
+          const status = (res as any)?.status;
+          if (status >= 400) {
+            const errMsg =
+              (res as any)?.error?.message ||
+              (res as any)?.value?.error?.message ||
+              `Request failed with status ${status}`;
+            throw new Error(errMsg);
+          }
+          await loadManuscripts(researchAreaId);
+          toast({
+            title: "Success",
+            description: "Manuscript / Journal publication added successfully.",
+          });
+        } catch (error) {
+          console.error("Failed to add manuscript:", error);
+          toast({
+            title: "Error",
+            description:
+              error instanceof Error
+                ? error.message
+                : "Failed to add record.",
+            variant: "destructive",
+          });
+        } finally {
+          setShowLoader(false);
+        }
+      } else {
+        const newItem: ManuscriptItem = {
+          id: crypto.randomUUID(),
+          title: payload.title,
+          authors: payload.authors,
+          journal: payload.journal,
+          status: payload.status,
+          action: "new",
+        };
+        setForm((prev) => ({
+          ...prev,
+          manuscripts: [...prev.manuscripts, newItem],
+        }));
+      }
+    },
+    [formType, researchAreaId, callApi, loadManuscripts],
+  );
+
+  const handleRemoveManuscript = useCallback(
+    async (id: string) => {
+      const item = form.manuscripts.find((i) => i.id === id);
+      if (formType !== "new" && item?.action === "existing") {
+        setShowLoader(true);
+        try {
+          await callApi({
+            url: `/_api/${TableName.RESEARCHMANUSCRIPTSANDPUBLICATIONS}(${id})`,
+            method: "DELETE",
+          });
+          setForm((prev) => ({
+            ...prev,
+            manuscripts: prev.manuscripts.filter((i) => i.id !== id),
+          }));
+          toast({
+            title: "Success",
+            description: "Record removed successfully.",
+          });
+        } catch (error) {
+          console.error("Failed to remove manuscript:", error);
+          toast({
+            title: "Error",
+            description: "Failed to remove record.",
+            variant: "destructive",
+          });
+        } finally {
+          setShowLoader(false);
+        }
+      } else {
+        setForm((prev) => ({
+          ...prev,
+          manuscripts: prev.manuscripts.map((i) =>
+            i.id === id ? { ...i, removed: true } : i,
+          ),
+        }));
+      }
+    },
+    [formType, form.manuscripts, callApi],
+  );
+
+  const handleEditManuscript = useCallback(
+    async (
+      id: string,
+      payload: {
+        title: string;
+        authors: string;
+        journal: string;
+        status: number;
+      },
+    ) => {
+      const item = form.manuscripts.find((i) => i.id === id);
+      if (formType !== "new" && item?.action === "existing") {
+        setShowLoader(true);
+        try {
+          const data: Record<string, any> = {
+            [ManuscriptFields.TITLE]: payload.title,
+            [ManuscriptFields.AUTHORS]: payload.authors || null,
+            [ManuscriptFields.JOURNAL]: payload.journal || null,
+            [ManuscriptFields.STATUS]: payload.status,
+          };
+          const res = await callApi({
+            url: `/_api/${TableName.RESEARCHMANUSCRIPTSANDPUBLICATIONS}(${id})`,
+            method: "PATCH",
+            data,
+          });
+          const status = (res as any)?.status;
+          if (status >= 400) {
+            const errMsg =
+              (res as any)?.error?.message ||
+              (res as any)?.value?.error?.message ||
+              `Request failed with status ${status}`;
+            throw new Error(errMsg);
+          }
+          setForm((prev) => ({
+            ...prev,
+            manuscripts: prev.manuscripts.map((i) =>
+              i.id === id
+                ? {
+                    ...i,
+                    title: payload.title,
+                    authors: payload.authors,
+                    journal: payload.journal,
+                    status: payload.status,
+                  }
+                : i,
+            ),
+          }));
+          toast({
+            title: "Success",
+            description: "Record updated successfully.",
+          });
+        } catch (error) {
+          console.error("Failed to update manuscript:", error);
+          toast({
+            title: "Error",
+            description:
+              error instanceof Error
+                ? error.message
+                : "Failed to update record.",
+            variant: "destructive",
+          });
+        } finally {
+          setShowLoader(false);
+        }
+      } else {
+        setForm((prev) => ({
+          ...prev,
+          manuscripts: prev.manuscripts.map((i) =>
+            i.id === id
+              ? {
+                  ...i,
+                  title: payload.title,
+                  authors: payload.authors,
+                  journal: payload.journal,
+                  status: payload.status,
+                }
+              : i,
+          ),
+        }));
+      }
+    },
+    [formType, form.manuscripts, callApi],
+  );
+
+  const handleAddResearchActivity = useCallback(
+    async (payload: {
+      title: string;
+      date: string;
+      deliveryFormat: string;
+      audience: string;
+      status: number;
+    }) => {
+      // Use Research record ID from URL (researchAreaId = searchParams "researchId"), not form.researchArea (Research Area ID)
+      if (formType !== "new" && researchAreaId) {
+        setShowLoader(true);
+        try {
+          const researchEntitySet = ResearchActivityFields.RESEARCH_ENTITY_SET;
+          const data: Record<string, any> = {
+            [ResearchActivityFields.TITLE]: payload.title,
+            [ResearchActivityFields.DATE]: toDataverseDate(payload.date),
+            [ResearchActivityFields.DELIVERY_FORMAT]: payload.deliveryFormat || null,
+            [ResearchActivityFields.AUDIENCE]: payload.audience || null,
+            [ResearchActivityFields.STATUS]: payload.status,
+            [ResearchActivityFields.RESEARCH_ID]: `/${researchEntitySet}(${researchAreaId})`,
+          };
+          await callApi({
+            url: `/_api/${TableName.RESEARCHACTIVITIES}`,
+            method: "POST",
+            data,
+          });
+          await loadResearchActivities(researchAreaId);
+          toast({
+            title: "Success",
+            description: "Research activity added.",
+          });
+        } catch (error) {
+          toast({
+            title: "Error",
+            description:
+              error instanceof Error
+                ? error.message
+                : "Failed to add research activity.",
+            variant: "destructive",
+          });
+        } finally {
+          setShowLoader(false);
+        }
+      } else {
+        const newItem: ResearchActivityItem = {
+          id: `new-${Date.now()}`,
+          title: payload.title,
+          date: payload.date,
+          deliveryFormat: payload.deliveryFormat,
+          audience: payload.audience,
+          status: payload.status,
+          action: "new",
+        };
+        setForm((prev) => ({
+          ...prev,
+          researchActivities: [...prev.researchActivities, newItem],
+        }));
+      }
+    },
+    [formType, researchAreaId, callApi, loadResearchActivities],
+  );
+
+  const handleRemoveResearchActivity = useCallback(
+    async (id: string) => {
+      const item = form.researchActivities.find((i) => i.id === id);
+      const isExisting = item?.action === "existing";
+      if (isExisting) {
+        try {
+          await callApi({
+            url: `/_api/${TableName.RESEARCHACTIVITIES}(${id})`,
+            method: "DELETE",
+          });
+          setForm((prev) => ({
+            ...prev,
+            researchActivities: prev.researchActivities.filter((i) => i.id !== id),
+          }));
+          toast({
+            title: "Success",
+            description: "Research activity removed.",
+          });
+        } catch (error) {
+          toast({
+            title: "Error",
+            description:
+              error instanceof Error
+                ? error.message
+                : "Failed to remove research activity.",
+            variant: "destructive",
+          });
+        }
+      } else {
+        setForm((prev) => ({
+          ...prev,
+          researchActivities: prev.researchActivities.map((i) =>
+            i.id === id ? { ...i, removed: true } : i,
+          ),
+        }));
+      }
+    },
+    [form.researchActivities, callApi],
+  );
+
+  const handleEditResearchActivity = useCallback(
+    async (
+      id: string,
+      payload: {
+        title: string;
+        date: string;
+        deliveryFormat: string;
+        audience: string;
+        status: number;
+      },
+    ) => {
+      const item = form.researchActivities.find((i) => i.id === id);
+      const isExisting = item?.action === "existing";
+      if (isExisting) {
+        setShowLoader(true);
+        try {
+          const data: Record<string, any> = {
+            [ResearchActivityFields.TITLE]: payload.title,
+            [ResearchActivityFields.DATE]: toDataverseDate(payload.date),
+            [ResearchActivityFields.DELIVERY_FORMAT]: payload.deliveryFormat || null,
+            [ResearchActivityFields.AUDIENCE]: payload.audience || null,
+            [ResearchActivityFields.STATUS]: payload.status,
+          };
+          await callApi({
+            url: `/_api/${TableName.RESEARCHACTIVITIES}(${id})`,
+            method: "PATCH",
+            data,
+          });
+          setForm((prev) => ({
+            ...prev,
+            researchActivities: prev.researchActivities.map((i) =>
+              i.id === id
+                ? {
+                    ...i,
+                    title: payload.title,
+                    date: payload.date,
+                    deliveryFormat: payload.deliveryFormat,
+                    audience: payload.audience,
+                    status: payload.status,
+                  }
+                : i,
+            ),
+          }));
+          toast({
+            title: "Success",
+            description: "Research activity updated.",
+          });
+        } catch (error) {
+          toast({
+            title: "Error",
+            description:
+              error instanceof Error
+                ? error.message
+                : "Failed to update research activity.",
+            variant: "destructive",
+          });
+        } finally {
+          setShowLoader(false);
+        }
+      } else {
+        setForm((prev) => ({
+          ...prev,
+          researchActivities: prev.researchActivities.map((i) =>
+            i.id === id
+              ? {
+                  ...i,
+                  title: payload.title,
+                  date: payload.date,
+                  deliveryFormat: payload.deliveryFormat,
+                  audience: payload.audience,
+                  status: payload.status,
+                }
+              : i,
+          ),
+        }));
+      }
+    },
+    [form.researchActivities, callApi],
+  );
+
   const handleFilesAdd = useCallback(
     (newFiles: { file: File; action: "new" | "existing" | "remove" }[]) => {
       const existing = new Map(form.files.map((f) => [getFileKey(f.file), f]));
@@ -1477,6 +2273,9 @@ export default function FormResearch() {
       prmtk_upcomingactivities: string;
       prmtk_journalpublications: string;
       prmtk_workforcedevelopment: string;
+      prmtk_changes?: string;
+      prmtk_lessonslearnedandimplications?: string;
+      prmtk_feedback?: string;
       files?: { file: File; action: "new" | "existing" | "remove" }[];
     }) => {
       const newReport: ReportItem = {
@@ -1495,6 +2294,10 @@ export default function FormResearch() {
         prmtk_upcomingactivities: item.prmtk_upcomingactivities,
         prmtk_journalpublications: item.prmtk_journalpublications,
         prmtk_workforcedevelopment: item.prmtk_workforcedevelopment,
+        prmtk_changes: item.prmtk_changes ?? "",
+        prmtk_lessonslearnedandimplications:
+          item.prmtk_lessonslearnedandimplications ?? "",
+        prmtk_feedback: item.prmtk_feedback ?? "",
         files: item.files || [],
         action: "new",
       };
@@ -1542,6 +2345,8 @@ export default function FormResearch() {
             reportData[StatusReportFields.WORKFORCEDEVELOPMENT] =
               item.prmtk_workforcedevelopment;
           }
+          // Omit prmtk_changes, prmtk_lessonslearnedandimplications, prmtk_feedback
+          // until the Dataverse entity has these columns.
 
           await callApi({
             url: `/_api/${TableName.STATUSREPORT}`,
@@ -1641,6 +2446,9 @@ export default function FormResearch() {
         prmtk_upcomingactivities: string;
         prmtk_journalpublications: string;
         prmtk_workforcedevelopment: string;
+        prmtk_changes?: string;
+        prmtk_lessonslearnedandimplications?: string;
+        prmtk_feedback?: string;
         files?: { file: File; action: "new" | "existing" | "remove" }[];
       },
     ) => {
@@ -1714,6 +2522,8 @@ export default function FormResearch() {
             reportData[StatusReportFields.WORKFORCEDEVELOPMENT] =
               item.prmtk_workforcedevelopment;
           }
+          // Omit prmtk_changes, prmtk_lessonslearnedandimplications, prmtk_feedback
+          // until the Dataverse entity has these columns.
 
           await callApi({
             url: `/_api/${TableName.STATUSREPORT}(${id})`,
@@ -1776,6 +2586,10 @@ export default function FormResearch() {
                 prmtk_upcomingactivities: item.prmtk_upcomingactivities,
                 prmtk_journalpublications: item.prmtk_journalpublications,
                 prmtk_workforcedevelopment: item.prmtk_workforcedevelopment,
+                prmtk_changes: item.prmtk_changes ?? "",
+                prmtk_lessonslearnedandimplications:
+                  item.prmtk_lessonslearnedandimplications ?? "",
+                prmtk_feedback: item.prmtk_feedback ?? "",
                 files: item.files || [],
                 action: "existing" as const,
               }
@@ -2129,8 +2943,12 @@ export default function FormResearch() {
             handleUploadFile
           ) {
             const newActivity = list.find((a) => a.name === item.name) || list[list.length - 1];
-            const sanitizedName = newActivity.name.replace(/[<>:"/\\|?*]/g, "-");
-            const folder = `${researchNumber}/Dissemination Activities/${sanitizedName}-${newActivity.id}`;
+            const folder = getDisseminationActivityFolderPath(
+              researchNumber,
+              newActivity.type ?? 0,
+              newActivity.date ?? "",
+              newActivity.id,
+            );
             await handleUploadFile(
               newFiles.map((f) => f.file),
               folder,
@@ -2228,9 +3046,14 @@ export default function FormResearch() {
     async (id: string, item: AddDisseminationActivityForm) => {
       const researchNumber =
         form.researchNumber || state?.item?.[ResearchKeys.RESEARCHNUMBER];
-      const sanitizedName = (item.name || "").replace(/[<>:"/\\|?*]/g, "-");
+      const typeNum = item.type ? parseInt(item.type, 10) : 0;
       const folder = researchNumber
-        ? `${researchNumber}/Dissemination Activities/${sanitizedName}-${id}`
+        ? getDisseminationActivityFolderPath(
+            researchNumber,
+            typeNum,
+            item.date ?? "",
+            id,
+          )
         : "";
 
       if (formType !== "new") {
@@ -2745,6 +3568,17 @@ export default function FormResearch() {
       // Process all related data in parallel
       await Promise.all([
         processTeamMembers(form.team, researchId, callApi),
+        processWorkforceDevelopments(
+          form.workforceDevelopments,
+          researchId,
+          callApi,
+        ),
+        processManuscripts(form.manuscripts, researchId, callApi),
+        processResearchActivities(
+          form.researchActivities,
+          researchId,
+          callApi,
+        ),
         processBudgetData(
           form.budgetHeaders,
           form.budgetLineItems,
@@ -2773,6 +3607,25 @@ export default function FormResearch() {
       setShowLoader(false);
     }
   };
+
+  const location = useLocation();
+  const isReportingSubRoute = location.pathname.includes("/reporting/");
+  if (isReportingSubRoute) {
+    return (
+      <Outlet
+        context={{
+          form,
+          reportItems: form.reportItems,
+          handleAddReport,
+          handleEditReport,
+          handleDeleteFile,
+          handleUploadFile,
+          handleUpdateReportFiles,
+        }}
+      />
+    );
+  }
+
   return (
     <section className="bg-white">
       <div className="container py-16">
@@ -3149,29 +4002,68 @@ export default function FormResearch() {
           form={form}
         />
 
-        {/* Team Members Section */}
+        {/* Team Members && Emirates Workforce Development Section */}
         <div className="mt-6 rounded-xl border border-[#e2e8f0] bg-white p-6">
           <div className="flex items-center justify-between">
-            <h2 className={HEADING_TEXT}>Team members</h2>
+            <h2 className={HEADING_TEXT}>
+              Team members && Emirates Workforce Development
+            </h2>
             <IconButton
               iconProps={{
                 iconName: showTeam ? "ChevronUp" : "ChevronDown",
               }}
               onClick={() => setShowTeam((prev) => !prev)}
-              ariaLabel="Toggle team members"
+              ariaLabel="Toggle team members and workforce development"
               disabled={form.type === "view"}
             />
           </div>
           {showTeam && (
-            <TeamMemberSection
-              team={form.team}
-              teamMemberRoles={teamMemberRoles}
-              onAddMember={handleAddMember}
-              onRemoveMember={handleRemoveMember}
-              onEditMember={handleEditMember}
-              form={form}
-            />
+            <>
+              <TeamMemberSection
+                team={form.team}
+                teamMemberRoles={teamMemberRoles}
+                onAddMember={handleAddMember}
+                onRemoveMember={handleRemoveMember}
+                onEditMember={handleEditMember}
+                form={form}
+              />
+              <WorkforceDevelopmentSection
+                items={form.workforceDevelopments}
+                onAdd={handleAddWorkforceDevelopment}
+                onRemove={handleRemoveWorkforceDevelopment}
+                onEdit={handleEditWorkforceDevelopment}
+                form={form}
+              />
+            </>
           )}
+        </div>
+
+        {/* Manuscripts Drafts and Journal Publications Section */}
+        <div className="mt-6 rounded-xl border border-[#e2e8f0] bg-white p-6">
+          <h2 className={HEADING_TEXT}>
+            Manuscripts Drafts and Journal Publications
+          </h2>
+          <ManuscriptsSection
+            items={form.manuscripts}
+            onAdd={handleAddManuscript}
+            onRemove={handleRemoveManuscript}
+            onEdit={handleEditManuscript}
+            form={form}
+          />
+        </div>
+
+        {/* Capacity Building Workshops, Training, and Engagement Activities */}
+        <div className="mt-6 rounded-xl border border-[#e2e8f0] bg-white p-6">
+          <h2 className={HEADING_TEXT}>
+            Capacity Building Workshops, Training, and Engagement Activities
+          </h2>
+          <CapacityBuildingSection
+            items={form.researchActivities}
+            onAdd={handleAddResearchActivity}
+            onRemove={handleRemoveResearchActivity}
+            onEdit={handleEditResearchActivity}
+            form={form}
+          />
         </div>
 
         {/* File Upload Section */}
