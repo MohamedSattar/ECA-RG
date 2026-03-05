@@ -65,6 +65,7 @@ import {
   loadDeliverableFiles,
   loadDisseminationActivityFiles,
   getDisseminationActivityFolderPath,
+  normalizeGetFilesResponse,
 } from "@/services/reportFileUpload";
 import { BudgetHeaderFields } from "@/constants/budgetHeader";
 import {
@@ -788,9 +789,17 @@ export default function FormResearch() {
 
       const filteredReports = res2.value || [];
 
-      // Get research number for file loading
-      const researchNumber =
+      // Get research number for file loading (fallback fetch if not in form/state)
+      let researchNumber =
         form.researchNumber || state?.item?.[ResearchKeys.RESEARCHNUMBER];
+      if (!researchNumber) {
+        researchNumber = await getResearchNumber(
+          formType,
+          researchId,
+          state?.item?.[ResearchKeys.RESEARCHNUMBER],
+          callApi,
+        );
+      }
 
       // Load files for each report in parallel
       const reportsWithFiles = await Promise.all(
@@ -924,8 +933,16 @@ export default function FormResearch() {
         url: `/_api/${TableName.DISSEMINATIONACTIVITIES}?$filter=${DisseminationActivityFields.RESEARCH} eq ${researchId}&$select=${activitySelect}&$top=100`,
         method: "GET",
       });
-      const researchNumber =
+      let researchNumber =
         form.researchNumber || state?.item?.[ResearchKeys.RESEARCHNUMBER];
+      if (!researchNumber) {
+        researchNumber = await getResearchNumber(
+          formType,
+          researchId,
+          state?.item?.[ResearchKeys.RESEARCHNUMBER],
+          callApi,
+        );
+      }
       const rawList = res?.value ?? [];
       const listWithFiles = await Promise.all(
         rawList.map(async (item: any) => {
@@ -978,9 +995,17 @@ export default function FormResearch() {
 
       const filteredDeliverables = res.value || [];
 
-      // Get research number for file loading
-      const researchNumber =
+      // Get research number for file loading (fallback fetch if not in form/state)
+      let researchNumber =
         form.researchNumber || state?.item?.[ResearchKeys.RESEARCHNUMBER];
+      if (!researchNumber) {
+        researchNumber = await getResearchNumber(
+          formType,
+          researchId,
+          state?.item?.[ResearchKeys.RESEARCHNUMBER],
+          callApi,
+        );
+      }
 
       // Load files for each deliverable in parallel
       const deliverablesWithFiles = await Promise.all(
@@ -1113,7 +1138,7 @@ export default function FormResearch() {
   const loadResearchActivities = async (researchId: string): Promise<void> => {
     if (formType === "new") return;
     try {
-      const select = `${ResearchActivityFields.ACTIVITYID},${ResearchActivityFields.TITLE},${ResearchActivityFields.DATE},${ResearchActivityFields.DELIVERY_FORMAT},${ResearchActivityFields.AUDIENCE},${ResearchActivityFields.STATUS}`;
+      const select = `${ResearchActivityFields.ACTIVITYID},${ResearchActivityFields.TITLE},${ResearchActivityFields.DATE},${ResearchActivityFields.DELIVERY_FORMAT},${ResearchActivityFields.AUDIENCE},${ResearchActivityFields.STATUS},${ResearchActivityFields.OBJECTIVE},${ResearchActivityFields.KEY_OUTPUTS}`;
       const filter = `${ResearchActivityFields.RESEARCH} eq ${researchId}`;
       const res = await callApi<{ value: any[] }>({
         url: `/_api/${TableName.RESEARCHACTIVITIES}?$filter=${filter}&$select=${select}&$top=500`,
@@ -1127,6 +1152,8 @@ export default function FormResearch() {
         deliveryFormat: row[ResearchActivityFields.DELIVERY_FORMAT] ?? "",
         audience: row[ResearchActivityFields.AUDIENCE] ?? "",
         status: row[ResearchActivityFields.STATUS] ?? 1,
+        objective: row[ResearchActivityFields.OBJECTIVE] ?? "",
+        keyOutputsOrLessons: row[ResearchActivityFields.KEY_OUTPUTS] ?? "",
         action: "existing",
       }));
       setForm((prev) => ({ ...prev, researchActivities: items }));
@@ -1227,7 +1254,7 @@ export default function FormResearch() {
     if (!researchNumber) return [];
 
     try {
-      const applicationFiles = await triggerFlow<any, any[]>(
+      const applicationFiles = await triggerFlow<any, any>(
         APIURL.FileGetEndpoint,
         {
           Library: "Researches",
@@ -1235,13 +1262,12 @@ export default function FormResearch() {
         },
       );
 
-      // console.log("Fetched application files:", applicationFiles);
-      return (
-        applicationFiles?.data?.map((f: any) => ({
-          file: getFile(f),
-          action: "existing" as const,
-        })) || []
-      );
+      if (!applicationFiles?.success) return [];
+      const normalized = normalizeGetFilesResponse(applicationFiles.data);
+      return normalized.map((f) => ({
+        file: getFile(f),
+        action: "existing" as const,
+      }));
     } catch (error) {
       console.error("Failed to load application files:", error);
       return [];
@@ -2050,6 +2076,8 @@ export default function FormResearch() {
       deliveryFormat: string;
       audience: string;
       status: number;
+      objective: string;
+      keyOutputsOrLessons: string;
     }) => {
       // Use Research record ID from URL (researchAreaId = searchParams "researchId"), not form.researchArea (Research Area ID)
       if (formType !== "new" && researchAreaId) {
@@ -2062,6 +2090,8 @@ export default function FormResearch() {
             [ResearchActivityFields.DELIVERY_FORMAT]: payload.deliveryFormat || null,
             [ResearchActivityFields.AUDIENCE]: payload.audience || null,
             [ResearchActivityFields.STATUS]: payload.status,
+            [ResearchActivityFields.OBJECTIVE]: payload.objective || null,
+            [ResearchActivityFields.KEY_OUTPUTS]: payload.keyOutputsOrLessons || null,
             [ResearchActivityFields.RESEARCH_ID]: `/${researchEntitySet}(${researchAreaId})`,
           };
           await callApi({
@@ -2094,6 +2124,8 @@ export default function FormResearch() {
           deliveryFormat: payload.deliveryFormat,
           audience: payload.audience,
           status: payload.status,
+          objective: payload.objective,
+          keyOutputsOrLessons: payload.keyOutputsOrLessons,
           action: "new",
         };
         setForm((prev) => ({
@@ -2154,6 +2186,8 @@ export default function FormResearch() {
         deliveryFormat: string;
         audience: string;
         status: number;
+        objective: string;
+        keyOutputsOrLessons: string;
       },
     ) => {
       const item = form.researchActivities.find((i) => i.id === id);
@@ -2167,6 +2201,8 @@ export default function FormResearch() {
             [ResearchActivityFields.DELIVERY_FORMAT]: payload.deliveryFormat || null,
             [ResearchActivityFields.AUDIENCE]: payload.audience || null,
             [ResearchActivityFields.STATUS]: payload.status,
+            [ResearchActivityFields.OBJECTIVE]: payload.objective || null,
+            [ResearchActivityFields.KEY_OUTPUTS]: payload.keyOutputsOrLessons || null,
           };
           await callApi({
             url: `/_api/${TableName.RESEARCHACTIVITIES}(${id})`,
@@ -2184,6 +2220,8 @@ export default function FormResearch() {
                     deliveryFormat: payload.deliveryFormat,
                     audience: payload.audience,
                     status: payload.status,
+                    objective: payload.objective,
+                    keyOutputsOrLessons: payload.keyOutputsOrLessons,
                   }
                 : i,
             ),
@@ -2216,6 +2254,8 @@ export default function FormResearch() {
                   deliveryFormat: payload.deliveryFormat,
                   audience: payload.audience,
                   status: payload.status,
+                  objective: payload.objective,
+                  keyOutputsOrLessons: payload.keyOutputsOrLessons,
                 }
               : i,
           ),

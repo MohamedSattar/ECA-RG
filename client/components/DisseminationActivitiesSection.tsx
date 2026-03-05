@@ -21,8 +21,6 @@ import {
   popupInputStyles,
   popupLabelClass,
   popupFormGridClass,
-  popupUploadZoneClass,
-  popupFileItemClass,
   popupFieldWrapperClass,
 } from "@/styles/popupInputStyles";
 
@@ -444,25 +442,24 @@ export const DisseminationActivitiesSection: React.FC<
                     }}
                   />
                   <div
-                    className={popupUploadZoneClass}
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-[#c77946] transition-colors"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <Icon
                       iconName="CloudUpload"
-                      className="text-4xl mb-2"
-                      style={{ color: "#e78f6a" }}
+                      className="text-4xl text-gray-400 mb-2"
                     />
-                    <p className="text-sm font-medium text-[#1e293b]">
+                    <p className="text-sm text-gray-600">
                       Click to upload files or drag and drop
                     </p>
-                    <p className="text-xs text-[#475569] mt-1">
+                    <p className="text-xs text-gray-500 mt-1">
                       Multiple files allowed
                     </p>
                   </div>
                   {activityForm.files &&
                     activityForm.files.filter((f) => f.action !== "remove")
                       .length > 0 && (
-                      <div className="mt-3 space-y-2">
+                      <div className="mt-4 space-y-2">
                         {activityForm.files
                           .filter((f) => f.action !== "remove")
                           .map((fileItem) => {
@@ -471,21 +468,21 @@ export const DisseminationActivitiesSection: React.FC<
                             return (
                               <div
                                 key={key}
-                                className={popupFileItemClass}
+                                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
                               >
                                 <div className="flex items-center gap-3">
                                   <Icon
                                     iconName="Page"
-                                    style={{ color: "#e78f6a" }}
+                                    className="text-[#c77946]"
                                   />
                                   <div>
-                                    <p className="text-sm font-medium text-[#1e293b]">
+                                    <p className="text-sm font-medium">
                                       {fileItem.file.name}
                                     </p>
-                                    <p className="text-xs text-[#475569]">
+                                    <p className="text-xs text-gray-500">
                                       {formatFileSize(fileItem.file.size)}
                                       {isExisting && (
-                                        <span className="ml-2 text-[#1D2054]">
+                                        <span className="ml-2 text-blue-600">
                                           (Uploaded)
                                         </span>
                                       )}
@@ -493,15 +490,16 @@ export const DisseminationActivitiesSection: React.FC<
                                   </div>
                                 </div>
                                 <div className="flex gap-2">
-                                  <IconButton
-                                    iconProps={{ iconName: "Download" }}
-                                    onClick={() =>
-                                      handleFileDownload(fileItem.file)
-                                    }
-                                    title="Download file"
-                                    ariaLabel="Download file"
-                                    styles={popupInputStyles.iconButton}
-                                  />
+                                  {isExisting && (
+                                    <IconButton
+                                      iconProps={{ iconName: "Download" }}
+                                      onClick={() =>
+                                        handleFileDownload(fileItem.file)
+                                      }
+                                      title="Download file"
+                                      ariaLabel="Download file"
+                                    />
+                                  )}
                                   <IconButton
                                     iconProps={{ iconName: "Delete" }}
                                     onClick={() =>
@@ -509,7 +507,6 @@ export const DisseminationActivitiesSection: React.FC<
                                     }
                                     title="Remove file"
                                     ariaLabel="Remove file"
-                                    styles={popupInputStyles.iconButton}
                                   />
                                 </div>
                               </div>
@@ -597,38 +594,33 @@ export const DisseminationActivitiesSection: React.FC<
                         <td className="px-6 py-4 text-[#475569]">
                           {getTypeLabel(item.type)}
                         </td>
-                        <td className="px-6 py-4 text-[#475569]">
+                        <td className="px-6 py-3">
                           {item.files && item.files.length > 0 ? (
-                            <div className="flex flex-wrap gap-1 items-center">
+                            <div className="flex flex-col gap-1">
                               {item.files
                                 .filter((f) => f.action !== "remove")
-                                .map((fileItem) => {
+                                .map((fileItem, fileIdx) => {
                                   const key = getFileKey(fileItem.file);
                                   return (
-                                    <span
-                                      key={key}
-                                      className="inline-flex items-center gap-1"
+                                    <a
+                                      key={key || fileIdx}
+                                      href={URL.createObjectURL(fileItem.file)}
+                                      download={fileItem.file.name}
+                                      className="flex items-center gap-2 text-blue-600 hover:text-blue-800 hover:underline text-xs"
+                                      title={`Download ${fileItem.file.name}`}
                                     >
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          handleFileDownload(fileItem.file)
-                                        }
-                                        className="text-[#1D2054] hover:underline text-left flex items-center gap-1"
-                                        title={`Download ${fileItem.file.name}`}
-                                      >
-                                        <Icon
-                                          iconName="Download"
-                                          className="text-sm"
-                                        />
+                                      <Icon iconName="CloudDownload" />
+                                      <span className="truncate max-w-[150px]">
                                         {fileItem.file.name}
-                                      </button>
-                                    </span>
+                                      </span>
+                                    </a>
                                   );
                                 })}
                             </div>
                           ) : (
-                            "—"
+                            <span className="text-gray-400 text-xs">
+                              No files
+                            </span>
                           )}
                         </td>
                         {edit && (
