@@ -10,6 +10,8 @@ export const ResearchActivityFields = {
   /** API uses prmkt_audience_ (trailing underscore) */
   AUDIENCE: "prmkt_audience_",
   STATUS: "prmkt_status",
+  OBJECTIVE: "prmkt_objective",
+  KEY_OUTPUTS: "prmkt_output",
   RESEARCH: "_prmkt_research_value",
   RESEARCH_ID: "prmkt_Research@odata.bind",
   RESEARCH_ENTITY_SET: "prmtk_researchs",

@@ -25,6 +25,8 @@ export interface ResearchActivityItem {
   deliveryFormat: string;
   audience: string;
   status: number;
+  objective?: string;
+  keyOutputsOrLessons?: string;
   action?: "new" | "existing";
   removed?: boolean;
 }
@@ -35,6 +37,8 @@ export interface AddResearchActivityForm {
   deliveryFormat: string;
   audience: string;
   status: number;
+  objective: string;
+  keyOutputsOrLessons: string;
 }
 
 interface CapacityBuildingSectionProps {
@@ -51,6 +55,8 @@ const INITIAL_FORM: AddResearchActivityForm = {
   deliveryFormat: "",
   audience: "",
   status: 1,
+  objective: "",
+  keyOutputsOrLessons: "",
 };
 
 const STATUS_OPTIONS: IDropdownOption[] = ResearchActivityStatusOptions.map(
@@ -107,7 +113,9 @@ export const CapacityBuildingSection: React.FC<CapacityBuildingSectionProps> = (
       date: item.date,
       deliveryFormat: item.deliveryFormat,
       audience: item.audience,
-      status: 1, // Always Pending in dialog; field is disabled
+      objective: item.objective ?? "",
+      keyOutputsOrLessons: item.keyOutputsOrLessons ?? "",
+      status: item.status ?? 1,
     });
     setEditingId(item.id);
     setDialogOpen(true);
@@ -214,6 +222,35 @@ export const CapacityBuildingSection: React.FC<CapacityBuildingSectionProps> = (
             />
           </div>
           <div>
+            <Label htmlFor="cb-objective">Objective of the Activity</Label>
+            <TextField
+              id="cb-objective"
+              multiline
+              value={formState.objective}
+              onChange={(_, v) =>
+                setFormState((prev) => ({ ...prev, objective: v ?? "" }))
+              }
+              placeholder="Enter objective of the activity"
+            />
+          </div>
+          <div>
+            <Label htmlFor="cb-key-outputs">
+              Key Outputs or Lessons
+            </Label>
+            <TextField
+              id="cb-key-outputs"
+              multiline
+              value={formState.keyOutputsOrLessons}
+              onChange={(_, v) =>
+                setFormState((prev) => ({
+                  ...prev,
+                  keyOutputsOrLessons: v ?? "",
+                }))
+              }
+              placeholder="Enter key outputs or lessons"
+            />
+          </div>
+          <div>
             <Label>Status</Label>
             <Dropdown
               placeholder="Select status"
@@ -225,7 +262,6 @@ export const CapacityBuildingSection: React.FC<CapacityBuildingSectionProps> = (
                   status: (opt?.key as number) ?? 1,
                 }))
               }
-              disabled
             />
           </div>
         </div>

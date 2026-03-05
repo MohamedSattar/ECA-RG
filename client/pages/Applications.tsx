@@ -241,6 +241,9 @@ export default function Applications() {
     );
   };
   const SummaryCards = () => {
+    const getStatus = (app: any) =>
+      ((app[ApplicationKeys.STATUS_FORMATTED] as string) || "").toLowerCase();
+
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-white p-6 border border-[#e2e8f0] rounded-xl mt-10 mb-6">
         <SummaryCard
@@ -254,9 +257,7 @@ export default function Applications() {
           number={applications
             .filter(
               (app) =>
-                app[ApplicationKeys.STATUS_FORMATTED]
-                  .toLowerCase()
-                  .indexOf("reject") !== -1,
+                getStatus(app).includes("reject"),
             )
             .length.toString()}
           label="Rejected"
@@ -268,9 +269,7 @@ export default function Applications() {
           number={applications
             .filter(
               (app) =>
-                app[ApplicationKeys.STATUS_FORMATTED]
-                  .toLowerCase()
-                  .indexOf("approve") !== -1,
+                getStatus(app).includes("approve"),
             )
             .length.toString()}
           label="Approved"
