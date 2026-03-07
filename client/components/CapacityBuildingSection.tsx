@@ -17,6 +17,7 @@ import {
   ResearchActivityStatusOptions,
   getResearchActivityStatusText,
 } from "@/constants";
+import { popupInputStyles } from "@/styles/popupInputStyles";
 
 export interface ResearchActivityItem {
   id: string;
@@ -153,7 +154,10 @@ export const CapacityBuildingSection: React.FC<CapacityBuildingSectionProps> = (
     <Reveal className="mt-6">
       {!isView && (
         <div className="flex items-center justify-end mb-3">
-          <PrimaryButton onClick={handleOpenAdd}>
+          <PrimaryButton
+            onClick={handleOpenAdd}
+            styles={popupInputStyles.researchPrimaryButton}
+          >
             Add capacity building / research activity
           </PrimaryButton>
         </div>
@@ -269,8 +273,13 @@ export const CapacityBuildingSection: React.FC<CapacityBuildingSectionProps> = (
           <PrimaryButton
             onClick={handleSubmit}
             text={editingId ? "Update" : "Add"}
+            styles={popupInputStyles.researchPrimaryButton}
           />
-          <DefaultButton onClick={handleDismiss} text="Cancel" />
+          <DefaultButton
+            onClick={handleDismiss}
+            text="Cancel"
+            styles={popupInputStyles.researchSecondaryButton}
+          />
         </FluentDialogFooter>
       </FluentDialog>
 
@@ -317,20 +326,22 @@ export const CapacityBuildingSection: React.FC<CapacityBuildingSectionProps> = (
                 </td>
                 {!isView && (
                   <td className="px-6 py-3 text-right">
-                    <IconButton
-                      onClick={() => handleEditClick(item)}
-                      iconProps={{ iconName: "Edit" }}
-                      title="Edit"
-                      ariaLabel="Edit"
-                      styles={{ root: { color: "#1D2054" } }}
-                    />
-                    <IconButton
-                      onClick={() => onRemove(item.id)}
-                      iconProps={{ iconName: "Delete" }}
-                      title="Delete"
-                      ariaLabel="Delete"
-                      styles={{ root: { color: "#dc2626" } }}
-                    />
+                    <div className="flex gap-2 justify-end">
+                      <IconButton
+                        onClick={() => handleEditClick(item)}
+                        iconProps={{ iconName: "Edit" }}
+                        title="Edit"
+                        ariaLabel="Edit"
+                        styles={popupInputStyles.editButton}
+                      />
+                      <IconButton
+                        onClick={() => onRemove(item.id)}
+                        iconProps={{ iconName: "Delete" }}
+                        title="Delete"
+                        ariaLabel="Delete"
+                        styles={popupInputStyles.deleteButton}
+                      />
+                    </div>
                   </td>
                 )}
               </tr>

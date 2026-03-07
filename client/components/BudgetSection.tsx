@@ -14,6 +14,7 @@ import { TextField } from "@fluentui/react/lib/TextField";
 import { IconButton } from "@fluentui/react/lib/Button";
 import { aedFormat } from "@/services/utility";
 import { HEADING_TEXT } from "@/styles/constants";
+import { popupInputStyles } from "@/styles/popupInputStyles";
 
 export interface BudgetHeader {
   id: string;
@@ -140,16 +141,7 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                     setEditingLineId(null);
                     setIsLineDialogOpen(true);
                   }}
-                  styles={{
-                    root: {
-                      backgroundColor: "#1D2054",
-                      borderColor: "#1D2054",
-                    },
-                    rootHovered: {
-                      backgroundColor: "#151b41",
-                      borderColor: "#151b41",
-                    },
-                  }}
+                  styles={popupInputStyles.researchPrimaryButton}
                 >
                   + Add Line Item
                 </PrimaryButton>
@@ -233,6 +225,7 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                 <PrimaryButton
                   onClick={handleAddBudgetLine}
                   text={editingLineId ? "Update" : "Add"}
+                  styles={popupInputStyles.researchPrimaryButton}
                 />
                 <DefaultButton
                   onClick={() => {
@@ -241,6 +234,7 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                     setLineForm(INITIAL_LINE_FORM);
                   }}
                   text="Cancel"
+                  styles={popupInputStyles.researchSecondaryButton}
                 />
               </FluentDialogFooter>
             </FluentDialog>
@@ -303,22 +297,14 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                                 iconProps={{ iconName: "Edit" }}
                                 title="Edit"
                                 ariaLabel="Edit"
-                                styles={{
-                                  root: {
-                                    color: "#1D2054",
-                                  },
-                                }}
+                                styles={popupInputStyles.editButton}
                               />
                               <IconButton
                                 onClick={() => onRemoveBudgetLineItem(item.id)}
                                 iconProps={{ iconName: "Delete" }}
                                 title="Remove"
                                 ariaLabel="Remove"
-                                styles={{
-                                  root: {
-                                    color: "#dc2626",
-                                  },
-                                }}
+                                styles={popupInputStyles.deleteButton}
                               />
                             </div>
                           )}
@@ -345,10 +331,10 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                     >
                       Total Amount
                     </td>
-                    <td className="px-6 py-3 font-bold text-right text-[#1D2054] text-lg">
+                    <td colSpan={3} className="px-6 py-3 font-bold text-right text-[#1D2054] text-lg">
                       {aedFormat(totalLineItemAmount)}
                     </td>
-                    <td></td>
+                   
                   </tr>
                 </tfoot>
               </table>

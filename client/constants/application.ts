@@ -59,3 +59,18 @@ export const ApplicationFields = {
   STATECODE: "statecode",
   STATUSCODE: "statuscode",
 } as const;
+
+/** prmtk_status (number) -> display label for application status */
+export const APPLICATION_STATUS_LABELS: Record<number, string> = {
+  1: "Draft",
+  2: "Submitted",
+  3: "Return for updates",
+  4: "Shortlisted",
+  5: "Rejected",
+  6: "Pending Review",
+  7: "Review Completed",
+  8: "Awarded (Approved)",
+  9: "Active (Research In Progress)",
+  10: "Disqualified (Low Score)",
+  11: "Archived",
+};
