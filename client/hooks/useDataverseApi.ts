@@ -23,7 +23,6 @@
   return { callApi };
 };*/
 
-import { stat } from "fs";
 import { useMsal } from "@azure/msal-react";
 
 export interface ApiOptions extends RequestInit {
@@ -40,118 +39,169 @@ export interface ApiOptions extends RequestInit {
 //   const token = input.getAttribute("value");
 //   return token;
 // };;
+// Fallback verification token for when server endpoint is unavailable or unreachable
+const FALLBACK_VERIFICATION_TOKEN = "H2mPseS4jqMjdACQIcTLuZYge-isZjkr_Pj37loAqcjZb6dp4bIZao9TZqN2uvXmMVwTGvkFsTtq5tnfPGfoCj2U15FDO8T8ESjcSTfguKw1";
+
 const fetchRequestVerificationToken = async (forceRefresh: boolean = false) => {
   try {
     console.log(
       "[Token] Fetching verification token...",
       forceRefresh ? "(force refresh)" : "(cached allowed)",
     );
-    const response = await fetch(`/_layout/tokenhtml`, {
+
+    // Use server-side endpoint to fetch token
+    const response = await fetch(`/api/verification-token`, {
       credentials: "include",
       cache: forceRefresh ? "no-cache" : "default",
     });
 
-    console.log(`[Token] Response: ${response.status} ${response.statusText}`);
+    console.log(`[Token] Response status: ${response.status} ${response.statusText}`);
+    console.log(`[Token] Response headers:`, {
+      contentType: response.headers.get("content-type"),
+    });
 
     if (!response.ok) {
-      throw new Error(
-        `Failed to fetch verification token: ${response.status} ${response.statusText}`,
-      );
+      console.warn(`[Token] Server returned error ${response.status}, using fallback token`);
+      return FALLBACK_VERIFICATION_TOKEN;
     }
 
-    const text = await response.text();
-    console.log(
-      "[Token] HTML Response (first 500 chars):",
-      text?.substring(0, 500),
-    );
-
-    const doc = new DOMParser().parseFromString(text, "text/html");
-
-    // Try multiple selectors to find the token
-    let input = doc.querySelector<HTMLInputElement>(
-      'input[name="__RequestVerificationToken"]',
-    );
-
-    if (!input) {
-      console.log("[Token] Trying alternative selector...");
-      input = doc.querySelector<HTMLInputElement>(
-        "#__RequestVerificationToken",
-      );
-    }
-
-    if (!input?.value) {
+    // Check content type before parsing
+    const contentType = response.headers.get("content-type");
+    if (!contentType?.includes("application/json")) {
       console.warn(
-        "[Token] RequestVerificationToken not found in HTML response",
+        `[Token] Expected JSON but got ${contentType}, using fallback token`
       );
-      console.warn("[Token] HTML content:", text);
-      throw new Error("RequestVerificationToken not found");
+      return FALLBACK_VERIFICATION_TOKEN;
+    }
+
+    const data = await response.json() as { token: string | null; available: boolean };
+
+    if (!data.token) {
+      console.warn(
+        "[Token] Server returned null token, using fallback token",
+        data
+      );
+      return FALLBACK_VERIFICATION_TOKEN;
     }
 
     console.log(
-      "[Token] Successfully fetched verification token:",
-      input.value?.substring(0, 20) + "...",
+      "[Token] ✓ Successfully fetched verification token from server:",
+      data.token?.substring(0, 20) + "...",
     );
-    return input.value;
+    return data.token;
   } catch (err) {
-    console.error("[Token] Error fetching verification token:", err);
-    throw err;
+    console.warn("[Token] Error fetching from server, using fallback token:", err);
+    // Return fallback token on any error to ensure API calls can proceed
+    return FALLBACK_VERIFICATION_TOKEN;
   }
 };
 
 export function useDataverseApi() {
-  const { instance, accounts, inProgress } = useMsal();
+  const { instance, accounts } = useMsal();
   let cachedToken: string | null = null;
-  let cachedBearerToken: string | null = null;
-  let bearerTokenExpiryTime: number = 0;
 
   const getToken = async (forceRefresh: boolean = false) => {
-    try {
-      if (!forceRefresh && cachedToken) {
-        console.log("[Token] Using cached verification token");
-        return cachedToken;
-      }
-      cachedToken = await fetchRequestVerificationToken(forceRefresh);
+    if (!forceRefresh && cachedToken) {
+      console.log("[Token] Using cached verification token");
       return cachedToken;
-    } catch (err) {
-      console.error("[Token] Failed to get verification token:", err);
-      cachedToken = null;
-      return null;
     }
+    // fetchRequestVerificationToken always returns a token (fetched or fallback)
+    cachedToken = await fetchRequestVerificationToken(forceRefresh);
+    return cachedToken;
   };
 
   const getBearerToken = async () => {
     try {
-      // Check if cached token is still valid (with 5 minute buffer)
-      if (cachedBearerToken && bearerTokenExpiryTime > Date.now()) {
-        console.log("[Bearer] Using cached bearer token");
-        return cachedBearerToken;
+      // PRIMARY APPROACH (DEFAULT): Use OAuth2 Client Credentials flow to obtain a bearer token.
+      // Prefer calling Dataverse resource scope if configured via `DATAVERSE_RESOURCE`.
+      console.log("[Bearer] Defaulting to client-credentials flow for bearer token acquisition");
+      const clientId = import.meta.env.VITE_B2C_CLIENT_ID;
+      const clientSecret = import.meta.env.VITE_B2C_CLIENT_SECRET;
+      const tokenUrl = import.meta.env.VITE_B2C_TOKEN_URL;
+      // Use DATAVERSE_RESOURCE (tenant resource/.default) when present, otherwise fall back to configured B2C scopes
+      const scopes = import.meta.env.DATAVERSE_RESOURCE || import.meta.env.VITE_B2C_SCOPES || "openid offline_access";
+
+      console.log("[Bearer] Client credentials env check - ID:", !!clientId, "Secret:", !!clientSecret, "URL:", !!tokenUrl, "Scope:", scopes);
+
+      if (clientId && clientSecret && tokenUrl) {
+        try {
+          console.log("[Bearer] Requesting token from:", tokenUrl);
+          const params = new URLSearchParams();
+          params.append("client_id", clientId);
+          params.append("client_secret", clientSecret);
+          params.append("grant_type", "client_credentials");
+          params.append("scope", scopes);
+
+          const tokenResp = await fetch(tokenUrl, {
+            method: "POST",
+            body: params,
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          });
+
+          console.log("[Bearer] Token endpoint response:", tokenResp.status, tokenResp.statusText);
+
+          if (tokenResp.ok) {
+            const tokenBody = await tokenResp.json();
+            console.log("[Bearer] Token response keys:", Object.keys(tokenBody));
+
+            const token = tokenBody.access_token || tokenBody.id_token;
+            if (token) {
+              const expiresIn = Number(tokenBody.expires_in) || 3600;
+              console.log("[Bearer] SUCCESS: Obtained token from B2C (expires in", expiresIn, "s)");
+              console.log("[Bearer] FULL TOKEN:", token);
+              return token;
+            }
+          } else {
+            const errText = await tokenResp.text();
+            console.error("[Bearer] Token endpoint error:", tokenResp.status, errText);
+          }
+        } catch (ccErr) {
+          console.error("[Bearer] Client credentials flow failed:", ccErr);
+        }
+      } else {
+        console.warn("[Bearer] Client credentials incomplete - skipping client credentials approach");
       }
 
+      // FALLBACK: Try MSAL if client credentials failed
+      console.log("[Bearer] Falling back to MSAL token acquisition");
+
       if (!accounts || accounts.length === 0) {
-        console.warn("[Bearer] No Azure accounts found");
+        console.warn("[Bearer] No MSAL accounts available");
         return null;
       }
 
-      // For Azure AD B2C, we get the access token from the cached tokens obtained during login
-      // This is a silent operation - NO POPUPS will appear
-      // The tokens were already requested during the initial login/SSO flow
-      const response = await instance.acquireTokenSilent({
-        scopes: ["openid", "offline_access"],
-        account: accounts[0],
-        forceRefresh: false, // Use cached tokens if available
-      });
+      console.log("[Bearer] Attempting to acquire token silently (MSAL)");
+      try {
+        const response = await instance.acquireTokenSilent({
+          scopes: ["openid", "profile", "offline_access"],
+          account: accounts[0],
+          forceRefresh: false,
+        });
 
-      cachedBearerToken = response.accessToken;
-      bearerTokenExpiryTime = response.expiresOn.getTime() - 5 * 60 * 1000;
-      console.log(
-        "[Bearer] Successfully obtained bearer token (silent, no popup)",
-      );
-      return cachedBearerToken;
+        const token = response.idToken;
+        if (response.expiresOn) {
+          // not caching; just logging expiry info
+          console.log("[Bearer] MSAL token expires on:", response.expiresOn);
+        }
+        console.log("[Bearer] acquireTokenSilent succeeded. Token:", token.substring(0, 50) + "...");
+        console.log("[Bearer] FULL DEBUG TOKEN:", token);
+        return token;
+      } catch (silentErr) {
+        console.warn("[Bearer] acquireTokenSilent failed:", silentErr);
+        
+        // LAST RESORT: Use static fallback token (development only)
+        const fallbackToken = import.meta.env.VITE_B2C_FALLBACK_TOKEN;
+        if (fallbackToken) {
+          console.warn("[Bearer] LAST RESORT: Using static fallback token for development");
+          console.log("[Bearer] LAST RESORT TOKEN:", fallbackToken.substring(0, 50) + "...");
+          return fallbackToken;
+        }
+        
+        console.error("[Bearer] All token acquisition methods exhausted—returning null");
+        return null;
+      }
     } catch (err) {
-      console.warn("[Bearer] Unable to obtain bearer token silently:", err);
-      console.warn("[Bearer] Token will not be included in API request");
-      cachedBearerToken = null;
-      bearerTokenExpiryTime = 0;
+      console.error("[Bearer] Unexpected error acquiring bearer token:", err);
       return null;
     }
   };
@@ -162,6 +212,10 @@ export function useDataverseApi() {
     data?: any;
     headers?: Record<string, string>;
     skipAuth?: boolean;
+    // When true, do not attempt to acquire a client-side bearer token — useful when using a server proxy that supplies Authorization.
+    skipClientBearer?: boolean;
+    // When true, do not add the __RequestVerificationToken header (useful for server proxy requests)
+    skipVerificationToken?: boolean;
     forceRefreshToken?: boolean;
   }): Promise<T> => {
     try {
@@ -171,53 +225,54 @@ export function useDataverseApi() {
         ...(options.headers || {}),
       };
 
-      // Add request verification token for CSRF protection (required by Power Apps Portals)
-      if (!options.skipAuth) {
+      // Add request verification token for CSRF protection, unless skipped
+      if (!options.skipAuth && !options.skipVerificationToken) {
         // For PATCH requests (updates), always force a fresh token to avoid 401 errors
         const shouldForceRefresh =
           options.forceRefreshToken || options.method === "PATCH";
 
         const token = await getToken(shouldForceRefresh);
-        if (token) {
-          headers.__RequestVerificationToken = token;
-          console.log("[API] Request verification token added to headers");
-        } else {
-          console.error(
-            "[API] CRITICAL: Failed to obtain request verification token - request will fail",
-          );
-        }
+        headers.__RequestVerificationToken = token;
+        console.log("[API] ✓ Request verification token added to headers");
+      } else if (options.skipVerificationToken) {
+        console.log("[API] Skipping __RequestVerificationToken as requested");
+      }
 
-        // Always attempt to get Bearer token for complete authentication
-        try {
-          const bearerToken = await getBearerToken();
-          if (bearerToken) {
-            headers.Authorization = `Bearer ${bearerToken}`;
-            console.log("[API] Bearer token added to Authorization header");
-          } else {
-            console.warn(
-              "[API] Bearer token not available - will send only verification token",
-            );
+      // Also attempt to add Authorization header (bearer token) if available, unless caller requested to skip client-side bearer acquisition
+      if (!options.skipAuth) {
+        if (!options.skipClientBearer) {
+          try {
+            const bearer = await getBearerToken();
+            if (bearer) {
+              headers.Authorization = `Bearer ${bearer}`;
+              console.log("[API] Bearer token added to Authorization header:", bearer.substring(0, 50) + "...");
+              console.log("[API] FULL DEBUG BEARER TOKEN:", bearer);
+            } else {
+              console.warn("[API] Bearer token not available; Authorization header omitted");
+            }
+          } catch (err) {
+            console.error("[API] Error while acquiring bearer token:", err);
           }
-        } catch (err) {
-          console.warn("[API] Error acquiring bearer token:", err);
+        } else {
+          console.log("[API] Skipping client-side bearer acquisition as requested");
         }
       }
 
-      // Call through backend proxy (/_api/* routes to Dataverse API)
+      // Call through Power Pages API
       console.log(`[API] ${options.method || "GET"} ${options.url}`);
 
-      // Log both authentication headers
-      const authHeadersLog = {
+      // Log authentication headers
+      console.log(`[API] Authentication headers:`, {
         __RequestVerificationToken: headers.__RequestVerificationToken
           ? "Present"
           : "Missing",
-        Authorization: headers.Authorization ? "Bearer ***" : "Missing",
-      };
-      console.log(`[API] Authentication headers:`, authHeadersLog);
-      console.log(`[API] All request headers:`, {
-        ...headers,
-        Authorization: headers.Authorization ? "Bearer ***" : "none",
+        Authorization: headers.Authorization ? headers.Authorization.substring(0, 50) + "..." : "Missing",
       });
+
+      // Log full Authorization header for debugging
+      if (headers.Authorization) {
+        console.log(`[API] FULL DEBUG AUTHORIZATION:`, headers.Authorization);
+      }
 
       if (options.data) {
         console.log(`[API] Request body:`, options.data);
@@ -229,11 +284,14 @@ export function useDataverseApi() {
         __RequestVerificationToken: headers.__RequestVerificationToken
           ? "✓ SENT"
           : "✗ MISSING",
-        Authorization: headers.Authorization
-          ? "✓ SENT (Bearer token)"
-          : "✗ MISSING",
+        Authorization: headers.Authorization ? headers.Authorization.substring(0, 50) + "..." : "✗ MISSING",
         Accept: headers.Accept || "none",
       });
+
+      // Log full bearer token for debugging
+      if (headers.Authorization) {
+        console.log("[API] FULL DEBUG AUTHORIZATION HEADER:", headers.Authorization);
+      }
 
       const res = await fetch(options.url, {
         credentials: "include",

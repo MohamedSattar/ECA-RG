@@ -7,6 +7,7 @@ import { ApplicationKeys, ContactKeys, TableName } from "@/constants/index";
 import { useAuth } from "@/state/auth";
 import { OverlayLoader } from "@/components/Loader";
 import { IconButton } from "@fluentui/react";
+import { popupInputStyles } from "@/styles/popupInputStyles";
 
 
 function StatusBadge({ value }: { value?: string | null }) {
@@ -181,10 +182,11 @@ export default function ApplicationsNew() {
                               />                                
 
                               <IconButton
-                                iconProps={{iconName:"Edit"}}
+                                iconProps={{ iconName: "Edit" }}
                                 title="Edit Application"
-                                onClick={() => onEdit(app)}                          
+                                onClick={() => onEdit(app)}
                                 aria-label={`Edit ${title}`}
+                                styles={popupInputStyles.editButton}
                               />
                             </div>
                           </td>

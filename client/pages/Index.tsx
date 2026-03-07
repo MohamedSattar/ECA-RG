@@ -586,7 +586,7 @@ export default function Index() {
             />
           </div>
           <img
-            src="https://cdn.builder.io/api/v1/image/assets%2F70b9b0a609c24ee0bbf265ba4136c987%2F70f208287cbb42e085316b29c857b9b9?format=webp&width=1200"
+            src="images/bg1.png"
             alt="decorative lines"
             className="absolute left-0 bottom-0 w-[70%] opacity-30"
           />
@@ -666,7 +666,7 @@ export default function Index() {
               />
 
               <img
-                src="https://cdn.builder.io/api/v1/image/assets%2F70b9b0a609c24ee0bbf265ba4136c987%2F7179a3b6394e482e95d26e73368edd6b?format=webp&width=700"
+                src="images/bg2.png"
                 alt="Hero collage"
                 className="absolute right-0 top-0 h-full w-auto max-w-none"
               />
@@ -735,40 +735,7 @@ export default function Index() {
               </div>
             </div>
           </section>
-          <section className="bg-white">
-            <div className="container pb-12">
-              <Reveal>
-                <div className="rounded-xl border overflow-hidden">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x">
-                    <div className="p-6 animate-in fade-in-50 duration-700">
-                      <div className="text-2xl md:text-3xl font-extrabold tracking-tight">
-                        {formatAedMillion(totalAllocatedBudget)}
-                      </div>
-                      <div className="text-sm text-muted-foreground mt-1">
-                        Total Funding Available
-                      </div>
-                    </div>
-                    <div className="p-6 bg-[#f6e4d8] animate-in fade-in-50 duration-700">
-                      <div className="text-2xl md:text-3xl font-extrabold tracking-tight">
-                        {daysLeft(grant[GrantCycleKeys.ENDDATE])}
-                      </div>
-                      <div className="text-sm text-muted-foreground mt-1">
-                        Days Until Deadline
-                      </div>
-                    </div>
-                    <div className="p-6 animate-in fade-in-50 duration-700">
-                      <div className="text-2xl md:text-3xl font-extrabold tracking-tight">
-                        {applications ? applications.length : "-"}
-                      </div>
-                      <div className="text-sm text-muted-foreground mt-1">
-                        Active Grant Cycles Applications
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </Reveal>
-            </div>
-          </section>
+          
         </div>
       )}
 

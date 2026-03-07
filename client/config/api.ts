@@ -10,7 +10,7 @@ export const API_CONFIG = {
    */
   BASE_URL:
     import.meta.env.VITE_PUBLIC_API_BASE_URL ||
-    "https://research-grants-spa.powerappsportals.com",
+    "https://researchgrants-dev.powerappsportals.com",
 
   /**
    * API endpoints

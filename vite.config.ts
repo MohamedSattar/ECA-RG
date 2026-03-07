@@ -6,7 +6,7 @@ import { createServer } from "./server";
 // API Base URL - sourced from environment variables
 const API_BASE_URL =
   process.env.VITE_PUBLIC_API_BASE_URL ||
-  "https://research-grants-spa.powerappsportals.com";
+  "https://researchgrants-dev.powerappsportals.com";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({

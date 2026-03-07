@@ -20,7 +20,10 @@ export const StatusReportFields = {
   UPCOMINGACTIVITIES: "prmtk_upcomingactivities",
   JOURNALPUBLICATIONS: "prmtk_journalpublications",
   WORKFORCEDEVELOPMENT: "prmtk_workforcedevelopment",
-  
+  CHANGES: "prmtk_changes",
+  LESSONSLEARNEDANDIMPLICATIONS: "prmtk_lessonslearnedandimplications",
+  FEEDBACK: "prmtk_feedback",
+
   // Lookups (values)
   RESEARCH: "_prmtk_research_value",
   TRANSACTIONCURRENCY: "_transactioncurrencyid_value",

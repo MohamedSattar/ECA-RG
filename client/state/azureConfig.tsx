@@ -2,7 +2,7 @@
 // Use dynamic redirect URI based on current domain for multi-deployment support
 const getRedirectUri = () => {
   if (typeof window === "undefined") {
-    return "https://research-grants-spa.powerappsportals.com/";
+    return "https://researchgrants-dev.powerappsportals.com/";
   }
   return `${window.location.origin}/`;
 };
