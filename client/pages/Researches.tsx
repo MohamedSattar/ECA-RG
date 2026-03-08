@@ -11,6 +11,7 @@ import {
 import { useAuth } from "@/state/auth";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { IconButton } from "@fluentui/react/lib/Button";
+import { popupInputStyles } from "@/styles/popupInputStyles";
 
 function StatusBadge({ value }: { value?: string | null }) {
   const cls =
@@ -258,9 +259,7 @@ export default function Researches() {
                               title="Edit Research"
                               aria-label={`Edit ${item.title}`}
                               iconProps={{ iconName: "Edit" }}
-                              styles={{
-                                root: { color: "#1D2054" },
-                              }}
+                              styles={popupInputStyles.editButton}
                             />
                           </div>
                         </td>

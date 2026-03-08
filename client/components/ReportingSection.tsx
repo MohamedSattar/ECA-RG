@@ -7,6 +7,7 @@ import { PrimaryButton } from "@fluentui/react/lib/Button";
 import { Icon } from "@fluentui/react/lib/Icon";
 import { aedFormat, getFileKey } from "@/services/utility";
 import { HEADING_TEXT } from "@/styles/constants";
+import { popupInputStyles } from "@/styles/popupInputStyles";
 
 export interface ReportItem {
   id?: string;
@@ -119,7 +120,7 @@ export const ReportingSection: React.FC<ReportingSectionProps> = ({
   form,
   edit = true,
 }) => {
-  const [showSection, setShowSection] = useState(true);
+  const [showSection, setShowSection] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -135,7 +136,7 @@ export const ReportingSection: React.FC<ReportingSectionProps> = ({
 
   return (
     <div className="mt-8 rounded-xl border bg-white p-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between min-h-[52px]">
         <h2 className={HEADING_TEXT}>Reporting Details</h2>
         <IconButton
           iconProps={{
@@ -145,14 +146,16 @@ export const ReportingSection: React.FC<ReportingSectionProps> = ({
           ariaLabel="Toggle reporting section"
         />
       </div>
-      <Reveal className="mt-8">
+      
         {showSection && (
+          <Reveal className="mt-8">
           <div style={{ marginTop: "20px" }}>
             <div className="flex items-center justify-end mb-4">
               {edit && (
                 <PrimaryButton
                   onClick={() => navigate(buildReportingUrl("reporting/add"))}
                   disabled={form.type === "view"}
+                  styles={popupInputStyles.researchPrimaryButton}
                 >
                   Add Report
                 </PrimaryButton>
@@ -173,16 +176,7 @@ export const ReportingSection: React.FC<ReportingSectionProps> = ({
                       Reporting Month
                     </th>
                     <th className="px-6 py-3 font-semibold text-white">
-                      Reporting Date
-                    </th>
-                    <th className="px-6 py-3 font-semibold text-white">
-                      Budget Spent (AED)
-                    </th>
-                    <th className="px-6 py-3 font-semibold text-white">
                       Overall Health
-                    </th>
-                    <th className="px-6 py-3 font-semibold text-white">
-                      Achievements
                     </th>
                     <th className="px-6 py-3 font-semibold text-white">
                       Attachments
@@ -212,26 +206,8 @@ export const ReportingSection: React.FC<ReportingSectionProps> = ({
                         {item.prmtk_reportingmonth}
                       </td>
                       <td className="px-6 py-3 text-[#475569]">
-                        {formatDateOnly(item.reportingDate)}
-                      </td>
-                      <td className="px-6 py-3 font-medium text-[#1e293b]">
-                        {aedFormat(item.prmtk_budgetspent || 0)}
-                      </td>
-                      <td className="px-6 py-3 text-[#475569]">
                         {getHealthIndicatorText(
                           item.prmtk_researchhealthindicator,
-                        )}
-                      </td>
-                      <td className="px-6 py-3 text-[#475569]">
-                        {item.prmtk_achievements ? (
-                          <div
-                            className="max-w-xs truncate"
-                            title={item.prmtk_achievements}
-                          >
-                            {item.prmtk_achievements}
-                          </div>
-                        ) : (
-                          "-"
                         )}
                       </td>
                       <td className="px-6 py-3">
@@ -284,14 +260,7 @@ export const ReportingSection: React.FC<ReportingSectionProps> = ({
                                 iconProps={{ iconName: "Edit" }}
                                 title="Edit"
                                 ariaLabel="Edit"
-                                styles={{
-                                  root: {
-                                    color: "#1D2054",
-                                  },
-                                  rootDisabled: {
-                                    color: "#cbd5e1",
-                                  },
-                                }}
+                                styles={popupInputStyles.editButton}
                               />
                               <IconButton
                                 disabled={form.type === "view"}
@@ -299,14 +268,7 @@ export const ReportingSection: React.FC<ReportingSectionProps> = ({
                                 iconProps={{ iconName: "Delete" }}
                                 title="Remove"
                                 ariaLabel="Remove"
-                                styles={{
-                                  root: {
-                                    color: "#dc2626",
-                                  },
-                                  rootDisabled: {
-                                    color: "#cbd5e1",
-                                  },
-                                }}
+                                styles={popupInputStyles.deleteButton}
                               />
                             </div>
                           )}
@@ -317,7 +279,7 @@ export const ReportingSection: React.FC<ReportingSectionProps> = ({
                   {reportItems.length === 0 && (
                     <tr>
                       <td
-                        colSpan={edit ? 9 : 8}
+                        colSpan={edit ? 6 : 5}
                         className="px-6 py-8 text-center text-[#94a3b8]"
                       >
                         No reports added.
@@ -342,8 +304,9 @@ export const ReportingSection: React.FC<ReportingSectionProps> = ({
               </table>
             </div>
           </div>
+          </Reveal>
         )}
-      </Reveal>
+      
     </div>
   );
 };

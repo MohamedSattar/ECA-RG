@@ -585,25 +585,25 @@ export default function FormApplication() {
           return;
         }
 
-        // Load files in parallel with budget details
+        // Load files (budget is loaded separately in loadBudgetDetails)
         setForm((prev) => ({
           ...prev,
           grantCycle: app[ApplicationKeys.GRANTCYCLE] || "",
           researchArea: app[ApplicationKeys.RESEARCHAREA] || "",
-          budgetHeaders: app[ApplicationKeys.BUDGETHEADERS] || null,
         }));
         const applicationNumber = app[ApplicationKeys.APPLICATIONNUMBER] || "";
         const [files] = await Promise.all([
           loadApplicationFiles(applicationNumber),
         ]);
-        // console.log(files);
-        // console.log(budget);
 
-        // Update form state with mapped data
+        // Update form state with mapped data (do not set budget here; loadBudgetDetails binds it)
         setForm((prev) => ({
           ...prev,
           ...mapApplicationToForm(app, files),
         }));
+
+        // Bind budget details for this application
+        await loadBudgetDetails(applicationId);
       } catch (error) {
         console.error("Failed to load application details:", error);
         // setDialogMessage(
@@ -778,17 +778,15 @@ export default function FormApplication() {
     checkForExistingApplication();
   }, [grantCycleId, researchAreaId, formType, user, navigate, callApi]);
 
-  // Initialize on mount
+  // Initialize on mount (loadBudgetDetails is called inside loadApplicationDetails when applicationId exists)
   useEffect(() => {
     const initialize = async () => {
       await loadTeamMemberRoles();
-      // Load application if editing or viewing
       if (applicationId) {
         await loadApplicationDetails(applicationId);
       }
     };
     initialize();
-    loadBudgetDetails(applicationId);
   }, [applicationId]);
 
   useEffect(() => {

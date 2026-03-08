@@ -9,7 +9,6 @@ import {
 import Reveal from "@/motion/Reveal";
 import { useAuth } from "@/state/auth";
 import { toast } from "@/ui/use-toast";
-import { LookupPicker } from "@/components/LookupPicker";
 import { TeamMemberSection } from "@/components/TeamMemberSection";
 import {
   WorkforceDevelopmentSection,
@@ -32,14 +31,12 @@ import { IDropdownOption } from "@fluentui/react/lib/Dropdown";
 import { DefaultButton, PrimaryButton } from "@fluentui/react/lib/Button";
 import {
   TableName,
-  ResearchAreaKeys,
   ContactKeys,
   ResearchKeys,
   ResearchTeamMemberKeys,
   TeamMemberRoles,
   ExpandRelations,
   ApplicationTeamMemberKeys,
-  ApplicationKeys,
   ApplicationTeamMemberFields,
   StatusReportFields,
   DisseminationRequestFields,
@@ -77,6 +74,7 @@ import { BudgetLineItemFields } from "@/constants/budgetLineItem";
 import { BudgetCategorys } from "@/constants/options";
 import { FileUploadSection } from "@/components/FileUploadSection";
 import { HEADING_TEXT } from "@/styles/constants";
+import { popupInputStyles } from "@/styles/popupInputStyles";
 import { ReportingSection, ReportItem } from "@/components/ReportingSection";
 import {
   // DisseminationRequestSection, // commented: dissemination not needed for now
@@ -133,6 +131,9 @@ interface FormState {
   researchActivities: ResearchActivityItem[];
   type: "new" | "edit" | "view";
   researchNumber?: string;
+  applicationTitle?: string;
+  researchAreaName?: string;
+  principalInvestigatorName?: string;
 }
 
 interface AddMemberForm {
@@ -618,23 +619,11 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
             onChange={(e, newValue) => onTitleChange(newValue || "")}
             placeholder="Enter project title"
             disabled={form.type === "view"}
-            borderless
-            styles={{
-              root: {
-                border: "1px solid #e2e8f0",
-                borderRadius: "6px",
-                backgroundColor: form.type === "view" ? "#f8fafc" : "#ffffff",
-                paddingLeft: "12px",
-                paddingRight: "12px",
-              },
-              field: {
-                fontSize: "14px",
-                color: "#1e293b",
-                "::placeholder": {
-                  color: "#94a3b8",
-                },
-              },
-            }}
+            styles={
+              form.type === "view"
+                ? popupInputStyles.textFieldDisabled
+                : popupInputStyles.textField
+            }
           />
         </div>
       </div>
@@ -645,13 +634,11 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
             value={form.startDate}
             onSelectDate={onStartDateChange}
             disabled={form.type === "view"}
-            styles={{
-              root: {
-                border: "1px solid #e2e8f0",
-                borderRadius: "6px",
-                backgroundColor: form.type === "view" ? "#f8fafc" : "#ffffff",
-              },
-            }}
+            styles={
+              form.type === "view"
+                ? popupInputStyles.datePickerDisabled
+                : popupInputStyles.datePicker
+            }
           />
         </div>
       </div>
@@ -662,13 +649,11 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
             value={form.endDate}
             onSelectDate={onEndDateChange}
             disabled={form.type === "view"}
-            styles={{
-              root: {
-                border: "1px solid #e2e8f0",
-                borderRadius: "6px",
-                backgroundColor: form.type === "view" ? "#f8fafc" : "#ffffff",
-              },
-            }}
+            styles={
+              form.type === "view"
+                ? popupInputStyles.datePickerDisabled
+                : popupInputStyles.datePicker
+            }
           />
         </div>
       </div>
@@ -684,9 +669,11 @@ export default function FormResearch() {
     ...INITIAL_FORM_STATE,
     submissionDate: formatDate(new Date()),
   }));
-  const [showGeneral, setShowGeneral] = useState(true);
-  const [showTeam, setShowTeam] = useState(true);
-  const [showBudget, setShowBudget] = useState(true);
+  const [showGeneral, setShowGeneral] = useState(false);
+  const [showTeam, setShowTeam] = useState(false);
+  const [showBudget, setShowBudget] = useState(false);
+  const [showManuscripts, setShowManuscripts] = useState(false);
+  const [showCapacity, setShowCapacity] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [showLoader, setShowLoader] = useState(false);
@@ -1167,9 +1154,13 @@ export default function FormResearch() {
     async (researchId: string) => {
       setShowLoader(true);
       try {
-        // Select only necessary fields to reduce payload
+        // Select only necessary fields to reduce payload; expand for summary display names
         const select = `${ResearchKeys.RESEARCHID},${ResearchKeys.RESEARCHTITLE},${ResearchKeys.STARTDATE},${ResearchKeys.ENDDATE},${ResearchKeys.RESEARCHAREA},${ResearchKeys.APPLICATIONREFERENCE},${ResearchKeys.PRINCIPALINVESTIGATOR},${ResearchKeys.RESEARCHNUMBER}`;
-        const expand = ExpandRelations.RESEARCH_TEAM_MEMBER;
+        const expand =
+          `${ExpandRelations.RESEARCH_TEAM_MEMBER},` +
+          `prmtk_ApplicationReference($select=prmtk_applicationtitle),` +
+          `prmtk_ResearchArea($select=prmtk_areaname),` +
+          `prmtk_PrincipalInvestigator($select=fullname)`;
         const currentUserContactId = user?.contact?.[ContactFields.CONTACTID];
 
         if (!currentUserContactId) {
@@ -1215,6 +1206,11 @@ export default function FormResearch() {
           loadManuscripts(researchId),
           loadResearchActivities(researchId),
         ]);
+        // Resolve display names from expanded entities
+        const appRef = research.prmtk_ApplicationReference;
+        const resArea = research.prmtk_ResearchArea;
+        const pi = research.prmtk_PrincipalInvestigator;
+
         // Update form state
         setForm((prev) => ({
           ...prev,
@@ -1233,6 +1229,9 @@ export default function FormResearch() {
           type: formType === "view" ? "view" : "edit",
           files: files || [],
           researchNumber: research[ResearchKeys.RESEARCHNUMBER] || null,
+          applicationTitle: appRef?.prmtk_applicationtitle ?? undefined,
+          researchAreaName: resArea?.prmtk_areaname ?? undefined,
+          principalInvestigatorName: pi?.fullname ?? undefined,
         }));
       } catch (error) {
         console.error("Failed to load research details:", error);
@@ -3670,128 +3669,83 @@ export default function FormResearch() {
     <section className="bg-white">
       <div className="container py-16">
         <Reveal>
-          <div>
+          <div className="rounded-xl border border-[#e2e8f0] bg-slate-50 p-6">
             <div className="text-xs tracking-[0.25em] text-[#475569] uppercase">
               Research
             </div>
-            <h1 className="mt-1 text-3xl md:text-4xl font-bold tracking-tight text-[#1e293b]">
+            <h1 className="mt-1 text-xl md:text-2xl font-bold tracking-tight text-[#1e293b]">
               {form.type === "new"
                 ? "New Application"
-                : `Research : ${state?.item?.[ResearchKeys.RESEARCHNUMBER] || ""}`}
+                : `Research : ${form.title || state?.item?.[ResearchKeys.RESEARCHNUMBER] || ""}`}
             </h1>
             <p className="mt-2 text-[#475569]">
               Complete the sections below and submit your proposal.
             </p>
             {form.type !== "new" && (
-              <div className="mt-3 text-sm text-[#475569]">
-                <span className="opacity-80">Submission Date:</span>
-                <span className="ml-2 font-semibold text-[#1e293b]">
-                  {form.submissionDate}
-                </span>
-              </div>
+              <>
+                <div className="mt-6 pt-6 border-t border-[#e2e8f0]" />
+                <dl className=" grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4 text-sm">
+                  <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-4">
+                    <dt className="text-[#475569] opacity-90 shrink-0 min-w-[10rem]">
+                      Submission Date
+                    </dt>
+                    <dd className="font-semibold text-[#1e293b]">
+                      {form.submissionDate}
+                    </dd>
+                  </div>
+                  <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-4">
+                    <dt className="text-[#475569] opacity-90 shrink-0 min-w-[10rem]">
+                      Application Reference
+                    </dt>
+                    <dd className="font-semibold text-[#1e293b]">
+                      {form.applicationTitle ?? "—"}
+                    </dd>
+                  </div>
+                  <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-4">
+                    <dt className="text-[#475569] opacity-90 shrink-0 min-w-[10rem]">
+                      Research Area
+                    </dt>
+                    <dd className="font-semibold text-[#1e293b]">
+                      {form.researchAreaName ?? "—"}
+                    </dd>
+                  </div>
+                  <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-4">
+                    <dt className="text-[#475569] opacity-90 shrink-0 min-w-[10rem]">
+                      Start Date
+                    </dt>
+                    <dd className="font-semibold text-[#1e293b]">
+                      {form.startDate
+                        ? form.startDate.toLocaleDateString()
+                        : "—"}
+                    </dd>
+                  </div>
+                  <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-4">
+                    <dt className="text-[#475569] opacity-90 shrink-0 min-w-[10rem]">
+                      End Date
+                    </dt>
+                    <dd className="font-semibold text-[#1e293b]">
+                      {form.endDate
+                        ? form.endDate.toLocaleDateString()
+                        : "—"}
+                    </dd>
+                  </div>
+                  <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-4">
+                    <dt className="text-[#475569] opacity-90 shrink-0 min-w-[10rem]">
+                      Principal Investigator
+                    </dt>
+                    <dd className="font-semibold text-[#1e293b]">
+                      {form.principalInvestigatorName ?? "—"}
+                    </dd>
+                  </div>
+                </dl>
+              </>
             )}
           </div>
         </Reveal>
 
-        {/* Application Reference and Research Area Section */}
-        <div className="mt-8 grid gap-6 md:grid-cols-2">
-          <div>
-            <Label>Application Reference</Label>
-            <div className="mt-1">
-              <LookupPicker
-                key={`application-${form.application || "none"}`}
-                displayField={ApplicationKeys.APPLICATIONTITLE}
-                keyField={ApplicationKeys.APPLICATIONID}
-                secondaryField={ApplicationKeys.ABSTRACT}
-                searchField={ApplicationKeys.APPLICATIONTITLE}
-                tableName={TableName.APPLICATIONS}
-                maxSelection={1}
-                label="Application"
-                cascadeField={ApplicationKeys.APPLICATIONID}
-                cascadeValue={applicationId}
-                isDefaultSelected={applicationId != null}
-                disabled={form.type === "view"}
-                onSelect={(values) => {
-                  setForm((prev) => ({
-                    ...prev,
-                    application:
-                      values && values.length > 0
-                        ? values[0][ApplicationKeys.APPLICATIONID]
-                        : null,
-                  }));
-                }}
-              />
-            </div>
-          </div>
-          <div>
-            <Label>Research Area</Label>
-            <div className="mt-1">
-              <LookupPicker
-                key={`research-area-${form.researchArea || "none"}`}
-                displayField={ResearchAreaKeys.AREANAME}
-                keyField={ResearchAreaKeys.RESEARCHAREAID}
-                secondaryField={ResearchAreaKeys.AREADESCRIPTION}
-                searchField={ResearchAreaKeys.AREANAME}
-                tableName={TableName.RESEARCHAREAS}
-                maxSelection={1}
-                label="Research Area"
-                cascadeField={ResearchAreaKeys.RESEARCHAREAID}
-                cascadeValue={form.researchArea || undefined}
-                isDefaultSelected={form.researchArea != null}
-                disabled={form.type === "view"}
-                onSelect={(values) => {
-                  setForm((prev) => ({
-                    ...prev,
-                    researchArea:
-                      values && values.length > 0
-                        ? values[0][ResearchAreaKeys.RESEARCHAREAID]
-                        : null,
-                  }));
-                }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* General Information Section */}
-        <div className="mt-8 rounded-xl border border-[#e2e8f0] bg-white p-6">
-          <div className="flex items-center justify-between">
-            <h2 className={HEADING_TEXT}>General information</h2>
-            <IconButton
-              iconProps={{
-                iconName: showGeneral ? "ChevronUp" : "ChevronDown",
-              }}
-              onClick={() => setShowGeneral((prev) => !prev)}
-              ariaLabel="Toggle general information"
-            />
-          </div>
-          {showGeneral && (
-            <GeneralInformationSection
-              key={`${user?.adxUserId}`}
-              form={form}
-              onTitleChange={(value) =>
-                setForm((prev) => ({ ...prev, title: value }))
-              }
-              onPrincipalInvestigatorChange={(contactId) =>
-                setForm((prev) => ({
-                  ...prev,
-                  principalInvestigator: contactId,
-                }))
-              }
-              onStartDateChange={(date) =>
-                setForm((prev) => ({ ...prev, startDate: date }))
-              }
-              onEndDateChange={(date) =>
-                setForm((prev) => ({ ...prev, endDate: date }))
-              }
-              userAdxUserId={user?.adxUserId}
-            />
-          )}
-        </div>
-
         {/* Budget Details Section */}
         <div className="mt-8 rounded-xl border border-[#e2e8f0] bg-white p-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between min-h-[52px]">
             <div className="flex items-center gap-3">
               <h2 className={HEADING_TEXT}>Budget Management</h2>
               {form.budgetHeaders && form.budgetVersions.length > 0 && (
@@ -3843,59 +3797,74 @@ export default function FormResearch() {
                 </Badge>
               )}
             </div>
-            <div className="flex items-center gap-4">
-              {form.budgetVersions.length > 0 && (
-                <Dropdown
-                  label=""
-                  options={form.budgetVersions.map((v) => ({
-                    key: v.id,
-                    text: `Version ${v.version} - ${
-                      v.status === 101
-                        ? "Draft"
-                        : v.status === 102
-                          ? "Submitted"
-                          : v.status === 103
-                            ? "Approved"
-                            : "Unknown"
-                    }${v.isActive ? " (Active)" : ""}`,
-                  }))}
-                  selectedKey={form.selectedBudgetVersion}
-                  onChange={handleBudgetVersionChange}
-                  styles={{ root: { minWidth: 250 } }}
-                />
-              )}
-              <PrimaryButton
-                text="Update Budget"
-                onClick={handleUpdateBudgetClick}
-                iconProps={{ iconName: "Copy" }}
-                disabled={
-                  !form.budgetHeaders ||
-                  !form.budgetVersions.find(
-                    (v) => v.id === form.selectedBudgetVersion,
-                  )?.isActive ||
-                  form.budgetVersions.some(
-                    (v) =>
-                      v.version >
-                      (form.budgetVersions.find(
-                        (ver) => ver.id === form.selectedBudgetVersion,
-                      )?.version || 0),
-                  )
-                }
-              />
-              <DefaultButton
-                text="Submit Budget"
-                onClick={handleEditBudgetClick}
-                iconProps={{ iconName: "Send" }}
-                disabled={
-                  !form.budgetHeaders ||
-                  form.budgetVersions.find(
-                    (v) => v.id === form.selectedBudgetVersion,
-                  )?.status !== 101
-                }
-              />
-            </div>
+            <IconButton
+              iconProps={{
+                iconName: showBudget ? "ChevronUp" : "ChevronDown",
+              }}
+              onClick={() => setShowBudget((prev) => !prev)}
+              ariaLabel="Toggle budget section"
+            />
           </div>
-          <BudgetSection
+          {showBudget && (
+            <>
+              <div className="flex items-center justify-between gap-4 mt-4 mb-4">
+                {form.budgetVersions.length > 0 ? (
+                  <Dropdown
+                    label=""
+                    options={form.budgetVersions.map((v) => ({
+                      key: v.id,
+                      text: `Version ${v.version} - ${
+                        v.status === 101
+                          ? "Draft"
+                          : v.status === 102
+                            ? "Submitted"
+                            : v.status === 103
+                              ? "Approved"
+                              : "Unknown"
+                      }${v.isActive ? " (Active)" : ""}`,
+                    }))}
+                    selectedKey={form.selectedBudgetVersion}
+                    onChange={handleBudgetVersionChange}
+                    styles={{ root: { minWidth: 250 } }}
+                  />
+                ) : (
+                  <span />
+                )}
+                <div className="flex items-center gap-4">
+                  <PrimaryButton
+                  text="Update Budget"
+                  onClick={handleUpdateBudgetClick}
+                  iconProps={{ iconName: "Copy" }}
+                  styles={popupInputStyles.researchPrimaryButton}
+                  disabled={
+                    !form.budgetHeaders ||
+                    !form.budgetVersions.find(
+                      (v) => v.id === form.selectedBudgetVersion,
+                    )?.isActive ||
+                    form.budgetVersions.some(
+                      (v) =>
+                        v.version >
+                        (form.budgetVersions.find(
+                          (ver) => ver.id === form.selectedBudgetVersion,
+                        )?.version || 0),
+                    )
+                  }
+                />
+                <DefaultButton
+                  text="Submit Budget"
+                  onClick={handleEditBudgetClick}
+                  iconProps={{ iconName: "Send" }}
+                  styles={popupInputStyles.researchPrimaryButton}
+                  disabled={
+                    !form.budgetHeaders ||
+                    form.budgetVersions.find(
+                      (v) => v.id === form.selectedBudgetVersion,
+                    )?.status !== 101
+                  }
+                />
+                </div>
+              </div>
+              <BudgetSection
             key={`${form.budgetLineItems}`}
             budgetHeader={form.budgetHeaders}
             budgetLineItem={form.budgetLineItems}
@@ -3987,6 +3956,8 @@ export default function FormResearch() {
             }}
             form={form}
           />
+            </>
+          )}
         </div>
 
         {/* Report Section */}
@@ -4080,30 +4051,52 @@ export default function FormResearch() {
 
         {/* Manuscripts Drafts and Journal Publications Section */}
         <div className="mt-6 rounded-xl border border-[#e2e8f0] bg-white p-6">
-          <h2 className={HEADING_TEXT}>
-            Manuscripts Drafts and Journal Publications
-          </h2>
-          <ManuscriptsSection
-            items={form.manuscripts}
-            onAdd={handleAddManuscript}
-            onRemove={handleRemoveManuscript}
-            onEdit={handleEditManuscript}
-            form={form}
-          />
+          <div className="flex items-center justify-between">
+            <h2 className={HEADING_TEXT}>
+              Manuscripts Drafts and Journal Publications
+            </h2>
+            <IconButton
+              iconProps={{
+                iconName: showManuscripts ? "ChevronUp" : "ChevronDown",
+              }}
+              onClick={() => setShowManuscripts((prev) => !prev)}
+              ariaLabel="Toggle manuscripts section"
+            />
+          </div>
+          {showManuscripts && (
+            <ManuscriptsSection
+              items={form.manuscripts}
+              onAdd={handleAddManuscript}
+              onRemove={handleRemoveManuscript}
+              onEdit={handleEditManuscript}
+              form={form}
+            />
+          )}
         </div>
 
         {/* Capacity Building Workshops, Training, and Engagement Activities */}
         <div className="mt-6 rounded-xl border border-[#e2e8f0] bg-white p-6">
-          <h2 className={HEADING_TEXT}>
-            Capacity Building Workshops, Training, and Engagement Activities
-          </h2>
-          <CapacityBuildingSection
-            items={form.researchActivities}
-            onAdd={handleAddResearchActivity}
-            onRemove={handleRemoveResearchActivity}
-            onEdit={handleEditResearchActivity}
-            form={form}
-          />
+          <div className="flex items-center justify-between">
+            <h2 className={HEADING_TEXT}>
+              Capacity Building Workshops, Training, and Engagement Activities
+            </h2>
+            <IconButton
+              iconProps={{
+                iconName: showCapacity ? "ChevronUp" : "ChevronDown",
+              }}
+              onClick={() => setShowCapacity((prev) => !prev)}
+              ariaLabel="Toggle capacity building section"
+            />
+          </div>
+          {showCapacity && (
+            <CapacityBuildingSection
+              items={form.researchActivities}
+              onAdd={handleAddResearchActivity}
+              onRemove={handleRemoveResearchActivity}
+              onEdit={handleEditResearchActivity}
+              form={form}
+            />
+          )}
         </div>
 
         {/* File Upload Section */}
@@ -4120,23 +4113,7 @@ export default function FormResearch() {
             <PrimaryButton
               onClick={submit}
               disabled={!canSubmit}
-              styles={{
-                root: {
-                  backgroundColor: "#1D2054",
-                  borderColor: "#1D2054",
-                  height: "44px",
-                  fontSize: "16px",
-                  fontWeight: "600",
-                },
-                rootHovered: {
-                  backgroundColor: "#151b41",
-                  borderColor: "#151b41",
-                },
-                rootDisabled: {
-                  backgroundColor: "#cbd5e1",
-                  borderColor: "#cbd5e1",
-                },
-              }}
+              styles={popupInputStyles.researchPrimaryButton}
             >
               {form.type === "edit" ? "Update Research" : "Submit Research"}
             </PrimaryButton>

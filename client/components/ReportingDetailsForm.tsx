@@ -9,6 +9,7 @@ import { Icon } from "@fluentui/react/lib/Icon";
 import { getFileKey } from "@/services/utility";
 import type { AddReportForm, ReportItem } from "@/components/ReportingSection";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/tooltip";
+import { popupInputStyles } from "@/styles/popupInputStyles";
 
 const getTodayDate = (): string => {
   const today = new Date();
@@ -905,6 +906,7 @@ export const ReportingDetailsForm: React.FC<ReportingDetailsFormProps> = ({
                             }
                             title="Remove file"
                             ariaLabel="Remove file"
+                            styles={popupInputStyles.deleteButton}
                           />
                         </div>
                       </div>
@@ -919,11 +921,13 @@ export const ReportingDetailsForm: React.FC<ReportingDetailsFormProps> = ({
           onClick={onSubmit}
           text={isEdit ? "Update" : "Add"}
           disabled={isUploading}
+          styles={popupInputStyles.researchPrimaryButton}
         />
         <DefaultButton
           onClick={onCancel}
           text="Cancel"
           disabled={isUploading}
+          styles={popupInputStyles.researchSecondaryButton}
         />
       </div>
     </div>
