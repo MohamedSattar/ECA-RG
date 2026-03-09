@@ -19,7 +19,7 @@
 
 // Entity Fields
 export { GrantCycleFields } from './grantCycle';
-export { ApplicationFields } from './application';
+export { ApplicationFields, APPLICATION_STATUS_LABELS } from './application';
 export {
   ResearchAreaFields,
   ContactFields,

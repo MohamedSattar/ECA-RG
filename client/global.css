@@ -247,7 +247,15 @@ html[dir="ltr"] body {
   }
 }
 
-/* Form Field Styling - Unified */
+/* Form controls – warm palette (align with popupInputStyles / flunetUITheme) */
+:root {
+  --form-border: #f3d1bf;
+  --form-border-focus: #e78f6a;
+  --form-bg: #fff8f3;
+  --form-bg-disabled: #f5f0eb;
+  --form-radius: 6px;
+}
+
 .ms-TextField {
   width: 100%;
 }
@@ -256,68 +264,104 @@ html[dir="ltr"] body {
   width: 100%;
 }
 
-.ms-TextField-field {
-  border: 1px solid #e2e8f0 !important;
-  border-radius: 0.5rem !important;
-  padding: 0.75rem 0.75rem !important;
-  font-size: 14px;
-  transition: all 0.2s ease;
+/* Single border only – remove Fluent’s ::after to avoid double border */
+.ms-TextField-fieldGroup::after,
+.ms-Dropdown .ms-Dropdown-title::after,
+.ms-DatePicker .ms-TextField-fieldGroup::after {
+  border: none !important;
+  box-shadow: none !important;
 }
 
-.ms-TextField-field:focus {
-  border-color: #1d2054 !important;
-  box-shadow: 0 0 0 3px rgba(29, 32, 84, 0.1) !important;
+.ms-TextField-fieldGroup {
+  border: 1px solid var(--form-border) !important;
+  border-radius: var(--form-radius) !important;
+  background: var(--form-bg) !important;
+  min-height: 36px;
+  box-shadow: none !important;
+  outline: none !important;
+  transition: border-color 0.15s ease;
+}
+
+.ms-TextField-fieldGroup:hover {
+  border-color: var(--form-border-focus) !important;
+}
+
+.ms-TextField-fieldGroup:focus-within {
+  border-color: var(--form-border-focus) !important;
+  box-shadow: none !important;
+}
+
+.ms-TextField-field {
+  background: transparent !important;
+  border: none !important;
+  border-radius: var(--form-radius) !important;
+  padding: 0 12px !important;
+  font-size: 14px !important;
+  min-height: 34px;
+  line-height: 36px;
 }
 
 .ms-TextField-field:disabled {
-  background-color: #f8fafc !important;
+  background: transparent !important;
   color: #94a3b8 !important;
-  border-color: #e2e8f0 !important;
 }
 
-/* TextArea specific styling */
+.ms-TextField-fieldGroup:has(.ms-TextField-field:disabled) {
+  background: var(--form-bg-disabled) !important;
+  border-color: var(--form-border) !important;
+}
+
+/* All textareas – min-height 100px */
 .ms-TextField-field[data-is-multiline="true"] {
-  padding: 0.75rem !important;
-  min-height: 100px;
+  padding: 0.75rem 12px !important;
+  min-height: 100px !important;
   resize: vertical;
   font-family: inherit;
 }
 
-/* Label styling */
 .ms-Label {
-  font-weight: 500 !important;
+  font-weight: 600 !important;
   color: #1e293b !important;
-  margin-bottom: 0.5rem !important;
-  font-size: 14px;
+  margin-bottom: 0.25rem !important;
+  font-size: 14px !important;
 }
 
-/* LookupPicker / TagPicker styling */
+/* TagPicker / LookupPicker */
 .ms-BasePicker {
   width: 100%;
 }
 
 .ms-BasePicker-text {
-  border: 1px solid #e2e8f0 !important;
-  border-radius: 0.5rem !important;
-  min-height: 38px;
-  padding: 0.5rem !important;
-  transition: all 0.2s ease;
+  border: 1px solid var(--form-border) !important;
+  border-radius: var(--form-radius) !important;
+  min-height: 36px !important;
+  padding: 0 12px !important;
+  background: var(--form-bg) !important;
+  box-shadow: none !important;
+  outline: none !important;
+  transition: border-color 0.15s ease;
+}
+
+.ms-BasePicker-text:hover {
+  border-color: var(--form-border-focus) !important;
 }
 
 .ms-BasePicker-text:focus-within {
-  border-color: #1d2054 !important;
-  box-shadow: 0 0 0 3px rgba(29, 32, 84, 0.1) !important;
+  border-color: var(--form-border-focus) !important;
+  box-shadow: none !important;
 }
 
-.ms-BasePicker-text.is-disabled {
-  background-color: #f8fafc !important;
-  border-color: #e2e8f0 !important;
+.ms-BasePicker-text.is-disabled,
+.ms-BasePicker[aria-disabled="true"] .ms-BasePicker-text {
+  background: var(--form-bg) !important;
+  border-color: var(--form-border) !important;
+  cursor: default !important;
 }
 
 .ms-BasePicker-tag {
-  background-color: #f0f4f8 !important;
-  border: 1px solid #cbd5e1 !important;
-  border-radius: 0.375rem !important;
+  background: #fbece6 !important;
+  border: 1px solid var(--form-border) !important;
+  border-radius: 4px !important;
   padding: 0.25rem 0.5rem !important;
   color: #1e293b !important;
 }
@@ -330,104 +374,127 @@ html[dir="ltr"] body {
   color: #1e293b !important;
 }
 
-/* TagPicker suggestions dropdown */
+/* Disabled Application Reference / Research Area – remove bad backgrounds from tag value and X button */
+.ms-BasePicker[aria-disabled="true"] .root-182,
+.ms-BasePicker[aria-disabled="true"] .close-185,
+.ms-BasePicker-text.is-disabled .root-182,
+.ms-BasePicker-text.is-disabled .close-185 {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
 .ms-Suggestions {
-  border: 1px solid #e2e8f0 !important;
+  border: 1px solid var(--form-border) !important;
   border-top: none;
-  border-radius: 0 0 0.5rem 0.5rem !important;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+  border-radius: 0 0 var(--form-radius) var(--form-radius) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
 }
 
 .ms-Suggestions-item {
-  padding: 0.75rem !important;
+  padding: 6px 12px !important;
+  min-height: 32px;
+  line-height: 20px;
+  font-size: 14px;
   transition: background-color 0.15s ease;
 }
 
 .ms-Suggestions-item:hover {
-  background-color: #f0f4f8 !important;
+  background: #fefaf9 !important;
 }
 
 .ms-Suggestions-item.is-selected {
-  background-color: #e0e7ff !important;
-  color: #1d2054 !important;
+  background: #fbece6 !important;
+  color: #1e293b !important;
 }
 
-/* DatePicker styling */
+/* DatePicker – border only on root, inner TextField has no border */
 .ms-DatePicker {
   width: 100%;
 }
 
+.ms-DatePicker .ms-TextField-fieldGroup {
+  border: none !important;
+  border-radius: var(--form-radius) !important;
+  background: transparent !important;
+  min-height: 34px;
+  box-shadow: none !important;
+}
+
+.ms-DatePicker .ms-TextField-fieldGroup:hover,
+.ms-DatePicker .ms-TextField-fieldGroup:focus-within {
+  border: none !important;
+  box-shadow: none !important;
+}
+
 .ms-DatePicker-input {
-  border: 1px solid #e2e8f0 !important;
-  border-radius: 0.5rem !important;
-  padding: 0.75rem !important;
-  font-size: 14px;
-  transition: all 0.2s ease;
-  background-color: #ffffff !important;
+  border: none !important;
+  background: transparent !important;
+  padding: 0 10px !important;
+  font-size: 14px !important;
 }
 
-.ms-DatePicker-input:focus {
-  border-color: #1d2054 !important;
-  box-shadow: 0 0 0 3px rgba(29, 32, 84, 0.1) !important;
-}
-
-.ms-DatePicker-input:disabled {
-  background-color: #f8fafc !important;
-  color: #94a3b8 !important;
-  border-color: #e2e8f0 !important;
-}
-
-/* Dropdown styling */
+/* Dropdown – border only on title, not on root/container */
 .ms-Dropdown {
   width: 100%;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .ms-Dropdown-caretDownWrapper {
   right: 8px;
+  color: var(--form-border-focus);
 }
 
 .ms-Dropdown-title {
-  border: 1px solid #e2e8f0 !important;
-  border-radius: 0.5rem !important;
-  padding: 0.75rem !important;
-  min-height: 38px;
-  transition: all 0.2s ease;
-  background-color: #ffffff !important;
+  border: 1px solid var(--form-border) !important;
+  border-radius: var(--form-radius) !important;
+  padding: 0 12px !important;
+  min-height: 36px !important;
+  line-height: 34px !important;
+  background: var(--form-bg) !important;
   color: #1e293b !important;
+  font-size: 14px !important;
+  box-shadow: none !important;
+  outline: none !important;
+  transition: border-color 0.15s ease;
 }
 
 .ms-Dropdown-title:hover:not(.is-disabled) {
-  border-color: #cbd5e1 !important;
+  border-color: var(--form-border-focus) !important;
 }
 
 .ms-Dropdown-title.is-open {
-  border-color: #1d2054 !important;
-  box-shadow: 0 0 0 3px rgba(29, 32, 84, 0.1) !important;
+  border-color: var(--form-border-focus) !important;
+  box-shadow: none !important;
 }
 
 .ms-Dropdown-title.is-disabled {
-  background-color: #f8fafc !important;
+  background: var(--form-bg-disabled) !important;
   color: #94a3b8 !important;
-  border-color: #e2e8f0 !important;
+  border-color: var(--form-border) !important;
 }
 
 .ms-Dropdown-callout {
-  border: 1px solid #e2e8f0 !important;
-  border-radius: 0.5rem !important;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+  border: 1px solid var(--form-border) !important;
+  border-radius: var(--form-radius) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
 }
 
 .ms-Dropdown-item,
 .ms-Dropdown-divider {
-  padding: 0.75rem !important;
+  padding: 6px 12px !important;
+  min-height: 32px;
+  line-height: 20px !important;
+  font-size: 14px !important;
   color: #1e293b !important;
 }
 
 .ms-Dropdown-item:hover {
-  background-color: #f0f4f8 !important;
+  background: #fefaf9 !important;
 }
 
 .ms-Dropdown-item.is-selected {
-  background-color: #e0e7ff !important;
-  color: #1d2054 !important;
+  background: #fbece6 !important;
+  color: #1e293b !important;
 }
+

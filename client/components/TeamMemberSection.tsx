@@ -12,6 +12,7 @@ import { Label } from "@fluentui/react/lib/Label";
 import { Dropdown, IDropdownOption } from "@fluentui/react/lib/Dropdown";
 import { TextField } from "@fluentui/react/lib/TextField";
 import { IconButton } from "@fluentui/react/lib/Button";
+import { popupInputStyles } from "@/styles/popupInputStyles";
 
 interface TeamMember {
   id: string;
@@ -116,7 +117,10 @@ export const TeamMemberSection: React.FC<TeamMemberSectionProps> = ({
       <>
         {form.type !== "view" && (
           <div className="flex items-center justify-end">
-            <PrimaryButton onClick={() => setIsDialogOpen(true)}>
+            <PrimaryButton
+              onClick={() => setIsDialogOpen(true)}
+              styles={popupInputStyles.researchPrimaryButton}
+            >
               Add member
             </PrimaryButton>
           </div>
@@ -195,8 +199,13 @@ export const TeamMemberSection: React.FC<TeamMemberSectionProps> = ({
             <PrimaryButton
               onClick={handleAddMember}
               text={editingMemberId ? "Update" : "Add"}
+              styles={popupInputStyles.researchPrimaryButton}
             />
-            <DefaultButton onClick={handleDialogDismiss} text="Cancel" />
+            <DefaultButton
+              onClick={handleDialogDismiss}
+              text="Cancel"
+              styles={popupInputStyles.researchSecondaryButton}
+            />
           </FluentDialogFooter>
         </FluentDialog>
       </>
@@ -241,26 +250,22 @@ export const TeamMemberSection: React.FC<TeamMemberSectionProps> = ({
                   {m.action === "remove" ? (
                     <span className="text-[#94a3b8]">Removed</span>
                   ) : form.type !== "view" ? (
-                    <>
+                    <div className="flex gap-2 justify-end">
                       <IconButton
                         onClick={() => handleEditClick(m)}
                         iconProps={{ iconName: "Edit" }}
                         title="Edit"
                         ariaLabel="Edit"
-                        styles={{
-                          root: { color: "#1D2054" },
-                        }}
+                        styles={popupInputStyles.editButton}
                       />
                       <IconButton
                         onClick={() => onRemoveMember(m.id)}
                         iconProps={{ iconName: "Delete" }}
                         title="Remove"
                         ariaLabel="Remove"
-                        styles={{
-                          root: { color: "#dc2626" },
-                        }}
+                        styles={popupInputStyles.deleteButton}
                       />
-                    </>
+                    </div>
                   ) : null}
                 </td>
               </tr>

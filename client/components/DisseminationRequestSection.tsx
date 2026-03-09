@@ -14,6 +14,7 @@ import { IconButton } from "@fluentui/react/lib/Button";
 import { Icon } from "@fluentui/react/lib/Icon";
 import { aedFormat, getFileKey } from "@/services/utility";
 import { HEADING_TEXT } from "@/styles/constants";
+import { popupInputStyles } from "@/styles/popupInputStyles";
 
 export interface DisseminationRequest {
   id?: string;
@@ -330,6 +331,7 @@ export const DisseminationRequestSection: React.FC<
                     setIsDialogOpen(true);
                   }}
                   disabled={form.type === "view"}
+                  styles={popupInputStyles.researchPrimaryButton}
                 >
                   Add Request
                 </PrimaryButton>
@@ -529,6 +531,7 @@ export const DisseminationRequestSection: React.FC<
                   onClick={handleAddRequest}
                   text={editingRequestId ? "Update" : "Add"}
                   disabled={isUploading}
+                  styles={popupInputStyles.researchPrimaryButton}
                 />
                 <DefaultButton
                   onClick={() => {
@@ -538,6 +541,7 @@ export const DisseminationRequestSection: React.FC<
                   }}
                   text="Cancel"
                   disabled={isUploading}
+                  styles={popupInputStyles.researchSecondaryButton}
                 />
               </FluentDialogFooter>
             </FluentDialog>
