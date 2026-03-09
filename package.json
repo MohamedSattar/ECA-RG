@@ -10,6 +10,9 @@
       "dist/server/**/*.js"
     ]
   },
+  "engines": {
+    "node": ">=18.17.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "npm run build:client && npm run build:server",
@@ -24,7 +27,7 @@
     "@azure/msal-browser": "^4.26.2",
     "@azure/msal-react": "^3.0.22",
     "@fluentui/react": "^8.125.2",
-    "dotenv": "^17.2.1",
+    "dotenv": "^17.3.1",
     "express": "^5.1.0",
     "i18next": "^25.8.0",
     "i18next-browser-languagedetector": "^8.2.0",

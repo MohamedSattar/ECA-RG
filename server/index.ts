@@ -318,10 +318,6 @@ export function createServer() {
   // Dataverse API proxy - forward all /_api and /_layout requests
   app.all(/^\/((_api|_layout)\/)/, handleDataverseProxy);
 
-  // Fallback for unmatched routes
-  app.use((_req, res) => {
-    res.status(404).json({ error: "Not found" });
-  });
 
   return app;
 }
