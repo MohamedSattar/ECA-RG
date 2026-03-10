@@ -66,13 +66,13 @@ export const FileUploadSectionResearch: React.FC<
   return (
     <div className="mt-8 rounded-xl border bg-white p-6">
       <div className="flex items-center justify-between min-h-[52px]">
-        <h2 className={HEADING_TEXT}>Files</h2>
+        <h2 className={HEADING_TEXT}>Extra Attachments</h2>
         <IconButton
           iconProps={{
             iconName: showSection ? "ChevronUp" : "ChevronDown",
           }}
           onClick={() => setShowSection((prev) => !prev)}
-          ariaLabel="Toggle files section"
+          ariaLabel="Toggle extra attachments"
         />
       </div>
       {showSection && (

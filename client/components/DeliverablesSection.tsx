@@ -324,7 +324,7 @@ export const DeliverablesSection: React.FC<DeliverablesSectionProps> = ({
   return (
     <div className="mt-8 rounded-xl border bg-white p-6">
       <div className="flex items-center justify-between min-h-[52px]">
-        <h2 className={HEADING_TEXT}>Deliverables</h2>
+        <h2 className={HEADING_TEXT}>Final Deliverables</h2>
         <IconButton
           iconProps={{
             iconName: showSection ? "ChevronUp" : "ChevronDown",

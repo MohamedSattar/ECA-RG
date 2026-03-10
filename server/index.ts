@@ -2,17 +2,28 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { handleDemo } from "./routes/demo";
+import {
+  getBudgetHeadersByApplication,
+  getBudgetHeader,
+  createBudgetHeader as createBudgetHeaderRoute,
+  getBudgetLineItems,
+  createBudgetLineItem,
+  updateBudgetLineItem,
+  deleteBudgetLineItem,
+} from "./routes/budget";
 
 // Server-side client credentials configuration (set these in your env)
 const AZURE_TENANT_ID = process.env.AZURE_TENANT_ID;
 const AZURE_CLIENT_ID = process.env.AZURE_CLIENT_ID;
 const AZURE_CLIENT_SECRET = process.env.AZURE_CLIENT_SECRET;
+const AZURE_LOGIN_BASE_URL =
+  process.env.AZURE_LOGIN_BASE_URL || "https://login.microsoftonline.com";
 // Example: https://yourorg.crm.dynamics.com/.default or the resource scope for Power Pages/Dataverse
 const DATAVERSE_RESOURCE = process.env.DATAVERSE_RESOURCE;
 // DATAVERSE_BASE_URL: prefer explicit env var, otherwise derive from DATAVERSE_RESOURCE by stripping '/.default'
 const DATAVERSE_BASE_URL =
   process.env.DATAVERSE_BASE_URL ||
-  (DATAVERSE_RESOURCE ? DATAVERSE_RESOURCE.replace(/\/\.default\/?$/, "") : "https://researchgrants-dev.powerappsportals.com");
+  (DATAVERSE_RESOURCE ? DATAVERSE_RESOURCE.replace(/\/\.default\/?$/, "") : "https://ecacrmdev.crm15.dynamics.com");
 // If true, forward the client's Authorization header instead of using server token
 const FORCE_FORWARD_CLIENT_AUTH = process.env.FORWARD_CLIENT_AUTH === "true";
 
@@ -30,7 +41,7 @@ async function acquireServerToken() {
       return null;
     }
 
-    const tokenUrl = `https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/token`;
+    const tokenUrl = `${AZURE_LOGIN_BASE_URL}/${AZURE_TENANT_ID}/oauth2/v2.0/token`;
     const params = new URLSearchParams();
     params.append("client_id", AZURE_CLIENT_ID);
     params.append("client_secret", AZURE_CLIENT_SECRET);
@@ -223,6 +234,15 @@ export function createServer() {
   });
 
   app.get("/api/demo", handleDemo);
+
+  // Budget API (server-side Dataverse calls)
+  app.get("/api/budget/headers", getBudgetHeadersByApplication);
+  app.get("/api/budget/headers/:id", getBudgetHeader);
+  app.post("/api/budget/headers", createBudgetHeaderRoute);
+  app.get("/api/budget/line-items", getBudgetLineItems);
+  app.post("/api/budget/line-items", createBudgetLineItem);
+  app.patch("/api/budget/line-items/:id", updateBudgetLineItem);
+  app.delete("/api/budget/line-items/:id", deleteBudgetLineItem);
 
   // Token endpoint - fetch verification token from Dataverse/Power Pages
   app.get("/api/verification-token", async (_req, res) => {

@@ -9,7 +9,6 @@ import {
 import Reveal from "@/motion/Reveal";
 import { useAuth } from "@/state/auth";
 import { toast } from "@/ui/use-toast";
-import { TeamMemberSection } from "@/components/TeamMemberSection";
 import {
   WorkforceDevelopmentSection,
   WorkforceDevelopmentItem,
@@ -26,6 +25,7 @@ import { useDataverseApi } from "@/hooks/useDataverseApi";
 import { TextField } from "@fluentui/react/lib/TextField";
 import { DatePicker } from "@fluentui/react/lib/DatePicker";
 import { IconButton } from "@fluentui/react/lib/Button";
+import { Icon } from "@fluentui/react/lib/Icon";
 import { Label } from "@fluentui/react/lib/Label";
 import { IDropdownOption } from "@fluentui/react/lib/Dropdown";
 import { DefaultButton, PrimaryButton } from "@fluentui/react/lib/Button";
@@ -183,46 +183,6 @@ function formatDate(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
-
-// Helper function to process team members
-const processTeamMembers = async (
-  team: TeamMember[],
-  researchId: string,
-  callApi: (options: any) => Promise<any>,
-): Promise<void> => {
-  const upsertPromises = team
-    .filter((member) => member.action !== "remove")
-    .map(async (member) => {
-      const method = member.action === "existing" ? "PATCH" : "POST";
-      const url =
-        member.action === "existing"
-          ? `/_api/${TableName.RESEARCHTEAMMEMBER}(${member.id})`
-          : `/_api/${TableName.RESEARCHTEAMMEMBER}`;
-
-      const data: Record<string, any> = {
-        [ResearchTeamMemberKeys.TEAMMEMBERNAME]: member.name,
-        [ResearchTeamMemberKeys.ROLE]: member.role,
-      };
-
-      if (member.action === "new") {
-        data[ResearchTeamMemberKeys.RESEARCH_ID] =
-          `/${TableName.RESEARCHES}(${researchId})`;
-      }
-
-      return callApi({ url, method, data });
-    });
-
-  const removePromises = team
-    .filter((member) => member.action === "remove" && member.id !== researchId)
-    .map(async (member) =>
-      callApi({
-        url: `/_api/${TableName.RESEARCHTEAMMEMBER}(${member.id})`,
-        method: "DELETE",
-      }),
-    );
-
-  await Promise.all([...upsertPromises, ...removePromises]);
-};
 
 /** Format date string (YYYY-MM-DD) to Dataverse ISO date-time (YYYY-MM-DDTHH:mm:ss.000Z). */
 const toDataverseDate = (dateStr: string | undefined): string | null => {
@@ -669,7 +629,6 @@ export default function FormResearch() {
     ...INITIAL_FORM_STATE,
     submissionDate: formatDate(new Date()),
   }));
-  const [showGeneral, setShowGeneral] = useState(false);
   const [showTeam, setShowTeam] = useState(false);
   const [showBudget, setShowBudget] = useState(false);
   const [showManuscripts, setShowManuscripts] = useState(false);
@@ -1550,125 +1509,6 @@ export default function FormResearch() {
   ]);
 
   const canSubmit = useMemo(() => form.title.trim().length > 0, [form.title]);
-
-  const handleAddMember = useCallback(
-    async (member: AddMemberForm) => {
-      const newMember: TeamMember = {
-        id: crypto.randomUUID(),
-        name: member.name,
-        role: member.role,
-        customRoleName: member.customRoleName,
-        educationLevel: member.educationLevel,
-        action: "new",
-      } as any;
-      if (formType !== "new") {
-        setShowLoader(true);
-        try {
-          const memberData: Record<string, any> = {
-            [ResearchTeamMemberKeys.TEAMMEMBERNAME]: newMember.name,
-            [ResearchTeamMemberKeys.ROLE]: newMember.role,
-            [ResearchTeamMemberKeys.RESEARCH_ID]: `/${TableName.RESEARCHES}(${researchAreaId})`,
-          };
-          if (member.customRoleName) {
-            memberData[ApplicationTeamMemberFields.CUSTOMROLE] =
-              member.customRoleName;
-          }
-          if (member.educationLevel) {
-            memberData[ResearchTeamMemberKeys.EDUCATIONLEVEL] =
-              member.educationLevel;
-          }
-          await callApi({
-            url: `/_api/${TableName.RESEARCHTEAMMEMBER}`,
-            method: "POST",
-            data: memberData,
-          });
-
-          // Refetch team members to get the correct IDs from the database
-          await loadTeamMembers(researchAreaId);
-        } catch (error) {
-          toast({
-            title: "Error",
-            description: "Failed to add team member.",
-          });
-        } finally {
-          setShowLoader(false);
-        }
-      } else {
-        // For new forms, add to state immediately
-        setForm((prev) => ({ ...prev, team: [...prev.team, newMember] }));
-      }
-    },
-    [formType, researchAreaId, callApi, loadTeamMembers],
-  );
-
-  const handleRemoveMember = useCallback(async (id: string) => {
-    if (formType !== "new") {
-      const itemToRemove = form.budgetLineItems.find((li) => li.id === id);
-      setShowLoader(true);
-      const api = await callApi({
-        url: `/_api/${TableName.RESEARCHTEAMMEMBER}(${id})`,
-        method: "DELETE",
-      });
-      setShowLoader(false);
-    }
-    setForm((prev) => ({
-      ...prev,
-      team: prev.team.filter((m) => m.id !== id),
-    }));
-  }, []);
-
-  const handleEditMember = useCallback(
-    async (id: string, member: AddMemberForm) => {
-      if (formType !== "new") {
-        setShowLoader(true);
-        const memberData: Record<string, any> = {
-          [ResearchTeamMemberKeys.TEAMMEMBERNAME]: member.name,
-          [ResearchTeamMemberKeys.ROLE]: member.role,
-          [ResearchTeamMemberKeys.RESEARCH_ID]: `/${TableName.RESEARCHES}(${researchAreaId})`,
-        };
-        if (member.customRoleName) {
-          memberData[ApplicationTeamMemberFields.CUSTOMROLE] =
-            member.customRoleName;
-        }
-        if (member.educationLevel) {
-          memberData[ResearchTeamMemberKeys.EDUCATIONLEVEL] =
-            member.educationLevel;
-        }
-        try {
-          await callApi({
-            url: `/_api/${TableName.RESEARCHTEAMMEMBER}(${id})`,
-            method: "PATCH",
-            data: memberData,
-          });
-          toast({
-            title: "Success",
-            description: "Team member updated successfully.",
-          });
-        } catch (error) {
-          toast({
-            title: "Error",
-            description: "Failed to update team member.",
-          });
-        }
-        setShowLoader(false);
-      }
-      setForm((prev) => ({
-        ...prev,
-        team: prev.team.map((m) =>
-          m.id === id
-            ? {
-                ...m,
-                name: member.name,
-                role: member.role,
-                customRoleName: member.customRoleName,
-                educationLevel: member.educationLevel,
-              }
-            : m,
-        ),
-      }));
-    },
-    [formType],
-  );
 
   const handleAddWorkforceDevelopment = useCallback(
     async (payload: {
@@ -3606,7 +3446,6 @@ export default function FormResearch() {
 
       // Process all related data in parallel
       await Promise.all([
-        processTeamMembers(form.team, researchId, callApi),
         processWorkforceDevelopments(
           form.workforceDevelopments,
           researchId,
@@ -3669,76 +3508,123 @@ export default function FormResearch() {
     <section className="bg-white">
       <div className="container py-16">
         <Reveal>
-          <div className="rounded-xl border border-[#e2e8f0] bg-slate-50 p-6">
-            <div className="text-xs tracking-[0.25em] text-[#475569] uppercase">
-              Research
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            {/* Header */}
+            <div className="border-b border-slate-100 bg-slate-50 px-5 py-4">
+              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+                Research
+              </p>
+              <h1 className="mt-1 text-xl font-bold text-slate-900 md:text-2xl">
+                {form.type === "new"
+                  ? "New Application"
+                  : form.title || state?.item?.[ResearchKeys.RESEARCHNUMBER] || "Research"}
+              </h1>
+              <p className="mt-1 text-sm text-slate-500">
+                Complete the sections below and submit your proposal.
+              </p>
             </div>
-            <h1 className="mt-1 text-xl md:text-2xl font-bold tracking-tight text-[#1e293b]">
-              {form.type === "new"
-                ? "New Application"
-                : `Research : ${form.title || state?.item?.[ResearchKeys.RESEARCHNUMBER] || ""}`}
-            </h1>
-            <p className="mt-2 text-[#475569]">
-              Complete the sections below and submit your proposal.
-            </p>
-            {form.type !== "new" && (
-              <>
-                <div className="mt-6 pt-6 border-t border-[#e2e8f0]" />
-                <dl className=" grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4 text-sm">
-                  <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-4">
-                    <dt className="text-[#475569] opacity-90 shrink-0 min-w-[10rem]">
-                      Submission Date
-                    </dt>
-                    <dd className="font-semibold text-[#1e293b]">
-                      {form.submissionDate}
-                    </dd>
+
+            {/* Overview + Team: 8 cols | 4 cols */}
+            {(form.type !== "new" || form.team.length > 0) && (
+              <div className="grid grid-cols-1 lg:grid-cols-12">
+                {form.type !== "new" && (
+                  <div className="border-b border-slate-100 px-5 py-4 lg:col-span-8 lg:border-b-0 lg:border-r lg:py-5">
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Overview
+                    </p>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      {[
+                        {
+                          label: "Submission Date",
+                          value: form.submissionDate,
+                          iconName: "Calendar",
+                        },
+                        {
+                          label: "Application Reference",
+                          value: form.applicationTitle ?? "—",
+                          iconName: "Page",
+                        },
+                        {
+                          label: "Research Area",
+                          value: form.researchAreaName ?? "—",
+                          iconName: "FolderSearch",
+                        },
+                        {
+                          label: "Start Date",
+                          value: form.startDate
+                            ? form.startDate.toLocaleDateString()
+                            : "—",
+                          iconName: "CalendarDay",
+                        },
+                        {
+                          label: "End Date",
+                          value: form.endDate
+                            ? form.endDate.toLocaleDateString()
+                            : "—",
+                          iconName: "CalendarDay",
+                        },
+                        {
+                          label: "Principal Investigator",
+                          value: form.principalInvestigatorName ?? "—",
+                          iconName: "Contact",
+                        },
+                      ].map(({ label, value, iconName }) => (
+                        <div
+                          key={label}
+                          className="flex items-start gap-2.5 rounded-md border border-slate-100 bg-slate-50/50 px-3 py-2"
+                        >
+                          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-600">
+                            <Icon
+                              iconName={iconName}
+                              styles={{ root: { fontSize: 14 } }}
+                            />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="text-xs text-slate-500">
+                              {label}
+                            </span>
+                            <span className="mt-0.5 block text-sm font-medium text-slate-800">
+                              {value}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-4">
-                    <dt className="text-[#475569] opacity-90 shrink-0 min-w-[10rem]">
-                      Application Reference
-                    </dt>
-                    <dd className="font-semibold text-[#1e293b]">
-                      {form.applicationTitle ?? "—"}
-                    </dd>
+                )}
+                {form.team.length > 0 && (
+                  <div className="px-5 py-4 lg:col-span-4 lg:py-5">
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Team members
+                    </p>
+                    <ul className="space-y-2">
+                      {form.team.map((member) => (
+                        <li
+                          key={member.id}
+                          className="flex items-center gap-3 rounded-md border border-slate-100 bg-slate-50/50 px-3 py-2"
+                        >
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-600">
+                            <Icon
+                              iconName="Contact"
+                              styles={{ root: { fontSize: 16 } }}
+                            />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-slate-900">
+                              {member.name || "—"}
+                            </p>
+                            <p className="truncate text-xs text-slate-500">
+                              {teamMemberRoles.find(
+                                (r) => String(r.key) === String(member.role),
+                              )?.text ?? member.role ?? "—"}
+                            </p>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-4">
-                    <dt className="text-[#475569] opacity-90 shrink-0 min-w-[10rem]">
-                      Research Area
-                    </dt>
-                    <dd className="font-semibold text-[#1e293b]">
-                      {form.researchAreaName ?? "—"}
-                    </dd>
-                  </div>
-                  <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-4">
-                    <dt className="text-[#475569] opacity-90 shrink-0 min-w-[10rem]">
-                      Start Date
-                    </dt>
-                    <dd className="font-semibold text-[#1e293b]">
-                      {form.startDate
-                        ? form.startDate.toLocaleDateString()
-                        : "—"}
-                    </dd>
-                  </div>
-                  <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-4">
-                    <dt className="text-[#475569] opacity-90 shrink-0 min-w-[10rem]">
-                      End Date
-                    </dt>
-                    <dd className="font-semibold text-[#1e293b]">
-                      {form.endDate
-                        ? form.endDate.toLocaleDateString()
-                        : "—"}
-                    </dd>
-                  </div>
-                  <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-4">
-                    <dt className="text-[#475569] opacity-90 shrink-0 min-w-[10rem]">
-                      Principal Investigator
-                    </dt>
-                    <dd className="font-semibold text-[#1e293b]">
-                      {form.principalInvestigatorName ?? "—"}
-                    </dd>
-                  </div>
-                </dl>
-              </>
+                )}
+              </div>
             )}
           </div>
         </Reveal>
@@ -4000,44 +3886,21 @@ export default function FormResearch() {
           form={form}
         />
 
-        {/* Deliverables Section */}
-        <DeliverablesSection
-          deliverables={form.deliverables}
-          edit={true}
-          onAddDeliverable={handleAddDeliverable}
-          onEditDeliverable={handleEditDeliverable}
-          onRemoveDeliverable={handleRemoveDeliverable}
-          onDeleteFile={handleDeleteFile}
-          onUploadFile={handleUploadFile}
-          onUpdateItemFiles={handleUpdateDeliverableFiles}
-          form={form}
-        />
-
-        {/* Team Members && Emirates Workforce Development Section */}
+        {/* Emirates Workforce Development Section */}
         <div className="mt-6 rounded-xl border border-[#e2e8f0] bg-white p-6">
           <div className="flex items-center justify-between">
-            <h2 className={HEADING_TEXT}>
-              Team members && Emirates Workforce Development
-            </h2>
+            <h2 className={HEADING_TEXT}>Emirates Workforce Development</h2>
             <IconButton
               iconProps={{
                 iconName: showTeam ? "ChevronUp" : "ChevronDown",
               }}
               onClick={() => setShowTeam((prev) => !prev)}
-              ariaLabel="Toggle team members and workforce development"
+              ariaLabel="Toggle Emirates Workforce Development"
               disabled={form.type === "view"}
             />
           </div>
           {showTeam && (
             <>
-              <TeamMemberSection
-                team={form.team}
-                teamMemberRoles={teamMemberRoles}
-                onAddMember={handleAddMember}
-                onRemoveMember={handleRemoveMember}
-                onEditMember={handleEditMember}
-                form={form}
-              />
               <WorkforceDevelopmentSection
                 items={form.workforceDevelopments}
                 onAdd={handleAddWorkforceDevelopment}
@@ -4099,8 +3962,20 @@ export default function FormResearch() {
           )}
         </div>
 
-        {/* File Upload Section */}
+        {/* Final Deliverables Section */}
+        <DeliverablesSection
+          deliverables={form.deliverables}
+          edit={true}
+          onAddDeliverable={handleAddDeliverable}
+          onEditDeliverable={handleEditDeliverable}
+          onRemoveDeliverable={handleRemoveDeliverable}
+          onDeleteFile={handleDeleteFile}
+          onUploadFile={handleUploadFile}
+          onUpdateItemFiles={handleUpdateDeliverableFiles}
+          form={form}
+        />
 
+        {/* Extra Attachments (File Upload) Section */}
         <FileUploadSectionResearch
           onFilesAdd={handleFilesAdd}
           onFileRemove={handleFileRemove}
