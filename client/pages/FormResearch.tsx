@@ -92,6 +92,7 @@ import {
 import { FileUploadSectionResearch } from "@/components/FileUploadSectionResearch";
 import { Dropdown } from "@fluentui/react/lib/Dropdown";
 import { Badge } from "@/ui/badge";
+import { BudgetSpendDialog } from "@/components/BudgetSpendDialog";
 
 interface TeamMember {
   id: string;
@@ -654,7 +655,7 @@ export default function FormResearch() {
   // console.log("FormResearch state:", form);
   // console.log("Current state:", state);
 
-  // Helper to map budget line items
+  // Helper to map budget line items (without spends)
   const mapBudgetLineItems = (items: any[]): BudgetLineItem[] => {
     if (!items || !Array.isArray(items)) return [];
 
@@ -666,6 +667,55 @@ export default function FormResearch() {
       prmtk_category: item[BudgetLineItemFields.CATEGORY] || "",
       action: "existing" as const,
     }));
+  };
+
+  // Enrich line items with spend summary (Total Spent / Remaining Budget)
+  const addSpendSummaryToLineItems = async (
+    items: BudgetLineItem[],
+  ): Promise<BudgetLineItem[]> => {
+    if (!items.length) return items;
+
+    const updated = await Promise.all(
+      items.map(async (item) => {
+        if (!item.id) return item;
+        try {
+          const res = await callApi<{ value?: any[] }>({
+            url: `/_api/prmtk_budgetspends?$filter=_prmtk_lineitem_value eq ${item.id}`,
+            method: "GET",
+          });
+          const value = Array.isArray(res?.value) ? res.value : [];
+          if (!value.length) {
+            return {
+              ...item,
+              totalSpent: 0,
+              remainingBudget: item.prmtk_amount,
+            };
+          }
+
+          const total = value.reduce((sum, v: any) => {
+            const raw =
+              v.prmtk_spent ??
+              v.prmtk_amount ??
+              v.prmtk_budgetspent ??
+              v["prmtk_spent"] ??
+              v["prmtk_budgetspent"];
+            const n = Number(raw);
+            return sum + (isNaN(n) ? 0 : n);
+          }, 0);
+
+          const remaining = item.prmtk_amount - total;
+          return {
+            ...item,
+            totalSpent: total,
+            remainingBudget: remaining,
+          };
+        } catch {
+          return item;
+        }
+      }),
+    );
+
+    return updated;
   };
 
   // Helper to map budget header
@@ -1291,12 +1341,21 @@ export default function FormResearch() {
           method: "GET",
         });
 
-        const versions: BudgetVersion[] = (res?.value || []).map((v: any) => ({
+        const rawVersions = (res?.value || []).map((v: any) => ({
           id: v[BudgetHeaderFields.BUDGETHEADERID],
           version: v[BudgetHeaderFields.VERSIONNUMBER_BUDGET] || 1,
           status: v[BudgetHeaderFields.STATUS] || 101,
           name: v[BudgetHeaderFields.BUDGETNAME] || "",
-          isActive: v[BudgetHeaderFields.STATUS] === 103, // 103 = Approved
+        }));
+
+        // Mark only one version as active in the UI:
+        // the first "Approved" (status 103) in the list (latest version due to desc order).
+        const activeApprovedId =
+          rawVersions.find((v) => v.status === 103)?.id ?? null;
+
+        const versions: BudgetVersion[] = rawVersions.map((v) => ({
+          ...v,
+          isActive: activeApprovedId !== null && v.id === activeApprovedId,
         }));
 
         setForm((prev) => ({
@@ -1340,11 +1399,14 @@ export default function FormResearch() {
 
         const budgetHeader = mapBudgetHeader(budgetData);
         const budgetLineItems = mapBudgetLineItems(lineItems);
+        const itemsWithSpends = await addSpendSummaryToLineItems(
+          budgetLineItems,
+        );
 
         setForm((prev) => ({
           ...prev,
           budgetHeaders: budgetHeader,
-          budgetLineItems: budgetLineItems,
+          budgetLineItems: itemsWithSpends,
           selectedBudgetVersion: budgetHeaderId,
         }));
       } catch (error) {
@@ -1356,6 +1418,19 @@ export default function FormResearch() {
 
   // Handle Update Budget (clone current budget)
   const [showCloneBudgetConfirm, setShowCloneBudgetConfirm] = useState(false);
+  const [spendDialogOpen, setSpendDialogOpen] = useState(false);
+  const [selectedSpendLineItem, setSelectedSpendLineItem] =
+    useState<BudgetLineItem | null>(null);
+
+  const handleOpenSpendDialog = (lineItem: BudgetLineItem) => {
+    setSelectedSpendLineItem(lineItem);
+    setSpendDialogOpen(true);
+  };
+
+  const handleCloseSpendDialog = () => {
+    setSpendDialogOpen(false);
+    setSelectedSpendLineItem(null);
+  };
   const handleUpdateBudgetClick = () => {
     setShowCloneBudgetConfirm(true);
   };
@@ -3751,16 +3826,25 @@ export default function FormResearch() {
                 </div>
               </div>
               <BudgetSection
-            key={`${form.budgetLineItems}`}
-            budgetHeader={form.budgetHeaders}
-            budgetLineItem={form.budgetLineItems}
-            budgetCategories={BudgetCategorys}
-            edit={
-              form.budgetVersions.find(
-                (v) => v.id === form.selectedBudgetVersion,
-              )?.status === 101
-            }
-            onAddBudgetLineItem={(item) => {
+                key={`${form.budgetLineItems}`}
+                budgetHeader={form.budgetHeaders}
+                budgetLineItem={form.budgetLineItems}
+                budgetCategories={BudgetCategorys}
+                edit={
+                  form.budgetVersions.find(
+                    (v) => v.id === form.selectedBudgetVersion,
+                  )?.status === 101
+                }
+                canEditSpend={
+                  form.budgetVersions.find(
+                    (v) => v.id === form.selectedBudgetVersion,
+                  )?.status === 103 &&
+                  form.budgetVersions.find(
+                    (v) => v.id === form.selectedBudgetVersion,
+                  )?.isActive
+                }
+                onEditSpend={handleOpenSpendDialog}
+                onAddBudgetLineItem={(item) => {
               const newLineItem: BudgetLineItem = {
                 id: crypto.randomUUID(), // Ensure a unique ID is generated
                 prmtk_lineitemname: item.name,
@@ -3774,7 +3858,7 @@ export default function FormResearch() {
                 budgetLineItems: [...prev.budgetLineItems, newLineItem],
               }));
             }}
-            onEditBudgetLineItem={async (id, item) => {
+                onEditBudgetLineItem={async (id, item) => {
               if (formType !== "new") {
                 setShowLoader(true);
                 try {
@@ -3820,7 +3904,7 @@ export default function FormResearch() {
                     : li,
                 ),
               }));
-            }}
+                }}
             onRemoveBudgetLineItem={async (id) => {
               if (formType !== "new") {
                 const itemToRemove = form.budgetLineItems.find(
@@ -3839,7 +3923,7 @@ export default function FormResearch() {
                   (li) => li.id !== id,
                 ),
               }));
-            }}
+                }}
             form={form}
           />
             </>
@@ -4000,7 +4084,7 @@ export default function FormResearch() {
         message={dialogMessage}
         onDismiss={() => {
           navigate("/researches", { state: {} });
-        }}
+                }}
       />
       <ErrorDialog
         hidden={!showErrorDialog}
@@ -4023,6 +4107,27 @@ export default function FormResearch() {
         onConfirm={handleEditBudgetConfirm}
         onCancel={() => setShowSubmitBudgetConfirm(false)}
       />
+      {selectedSpendLineItem && (
+        <BudgetSpendDialog
+          open={spendDialogOpen}
+          onClose={handleCloseSpendDialog}
+          lineItem={selectedSpendLineItem}
+          onSaved={({ totalSpend, remainingBudget }) => {
+            setForm((prev) => ({
+              ...prev,
+              budgetLineItems: prev.budgetLineItems.map((item) =>
+                item.id === selectedSpendLineItem.id
+                  ? {
+                      ...item,
+                      totalSpent: totalSpend,
+                      remainingBudget,
+                    }
+                  : item,
+              ),
+            }));
+          }}
+        />
+      )}
       <OverlayLoader
         isVisible={showLoader}
         label="Your request is being processed..."

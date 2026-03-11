@@ -10,6 +10,8 @@ import {
   createBudgetLineItem,
   updateBudgetLineItem,
   deleteBudgetLineItem,
+  getBudgetSpendsByLineItem,
+  upsertBudgetSpends,
 } from "./routes/budget";
 
 // Server-side client credentials configuration (set these in your env)
@@ -243,6 +245,8 @@ export function createServer() {
   app.post("/api/budget/line-items", createBudgetLineItem);
   app.patch("/api/budget/line-items/:id", updateBudgetLineItem);
   app.delete("/api/budget/line-items/:id", deleteBudgetLineItem);
+  app.get("/api/budget/spends", getBudgetSpendsByLineItem);
+  app.post("/api/budget/spends/bulk", upsertBudgetSpends);
 
   // Token endpoint - fetch verification token from Dataverse/Power Pages
   app.get("/api/verification-token", async (_req, res) => {

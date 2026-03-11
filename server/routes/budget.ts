@@ -3,6 +3,7 @@ import { dataverseFetch } from "../dataverseClient";
 
 const BUDGETHEADERS = "prmtk_budgetheaders";
 const BUDGETLINEITEMS = "prmtk_budgetlineitems";
+const BUDGETSPENDS = "prmtk_budgetspends";
 const APPLICATIONS = "prmtk_applications";
 
 /** GET /api/budget/headers?applicationId=xxx - list headers by application */
@@ -176,6 +177,123 @@ export const deleteBudgetLineItem: RequestHandler = async (req, res) => {
     else res.end();
   } catch (err) {
     console.error("[Budget] deleteBudgetLineItem error:", err);
+    res.status(502).json({ error: "Budget API error", details: String(err) });
+  }
+};
+
+/** GET /api/budget/spends?budgetLineItemId=xxx */
+export const getBudgetSpendsByLineItem: RequestHandler = async (req, res) => {
+  try {
+    const budgetLineItemId = req.query.budgetLineItemId as string;
+    if (!budgetLineItemId) {
+      return res.status(400).json({ error: "budgetLineItemId required" });
+    }
+
+    // Filter by the correct lookup field on prmtk_budgetspends:
+    // Dataverse returns _prmtk_lineitem_value for the related budget line item.
+    const path = `/${BUDGETSPENDS}?$filter=_prmtk_lineitem_value eq ${budgetLineItemId}`;
+    const response = await dataverseFetch("GET", path);
+    const data = response.ok ? await response.json() : await response.text();
+
+    res.status(response.status);
+    const contentType = response.headers.get("content-type");
+    if (contentType) {
+      res.setHeader("Content-Type", contentType);
+    }
+    if (typeof data === "object") res.json(data);
+    else res.send(data);
+  } catch (err) {
+    console.error("[Budget] getBudgetSpendsByLineItem error:", err);
+    res.status(502).json({ error: "Budget API error", details: String(err) });
+  }
+};
+
+/**
+ * POST /api/budget/spends/bulk
+ * Upsert spend rows for a given budget line item.
+ * Body: { budgetLineItemId: string, spends: { id?: string; month: string; year: string; amount: number }[] }
+ */
+export const upsertBudgetSpends: RequestHandler = async (req, res) => {
+  try {
+    const { budgetLineItemId, spends } = req.body as {
+      budgetLineItemId?: string;
+      spends?: { id?: string; month: string; year: string; amount: number }[];
+    };
+
+    if (!budgetLineItemId) {
+      return res.status(400).json({ error: "budgetLineItemId required" });
+    }
+    if (!Array.isArray(spends)) {
+      return res.status(400).json({ error: "spends array required" });
+    }
+
+    // Fetch existing spends for this line item so we can delete missing ones.
+    // Use the actual lookup field name _prmtk_lineitem_value.
+    const listPath = `/${BUDGETSPENDS}?$filter=_prmtk_lineitem_value eq ${budgetLineItemId}`;
+    const existingResponse = await dataverseFetch("GET", listPath);
+    const existingJson =
+      existingResponse.ok ? await existingResponse.json() : { value: [] };
+    const existing: any[] = Array.isArray(existingJson.value)
+      ? existingJson.value
+      : [];
+
+    const incomingById = new Map<
+      string,
+      { id?: string; month: string; year: string; amount: number }
+    >();
+    spends.forEach((s) => {
+      if (s && s.id) {
+        incomingById.set(s.id, s);
+      }
+    });
+
+    // Delete spends that are no longer present in the incoming list
+    for (const ex of existing) {
+      const id = ex["prmtk_budgetspendid"] as string | undefined;
+      if (id && !incomingById.has(id)) {
+        const deletePath = `/${BUDGETSPENDS}(${id})`;
+        await dataverseFetch("DELETE", deletePath);
+      }
+    }
+
+    // Upsert incoming spends (PATCH when id present, otherwise POST)
+    for (const s of spends) {
+      const amount = Number(s.amount) || 0;
+      const body: Record<string, unknown> = {
+        // Store the amount in the Dataverse "spent" field so it matches
+        // prmtk_spent/prmtk_spent_base from the API payload.
+        prmtk_spent: amount,
+        prmtk_reportingmonth: s.month,
+        prmtk_reportingyear: s.year,
+      };
+
+      if (s.id) {
+        const patchPath = `/${BUDGETSPENDS}(${s.id})`;
+        await dataverseFetch("PATCH", patchPath, body);
+      } else {
+        const createBody = {
+          ...body,
+          // Bind to the budget line item via the correct navigation property.
+          "prmtk_LineItem@odata.bind": `/${BUDGETLINEITEMS}(${budgetLineItemId})`,
+        };
+        await dataverseFetch("POST", `/${BUDGETSPENDS}`, createBody);
+      }
+    }
+
+    // Re-fetch updated spends to return to client
+    const finalResponse = await dataverseFetch("GET", listPath);
+    const finalJson =
+      finalResponse.ok ? await finalResponse.json() : { value: [] };
+    const rows: any[] = Array.isArray(finalJson.value) ? finalJson.value : [];
+
+    const totalSpend = rows.reduce(
+      (sum, r) => sum + (Number(r["prmtk_amount"]) || 0),
+      0,
+    );
+
+    res.status(200).json({ value: rows, totalSpend });
+  } catch (err) {
+    console.error("[Budget] upsertBudgetSpends error:", err);
     res.status(502).json({ error: "Budget API error", details: String(err) });
   }
 };

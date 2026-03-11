@@ -32,6 +32,8 @@ export interface BudgetLineItem {
   prmtk_amount: number;
   prmtk_category: string;
   action?: "new" | "existing" | "remove";
+  totalSpent?: number;
+  remainingBudget?: number;
 }
 
 interface AddBudgetLineForm {
@@ -50,6 +52,8 @@ interface BudgetSectionProps {
   onEditBudgetLineItem: (id: string, item: AddBudgetLineForm) => void;
   form: any;
   edit?: boolean;
+  canEditSpend?: boolean;
+  onEditSpend?: (lineItem: BudgetLineItem) => void;
 }
 
 const INITIAL_LINE_FORM: AddBudgetLineForm = {
@@ -68,6 +72,8 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
   onEditBudgetLineItem,
   form,
   edit = true,
+  canEditSpend = false,
+  onEditSpend,
 }) => {
   const [showSection, setShowSection] = useState(true);
   const [lineForm, setLineForm] =
@@ -255,9 +261,20 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                     <th className="px-6 py-3 font-semibold text-white text-right">
                       Amount
                     </th>
+                    <th className="px-6 py-3 font-semibold text-white text-right">
+                      Total Spent
+                    </th>
+                    <th className="px-6 py-3 font-semibold text-white text-right">
+                      Remaining Budget
+                    </th>
                     {edit && (
                       <th className="px-6 py-3 font-semibold text-white text-right">
                         Actions
+                      </th>
+                    )}
+                    {canEditSpend && (
+                      <th className="px-6 py-3 font-semibold text-white text-right">
+                        Action
                       </th>
                     )}
                   </tr>
@@ -283,6 +300,16 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                       </td>
                       <td className="px-6 py-3 text-right font-medium text-[#1e293b]">
                         {aedFormat(item.prmtk_amount)}
+                      </td>
+                      <td className="px-6 py-3 text-right font-medium text-[#1e293b]">
+                        {item.totalSpent != null
+                          ? aedFormat(item.totalSpent)
+                          : "-"}
+                      </td>
+                      <td className="px-6 py-3 text-right font-medium text-[#1e293b]">
+                        {item.remainingBudget != null
+                          ? aedFormat(item.remainingBudget)
+                          : "-"}
                       </td>
                       {edit && form.type !== "view" && (
                         <td className="px-6 py-3 text-right">
@@ -310,12 +337,23 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                           )}
                         </td>
                       )}
+                      {canEditSpend && (
+                        <td className="px-6 py-3 text-right">
+                          <IconButton
+                            onClick={() => onEditSpend?.(item)}
+                            iconProps={{ iconName: "Edit" }}
+                            title="Edit spend"
+                            ariaLabel="Edit spend"
+                            styles={popupInputStyles.editButton}
+                          />
+                        </td>
+                      )}
                     </tr>
                   ))}
                   {budgetLineItem.length === 0 && (
                     <tr>
                       <td
-                        colSpan={edit ? 5 : 4}
+                        colSpan={edit ? 7 : 6}
                         className="px-6 py-8 text-center text-[#94a3b8]"
                       >
                         No budget line items added.
@@ -326,7 +364,7 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                 <tfoot className="bg-[#f8fafc] border-t-2 border-[#e2e8f0]">
                   <tr>
                     <td
-                      colSpan={edit ? 3 : 2}
+                      colSpan={edit ? 5 : 4}
                       className="px-6 py-3 font-semibold text-[#1D2054]"
                     >
                       Total Amount
