@@ -192,6 +192,13 @@ button.ms-Button.ms-Button--commandBar {
   color: #ffff !important;
   background: #0f1840 !important;
 }
+
+/* White icons inside primary and dark-background buttons */
+.ms-Button--primary .ms-Button-icon,
+.ms-Button--primary .ms-Button-icon:hover,
+.ms-Button--primary .ms-Button-icon:focus {
+  color: #fff !important;
+}
 .borderLeftthink {
   border-left-width: 4px !important;
   border-color: #ef6d58 !important;

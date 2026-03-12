@@ -1,6 +1,10 @@
 import { RequestHandler } from "express";
 
-const DATAVERSE_BASE_URL = "https://researchgrants-dev.powerappsportals.com";
+const DATAVERSE_BASE_URL =
+  process.env.DATAVERSE_BASE_URL ||
+  (process.env.DATAVERSE_RESOURCE
+    ? process.env.DATAVERSE_RESOURCE.replace(/\/\.default\/?$/, "")
+    : "https://ecacrmdev.crm15.dynamics.com");
 
 export const handleDataverseProxy: RequestHandler = async (req, res) => {
   try {

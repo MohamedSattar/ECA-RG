@@ -238,65 +238,76 @@ const processFileUploads = async (
   await Promise.all([...applicationUploadPromises, ...generalUploadPromises]);
 };
 
-// Helper function to process budget data
+// All budget operations use /api/budget/* (same as listing and delete)
 const processBudgetData = async (
   budgetHeader: BudgetHeader | null,
   budgetLineItems: BudgetLineItem[],
   callApi: (options: any) => Promise<any>,
 ): Promise<void> => {
-  if (!budgetHeader) {
-    console.log("No budget header to process");
-    return;
-  }
+  if (!budgetHeader) return;
 
-  let budgetHeaderId = budgetHeader.id;
-  // console.log(budgetLineItems, "budgetLineItems in processBudgetData");
-  // console.log(budgetHeaderId, "budgetHeaderId in processBudgetData");
-  // Process budget line items in parallel
+  const budgetHeaderId = budgetHeader.id;
+
   const lineItemPromises = budgetLineItems
     .filter((item) => item.action !== "remove")
     .map(async (item) => {
-      const method = item.action === "existing" ? "PATCH" : "POST";
-      const url =
-        item.action === "existing"
-          ? `/_api/${TableName.BUDGETLINEITEMS}(${item.id})`
-          : `/_api/${TableName.BUDGETLINEITEMS}`;
-      // console.log(lineItemPromises, "lineItemPromises");
-      const data: Record<string, any> = {
-        [BudgetLineItemFields.LINEITEMNAME]: item.prmtk_lineitemname,
-        [BudgetLineItemFields.DESCRIPTION]: item.prmtk_description,
-        [BudgetLineItemFields.AMOUNT]: item.prmtk_amount,
-        [BudgetLineItemFields.CATEGORY]: item.prmtk_category,
-      };
-
-      // Only add binding for new items
-      if (item.action === "new") {
-        // console.log("new item", item);
-        data[BudgetLineItemFields.BUDGETHEADER_ID] =
-          `/${TableName.BUDGETHEADERS}(${budgetHeaderId})`;
+      const res =
+        item.action === "existing" && item.id
+          ? await callApi({
+              url: `/api/budget/line-items/${item.id}`,
+              method: "PATCH",
+              data: {
+                prmtk_lineitemname: item.prmtk_lineitemname,
+                prmtk_description: item.prmtk_description,
+                prmtk_amount: item.prmtk_amount,
+                prmtk_category: item.prmtk_category,
+              },
+            })
+          : await callApi({
+              url: "/api/budget/line-items",
+              method: "POST",
+              data: {
+                budgetHeaderId,
+                prmtk_lineitemname: item.prmtk_lineitemname,
+                prmtk_description: item.prmtk_description,
+                prmtk_amount: item.prmtk_amount,
+                prmtk_category: item.prmtk_category,
+              },
+            });
+      if (res?.status >= 400) {
+        const msg = (res?.error?.message ?? res?.error?.details ?? res?.message) || "Budget request failed";
+        throw new Error(String(msg));
       }
-      const response = await callApi({ url, method, data });
-      // console.log("response new item", response);
-      // If it's a POST request, log or return the created item details
-      if (method === "POST") {
-        // console.log("Created budget line item:", response);
-        return response; // Return the created item details if needed
-      }
-
-      return response;
+      return res;
     });
 
-  // Handle removals
   const removeLineItemPromises = budgetLineItems
     .filter((item) => item.action === "remove" && item.id)
-    .map(async (item) =>
-      callApi({
-        url: `/_api/${TableName.BUDGETLINEITEMS}(${item.id})`,
-        method: "DELETE",
-      }),
-    );
+    .map(async (item) => {
+      const res = await callApi({ url: `/api/budget/line-items/${item.id}`, method: "DELETE" });
+      if (res?.status >= 400) throw new Error("Budget delete failed");
+      return res;
+    });
 
   await Promise.all([...lineItemPromises, ...removeLineItemPromises]);
+};
+
+/** Create a budget header for an application (POST /api/budget/headers). */
+const createBudgetHeader = async (
+  applicationId: string,
+  callApi: (options: any) => Promise<any>,
+): Promise<string> => {
+  const res = (await callApi({
+    url: "/api/budget/headers",
+    method: "POST",
+    data: { applicationId, budgetName: "Application Budget", totalBudget: 0 },
+  })) as { headers?: Headers };
+  const entityId = res?.headers?.get?.("OData-EntityId");
+  const match = entityId?.match(/\(([^)]+)\)/);
+  if (!match?.[1]) {
+    throw new Error("Failed to get budget header id from response.");
+  }
+  return match[1];
 };
 
 interface GeneralInformationSectionProps {
@@ -602,8 +613,9 @@ export default function FormApplication() {
           ...mapApplicationToForm(app, files),
         }));
 
-        // Bind budget details for this application
-        await loadBudgetDetails(applicationId);
+        // Bind budget details for this application (use app's budget header lookup when present)
+        const budgetHeaderIdFromApp = app[ApplicationKeys.BUDGETHEADER] ?? app._prmtk_budgetheader_value;
+        await loadBudgetDetails(applicationId, budgetHeaderIdFromApp);
       } catch (error) {
         console.error("Failed to load application details:", error);
         // setDialogMessage(
@@ -694,33 +706,47 @@ export default function FormApplication() {
     };
   };
 
-  const loadBudgetDetails = async (applicationId: string): Promise<void> => {
-    if (formType === "new") {
-      return;
-    }
+  const loadBudgetDetails = async (
+    applicationId: string,
+    budgetHeaderIdFromApp?: string | null,
+  ): Promise<void> => {
+    if (formType === "new") return;
     try {
-      const res = await callApi<{ value: any[] }>({
-        url: `/_api/${TableName.BUDGETHEADERS}?$filter=${BudgetHeaderFields.APPLICATION} eq ${applicationId}`,
-        method: "GET",
-      });
-      const budgetData = res.value?.[0];
+      let budgetData: any = null;
+      let budgetHeaderId: string | null = null;
 
-      if (!budgetData) {
-        return;
+      if (budgetHeaderIdFromApp) {
+        const headerRes = await callApi<any>({
+          url: `/api/budget/headers/${budgetHeaderIdFromApp}`,
+          method: "GET",
+        });
+        budgetData = headerRes && headerRes[BudgetHeaderFields.BUDGETHEADERID] != null
+          ? headerRes
+          : headerRes?.value?.[0];
+        budgetHeaderId = budgetHeaderIdFromApp;
       }
 
-      const res2 = await callApi<{ value: any[] }>({
-        url: `/_api/${TableName.BUDGETLINEITEMS}?$filter=${BudgetLineItemFields.BUDGETHEADER} eq ${budgetData[BudgetHeaderFields.BUDGETHEADERID]}`,
+      if (!budgetData) {
+        const res = await callApi<any>({
+          url: `/api/budget/headers?applicationId=${applicationId}`,
+          method: "GET",
+        });
+        const raw = res?.value ?? (Array.isArray(res) ? res : res?.d?.results ?? res?.results);
+        budgetData = Array.isArray(raw) ? raw[0] : raw;
+        budgetHeaderId = budgetData?.[BudgetHeaderFields.BUDGETHEADERID] ?? null;
+      }
+
+      if (!budgetData || !budgetHeaderId) return;
+
+      const res2 = await callApi<any>({
+        url: `/api/budget/line-items?budgetHeaderId=${budgetHeaderId}`,
         method: "GET",
       });
-      const filteredArray = res2.value || [];
+      const rawLineItems = res2?.value ?? (Array.isArray(res2) ? res2 : res2?.d?.results ?? res2?.results);
+      const filteredArray = Array.isArray(rawLineItems) ? rawLineItems : [];
 
-      const lineItems = budgetData[ExpandRelations.BUDGET_LINE_ITEMS] || [];
       const budgetHeader = mapBudgetHeader(budgetData);
       const budgetLineItems = mapBudgetLineItems(filteredArray);
-      // console.log(budgetHeader);
-      // console.log(budgetLineItems);
-      // console.log(lineItems);
 
       setForm((prev) => ({
         ...prev,
@@ -729,7 +755,6 @@ export default function FormApplication() {
       }));
     } catch (error) {
       console.error("Failed to load budget details:", error);
-      // Don't throw error - budget is optional
     }
   };
 
@@ -1119,60 +1144,54 @@ export default function FormApplication() {
       // console.log(resApps, "resApps");
 
       if (matchingApp) {
-        // Load and set budget data for the matching application
         const budgetHeaderId = matchingApp._prmtk_budgetheader_value;
-        // console.log(budgetHeaderId, "budgetHeaderId");
+
+        // Resolve budget header: use existing or create when we have line items (all via /api/budget/*)
+        let headerForProcess: BudgetHeader | null = null;
         if (budgetHeaderId) {
-          // Fetch budget header
-          const budgetHeaderRes = await callApi<{ value: any[] }>({
-            url: `/_api/${TableName.BUDGETHEADERS}(${budgetHeaderId})`,
+          const budgetHeaderRes = await callApi<any>({
+            url: `/api/budget/headers/${budgetHeaderId}`,
             method: "GET",
           });
-
-          // Fetch budget line items
-          const budgetLineItemsRes = await callApi<{ value: any[] }>({
-            url: `/_api/${TableName.BUDGETLINEITEMS}?$filter=_prmtk_budgetheader_value eq ${budgetHeaderId}`,
-            method: "GET",
-          });
-
-          const budgetData = budgetHeaderRes;
-          const filteredArray = budgetLineItemsRes?.value || [];
-
-          const budgetHeader = mapBudgetHeader(budgetData);
-          const budgetLineItems = mapBudgetLineItems(filteredArray);
-          // console.log(budgetHeader, "budgetHeader ");
-          // console.log(budgetLineItems, "budgetLineItems");
-          if (formType !== "new") {
-            setForm((prev) => ({
-              ...prev,
-              budgetHeaders: budgetHeader,
-              budgetLineItems: budgetLineItems,
-            }));
+          const budgetData = budgetHeaderRes && budgetHeaderRes[BudgetHeaderFields.BUDGETHEADERID] != null
+            ? budgetHeaderRes
+            : budgetHeaderRes?.value?.[0];
+          if (budgetData) {
+            headerForProcess = mapBudgetHeader(budgetData);
           }
-
-          // Get application number for file uploads
-          const applicationNumbers = await getApplicationNumber(
-            formType,
-            applicationIdForm,
-            applicationNumber,
-            callApi,
-          );
-          if (formType === "new") {
-            await processTeamMembers(form.team, applicationIdForm, callApi);
-          }
-          const budgetHeaders = mapBudgetHeader(budgetData);
-          // Process all related data in parallel
-          await Promise.all([
-            processBudgetData(budgetHeaders, form.budgetLineItems, callApi),
-            processFileUploads(
-              form.applicationFiles,
-              form.generalFiles,
-              applicationNumbers,
-              triggerFlow,
-              user,
-            ),
-          ]);
+        } else if (form.budgetLineItems.length > 0) {
+          const newHeaderId = await createBudgetHeader(applicationIdForm, callApi);
+          headerForProcess = {
+            id: newHeaderId,
+            name: "Application Budget",
+            totalBudget: 0,
+            action: "existing",
+          };
         }
+
+        // Application number, team members, and file uploads regardless of budget
+        const applicationNumbers = await getApplicationNumber(
+          formType,
+          applicationIdForm,
+          applicationNumber,
+          callApi,
+        );
+        if (formType === "new") {
+          await processTeamMembers(form.team, applicationIdForm, callApi);
+        }
+
+        // Persist budget line items (add / edit / delete) when we have a header
+        if (headerForProcess) {
+          await processBudgetData(headerForProcess, form.budgetLineItems, callApi);
+        }
+
+        await processFileUploads(
+          form.applicationFiles,
+          form.generalFiles,
+          applicationNumbers,
+          triggerFlow,
+          user,
+        );
       }
 
       // if (form.budgetLineItems.length > 0) {
@@ -1402,58 +1421,111 @@ export default function FormApplication() {
             />
           )} */}
           <BudgetSection
-            key={`${form.budgetLineItems}`}
-            budgetHeader={form.budgetHeaders}
+            key={`budget-${form.budgetLineItems?.length ?? 0}-${form.budgetHeaders?.id ?? "none"}`}
+            budgetHeader={form.budgetHeaders ?? { id: "", name: "Budget", totalBudget: 0, action: "existing" }}
             budgetLineItem={form.budgetLineItems}
             budgetCategories={BudgetCategorys}
-            onAddBudgetLineItem={(item) => {
-              const newLineItem: BudgetLineItem = {
-                id: crypto.randomUUID(), // Ensure a unique ID is generated
+            onAddBudgetLineItem={async (item) => {
+              const budgetHeaderId = form.budgetHeaders?.id;
+              if (budgetHeaderId) {
+                setShowLoader(true);
+                try {
+                  const res = (await callApi({
+                    url: "/api/budget/line-items",
+                    method: "POST",
+                    data: {
+                      budgetHeaderId,
+                      prmtk_lineitemname: item.name,
+                      prmtk_description: item.description,
+                      prmtk_amount: parseFloat(item.amount),
+                      prmtk_category: item.category,
+                    },
+                  })) as { headers?: Headers; status?: number };
+                  if (res?.status >= 400) {
+                    toast({ title: "Error", description: "Failed to add budget line item.", variant: "destructive" });
+                    return;
+                  }
+                  const entityId = res?.headers?.get?.("OData-EntityId");
+                  const match = entityId?.match(/\(([^)]+)\)/);
+                  const newId = match?.[1] ?? crypto.randomUUID();
+                  const newLineItem: BudgetLineItem = {
+                    id: newId,
+                    prmtk_lineitemname: item.name,
+                    prmtk_category: item.category,
+                    prmtk_description: item.description,
+                    prmtk_amount: parseFloat(item.amount),
+                    action: "existing",
+                  };
+                  setForm((prev) => ({
+                    ...prev,
+                    budgetLineItems: [...prev.budgetLineItems, newLineItem],
+                  }));
+                } finally {
+                  setShowLoader(false);
+                }
+              } else {
+                const newLineItem: BudgetLineItem = {
+                  id: crypto.randomUUID(),
+                  prmtk_lineitemname: item.name,
+                  prmtk_category: item.category,
+                  prmtk_description: item.description,
+                  prmtk_amount: parseFloat(item.amount),
+                  action: "new",
+                };
+                setForm((prev) => ({
+                  ...prev,
+                  budgetLineItems: [...prev.budgetLineItems, newLineItem],
+                }));
+              }
+            }}
+            onEditBudgetLineItem={async (id, item) => {
+              const existing = form.budgetLineItems.find((li) => li.id === id);
+              const payload = {
                 prmtk_lineitemname: item.name,
-                prmtk_category: item.category,
                 prmtk_description: item.description,
                 prmtk_amount: parseFloat(item.amount),
-                action: "new",
+                prmtk_category: item.category,
               };
-              setForm((prev) => ({
-                ...prev,
-                budgetLineItems: [...prev.budgetLineItems, newLineItem],
-              }));
-            }}
-            onEditBudgetLineItem={(id, item) => {
+              if (existing?.action === "existing" && id) {
+                setShowLoader(true);
+                try {
+                  const res = await callApi({
+                    url: `/api/budget/line-items/${id}`,
+                    method: "PATCH",
+                    data: payload,
+                  });
+                  if ((res as any)?.status >= 400) {
+                    toast({ title: "Error", description: "Failed to update budget line item.", variant: "destructive" });
+                    return;
+                  }
+                } finally {
+                  setShowLoader(false);
+                }
+              }
               setForm((prev) => ({
                 ...prev,
                 budgetLineItems: prev.budgetLineItems.map((li) =>
-                  li.id === id
-                    ? {
-                        ...li,
-                        prmtk_lineitemname: item.name,
-                        prmtk_category: item.category,
-                        prmtk_description: item.description,
-                        prmtk_amount: parseFloat(item.amount),
-                        action: "existing" as const,
-                      }
-                    : li,
+                  li.id === id ? { ...li, ...payload, action: "existing" as const } : li,
                 ),
               }));
             }}
             onRemoveBudgetLineItem={async (id) => {
-              if (formType !== "new") {
-                const itemToRemove = form.budgetLineItems.find(
-                  (li) => li.id === id,
-                );
+              const itemToRemove = form.budgetLineItems.find((li) => li.id === id);
+              const isExistingItem = itemToRemove?.action === "existing";
+              if (formType !== "new" && isExistingItem && itemToRemove?.id) {
                 setShowLoader(true);
-                const api = await callApi({
-                  url: `/_api/${TableName.BUDGETLINEITEMS}(${itemToRemove?.id})`,
-                  method: "DELETE",
-                });
-                setShowLoader(false);
+                try {
+                  await callApi({
+                    url: `/api/budget/line-items/${itemToRemove.id}`,
+                    method: "DELETE",
+                  });
+                } finally {
+                  setShowLoader(false);
+                }
               }
               setForm((prev) => ({
                 ...prev,
-                budgetLineItems: prev.budgetLineItems.filter(
-                  (li) => li.id !== id,
-                ),
+                budgetLineItems: prev.budgetLineItems.filter((li) => li.id !== id),
               }));
             }}
             form={form}
