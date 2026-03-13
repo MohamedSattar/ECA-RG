@@ -248,7 +248,7 @@ export const BudgetSpendDialog: React.FC<BudgetSpendDialogProps> = ({
           <div className="grid gap-2 md:grid-cols-4 rounded-lg border bg-slate-50 p-3 text-sm">
             <div>
               <p className="text-[11px] font-semibold text-slate-500 uppercase">
-                Name
+                Activity
               </p>
               <p className="mt-0.5 font-medium text-slate-900 line-clamp-1">
                 {lineItem.prmtk_lineitemname}
@@ -289,10 +289,10 @@ export const BudgetSpendDialog: React.FC<BudgetSpendDialogProps> = ({
                 <thead className="bg-[#1D2054] text-white">
                   <tr>
                     <th className="px-4 py-2 text-left font-semibold">
-                      Reporting Month
+                      Month
                     </th>
                     <th className="px-4 py-2 text-left font-semibold">
-                      Reporting Year
+                      Year
                     </th>
                     <th className="px-4 py-2 text-left font-semibold">
                       Spent (AED)

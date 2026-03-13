@@ -173,7 +173,7 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
             >
               <div className="grid gap-4 py-2">
                 <div>
-                  <Label htmlFor="lineName">Item Name</Label>
+                  <Label htmlFor="lineName">Activity</Label>
                   <TextField
                     id="lineName"
                     value={lineForm.name}
@@ -250,7 +250,7 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                 <thead className="bg-[#1D2054]">
                   <tr className="text-left">
                     <th className="px-6 py-3 font-semibold text-white">
-                      Item Name
+                      Activity
                     </th>
                     <th className="px-6 py-3 font-semibold text-white">
                       Description
@@ -274,7 +274,7 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                     )}
                     {canEditSpend && (
                       <th className="px-6 py-3 font-semibold text-white text-right">
-                        Action
+                        Update Spend
                       </th>
                     )}
                   </tr>

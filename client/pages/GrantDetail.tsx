@@ -400,58 +400,7 @@ export default function GrantDetail() {
                     </section>
 
                     {/* Research Focus Areas */}
-                    <div className="container h-[1px] bg-lightorange mt-8"></div>
-                    <section className="mt-8">
-                      <h2 className="text-2xl font-semibold mb-4 text-[#391400]">
-                        Research Focus Areas
-                      </h2>
-                      <ul className="text-gray-700 list-disc pl-5 space-y-2">
-                        <li>
-                          Cognitive and socio-emotional development in children
-                          aged 0–8 years
-                        </li>
-                        <li>
-                          Impact of early childhood interventions on learning
-                          outcomes
-                        </li>
-                        <li>
-                          Quality indicators in early childhood education
-                          settings
-                        </li>
-                        <li>Family engagement and parental support programs</li>
-                        <li>
-                          Assessment and measurement tools for early learning
-                        </li>
-                        <li>
-                          Cultural and contextual factors affecting child
-                          development
-                        </li>
-                      </ul>
-                    </section>
-
-                    {/* What We're Looking For */}
-                    <div className="container h-[1px] bg-lightorange mt-8"></div>
-                    <section className="mt-8">
-                      <h2 className="text-2xl font-semibold mb-4 text-[#391400]">
-                        What We're Looking For
-                      </h2>
-                      <ul className="text-gray-700 list-disc pl-5 space-y-2">
-                        <li>
-                          Address critical gaps in early childhood research
-                          within the Abu Dhabi context
-                        </li>
-                        <li>
-                          Employ rigorous research methodologies (qualitative,
-                          quantitative, or mixed)
-                        </li>
-                        <li>
-                          Demonstrate potential for practical application and
-                          policy impact
-                        </li>
-                        <li>Include clear dissemination plans</li>
-                        <li>Show feasibility within timeline and budget</li>
-                      </ul>
-                    </section>
+                  
 
                     {/* Important Note */}
                     <div className="bg-red-50 border borderLeftthink bg-light p-4 rounded-lg text-sm text-[#391400] mt-8">
@@ -484,9 +433,6 @@ export default function GrantDetail() {
 
                 {activeTab === "application" && (
                   <section>
-                    <h2 className="text-2xl font-semibold mb-4 text-[#391400]">
-                      Application Process
-                    </h2>
                     {grantTemplate?.prmtk_applicationprocess ? (
                       <div
                         className="text-gray-700 leading-7"
@@ -556,14 +502,7 @@ export default function GrantDetail() {
                 <h3 className="text-lg font-semibold mb-3">Key Information</h3>
 
                 <div className="bg-[#92CBE8] p-6 rounded-xl space-y-3">
-                  {/* <InfoRow
-                    label="Grant Amount:"
-                    value={
-                      researchArea?.[
-                        "prmtk_allocatedbudget@OData.Community.Display.V1.FormattedValue"
-                      ] || "AED 50,000 - 200,000"
-                    }
-                  /> */}
+                  
                   <InfoRow
                     label="Duration:"
                     value={
@@ -625,23 +564,10 @@ export default function GrantDetail() {
                     }
                   />
                 )}
-                {grantTemplate?.prmtk_budgettemplate && (
-                  <ResourceButton
-                    label="Budget Template"
-                    iconName="Budget"
-                    onClick={() =>
-                      downloadTemplate(
-                        "prmtk_budgettemplate",
-                        grantTemplate.prmtk_budgettemplate_name ||
-                          "Budget_Template.xlsx",
-                      )
-                    }
-                  />
-                )}
                 {grantTemplate?.prmtk_applicanthandbook && (
                   <ResourceButton
                     label="Application Handbook"
-                    iconName="Ethics"
+                    iconName="Application"
                     onClick={() =>
                       downloadTemplate(
                         "prmtk_applicanthandbook",
@@ -651,14 +577,27 @@ export default function GrantDetail() {
                     }
                   />
                 )}
-                {grantTemplate?.prmtk_statusreporttemplate && (
+                {grantTemplate?.prmkt_mainproposaltemplate && (
                   <ResourceButton
-                    label="Reporting Templates"
+                    label="Main Proposal Template"
+                    iconName="Ethics"
+                    onClick={() =>
+                      downloadTemplate(
+                        "prmkt_mainproposaltemplate",
+                        grantTemplate.prmkt_mainproposaltemplate_name ||
+                          "Application_Template.pdf",
+                      )
+                    }
+                  />
+                )}
+                {grantTemplate?.prmtk_granteecapacitybuildingworkshopbrieftemplate && (
+                  <ResourceButton
+                    label="Capacity Building Workshop Brief Template"
                     iconName="Report"
                     onClick={() =>
                       downloadTemplate(
-                        "prmtk_statusreporttemplate",
-                        grantTemplate.prmtk_statusreporttemplate_name ||
+                        "prmtk_granteecapacitybuildingworkshopbrieftemplate",
+                        grantTemplate.prmtk_granteecapacitybuildingworkshopbrieftemplate_name ||
                           "Reporting_Template.pdf",
                       )
                     }
@@ -672,10 +611,8 @@ export default function GrantDetail() {
               {/* Contact Box */}
               <div className="bg-white-100 border-8 border-yellow-300 p-4 rounded-xl">
                 <h3 className="font-semibold mb-5">Need Help?</h3>
-                <p className="font-medium mb-3">Research Grants Team</p>
-                <p className="text-sm mb-1">📧 researchgrants@eca.gov.ae</p>
-                <p className="text-sm mb-1">📞 +971 2 XXX XXXX</p>
-                <p className="text-sm mb-1">🕒 Sun–Thu: 8:00 AM – 4:00 PM</p>
+                <p className="font-medium mb-3">ECA Research Team</p>
+                <p className="text-sm mb-1">📧 Research@eca.gov.ae</p>
               </div>
             </div>
           </div>

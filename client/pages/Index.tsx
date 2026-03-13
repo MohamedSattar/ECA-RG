@@ -600,8 +600,7 @@ export default function Index() {
                 ECA Research Grants Portal
               </h1>
               <p className="mt-4 text-base md:text-lg text-white/80 max-w-xl">
-                Empowering university faculty to drive innovation in early
-                childhood development through research excellence
+             A dedicated platform for researchers to explore active grants, submit proposals, track grant progress, and register for updates on future funding opportunities.
               </p>
               <div className="mt-8 flex flex-col sm:flex-row gap-3">
                 {/*<PrimaryButton

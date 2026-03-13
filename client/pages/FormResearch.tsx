@@ -3750,10 +3750,18 @@ export default function FormResearch() {
                           (v) => v.id === form.selectedBudgetVersion,
                         )?.status === 102
                       ? "Submitted"
-                      : form.budgetVersions.find(
+                    : form.budgetVersions.find(
                             (v) => v.id === form.selectedBudgetVersion,
                           )?.status === 103
-                        ? "Approved"
+                      ? "Approved"
+                    : form.budgetVersions.find(
+                          (v) => v.id === form.selectedBudgetVersion,
+                        )?.status === 104
+                      ? "Rejected"
+                        : form.budgetVersions.find(
+                          (v) => v.id === form.selectedBudgetVersion,
+                        )?.status === 105
+                      ? "Archived"
                         : "Unknown"}
                 </Badge>
               )}
@@ -3781,6 +3789,10 @@ export default function FormResearch() {
                             ? "Submitted"
                             : v.status === 103
                               ? "Approved"
+                              : v.status === 104
+                              ? "Rejected"
+                              : v.status === 105
+                              ? "Archived"
                               : "Unknown"
                       }${v.isActive ? " (Active)" : ""}`,
                     }))}
@@ -4095,15 +4107,15 @@ export default function FormResearch() {
       />
       <ConfirmDialog
         hidden={!showCloneBudgetConfirm}
-        title="Clone Budget"
-        message="Are you sure you want to create a new budget version? This will clone the current budget header and all line items with Draft status."
+        title="Request Budget Change"
+        message="Are you sure you want to request for a budget change? This will require additional approval from ECA Research Team."
         onConfirm={handleUpdateBudgetConfirm}
         onCancel={() => setShowCloneBudgetConfirm(false)}
       />
       <ConfirmDialog
         hidden={!showSubmitBudgetConfirm}
         title="Submit Budget"
-        message="Are you sure you want to submit this budget version? Once submitted, it cannot be edited until reviewed."
+        message="Are you sure you want to submit this budget version? Once submitted, it cannot be edited until reviewed and approved."
         onConfirm={handleEditBudgetConfirm}
         onCancel={() => setShowSubmitBudgetConfirm(false)}
       />
