@@ -4,6 +4,7 @@ import { IconButton } from "@fluentui/react/lib/Button";
 import { Icon } from "@fluentui/react/lib/Icon";
 import React from "react";
 import { HEADING_TEXT } from "@/styles/constants";
+import { popupInputStyles } from "@/styles/popupInputStyles";
 import { useToast } from "@/hooks/use-toast";
 
 interface FileUploadSectionResearchProps {
@@ -23,7 +24,7 @@ export const FileUploadSectionResearch: React.FC<
   FileUploadSectionResearchProps
 > = ({ files, onFilesAdd, onFileRemove, form }) => {
   const { toast } = useToast();
-  const [showSection, setShowSection] = React.useState(true);
+  const [showSection, setShowSection] = React.useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFilesSelect = (newFiles: File[]) => {
@@ -64,14 +65,14 @@ export const FileUploadSectionResearch: React.FC<
 
   return (
     <div className="mt-8 rounded-xl border bg-white p-6">
-      <div className="flex items-center justify-between">
-        <h2 className={HEADING_TEXT}>Files</h2>
+      <div className="flex items-center justify-between min-h-[52px]">
+        <h2 className={HEADING_TEXT}>Extra Attachments</h2>
         <IconButton
           iconProps={{
             iconName: showSection ? "ChevronUp" : "ChevronDown",
           }}
           onClick={() => setShowSection((prev) => !prev)}
-          ariaLabel="Toggle files section"
+          ariaLabel="Toggle extra attachments"
         />
       </div>
       {showSection && (
@@ -180,13 +181,14 @@ export const FileUploadSectionResearch: React.FC<
                     />
                     {form.type !== "view" && (
                       <IconButton
-                        className="text-red-600"
                         iconProps={{ iconName: "Delete" }}
                         onClick={(e) => {
                           e.stopPropagation();
                           onFileRemove(key);
                         }}
                         title="Remove file"
+                        ariaLabel="Remove file"
+                        styles={popupInputStyles.deleteButton}
                       />
                     )}
                   </div>

@@ -1,33 +1,51 @@
 import * as React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import {
+  useNavigate,
+  useLocation,
+  useSearchParams,
+  Outlet,
+} from "react-router-dom";
 import Reveal from "@/motion/Reveal";
 import { useAuth } from "@/state/auth";
 import { toast } from "@/ui/use-toast";
-import { LookupPicker } from "@/components/LookupPicker";
-import { TeamMemberSection } from "@/components/TeamMemberSection";
+import {
+  WorkforceDevelopmentSection,
+  WorkforceDevelopmentItem,
+} from "@/components/WorkforceDevelopmentSection";
+import {
+  ManuscriptsSection,
+  ManuscriptItem,
+} from "@/components/ManuscriptsSection";
+import {
+  CapacityBuildingSection,
+  ResearchActivityItem,
+} from "@/components/CapacityBuildingSection";
 import { useDataverseApi } from "@/hooks/useDataverseApi";
 import { TextField } from "@fluentui/react/lib/TextField";
 import { DatePicker } from "@fluentui/react/lib/DatePicker";
 import { IconButton } from "@fluentui/react/lib/Button";
+import { Icon } from "@fluentui/react/lib/Icon";
 import { Label } from "@fluentui/react/lib/Label";
 import { IDropdownOption } from "@fluentui/react/lib/Dropdown";
 import { DefaultButton, PrimaryButton } from "@fluentui/react/lib/Button";
 import {
   TableName,
-  ResearchAreaKeys,
   ContactKeys,
   ResearchKeys,
   ResearchTeamMemberKeys,
   TeamMemberRoles,
   ExpandRelations,
   ApplicationTeamMemberKeys,
-  ApplicationKeys,
   ApplicationTeamMemberFields,
   StatusReportFields,
   DisseminationRequestFields,
+  DisseminationActivityFields,
   DeliverableFields,
   ContactFields,
+  WorkforceDevelopmentFields,
+  ManuscriptFields,
+  ResearchActivityFields,
 } from "@/constants";
 import { getDeliverableTypeText } from "@/constants/deliverables";
 import { ConfirmDialog, ErrorDialog, SuccessDialog } from "@/components/Dialog";
@@ -37,11 +55,14 @@ import { fileToBase64, getFileKey } from "@/services/utility";
 import { APIURL } from "@/constants/url";
 import {
   processReportFileUploads,
-  processDisseminationFileUploads,
+  // processDisseminationFileUploads, // commented: dissemination not needed for now
   processDeliverableFileUploads,
   loadReportFiles,
-  loadDisseminationFiles,
+  // loadDisseminationFiles, // commented: dissemination not needed for now
   loadDeliverableFiles,
+  loadDisseminationActivityFiles,
+  getDisseminationActivityFolderPath,
+  normalizeGetFilesResponse,
 } from "@/services/reportFileUpload";
 import { BudgetHeaderFields } from "@/constants/budgetHeader";
 import {
@@ -53,11 +74,17 @@ import { BudgetLineItemFields } from "@/constants/budgetLineItem";
 import { BudgetCategorys } from "@/constants/options";
 import { FileUploadSection } from "@/components/FileUploadSection";
 import { HEADING_TEXT } from "@/styles/constants";
+import { popupInputStyles } from "@/styles/popupInputStyles";
 import { ReportingSection, ReportItem } from "@/components/ReportingSection";
 import {
-  DisseminationRequestSection,
+  // DisseminationRequestSection, // commented: dissemination not needed for now
   DisseminationRequest,
 } from "@/components/DisseminationRequestSection";
+import {
+  DisseminationActivitiesSection,
+  DisseminationActivity,
+  AddDisseminationActivityForm,
+} from "@/components/DisseminationActivitiesSection";
 import {
   DeliverablesSection,
   Deliverable,
@@ -65,6 +92,7 @@ import {
 import { FileUploadSectionResearch } from "@/components/FileUploadSectionResearch";
 import { Dropdown } from "@fluentui/react/lib/Dropdown";
 import { Badge } from "@/ui/badge";
+import { BudgetSpendDialog } from "@/components/BudgetSpendDialog";
 
 interface TeamMember {
   id: string;
@@ -88,6 +116,7 @@ interface FormState {
   selectedBudgetVersion: string | null;
   reportItems: ReportItem[];
   disseminationRequests: DisseminationRequest[];
+  disseminationActivities: DisseminationActivity[];
   deliverables: Deliverable[];
   title: string;
   submissionDate: string;
@@ -98,8 +127,14 @@ interface FormState {
   principalInvestigator: string;
   files: { file: File; action: "new" | "existing" | "remove" }[];
   team: TeamMember[];
+  workforceDevelopments: WorkforceDevelopmentItem[];
+  manuscripts: ManuscriptItem[];
+  researchActivities: ResearchActivityItem[];
   type: "new" | "edit" | "view";
   researchNumber?: string;
+  applicationTitle?: string;
+  researchAreaName?: string;
+  principalInvestigatorName?: string;
 }
 
 interface AddMemberForm {
@@ -124,12 +159,16 @@ const INITIAL_FORM_STATE: FormState = {
   principalInvestigator: "",
   files: [],
   team: [],
+  workforceDevelopments: [],
+  manuscripts: [],
+  researchActivities: [],
   budgetHeaders: null,
   budgetLineItems: [],
   budgetVersions: [],
   selectedBudgetVersion: null,
   reportItems: [],
   disseminationRequests: [],
+  disseminationActivities: [],
   deliverables: [],
   type: "new",
 };
@@ -146,44 +185,110 @@ function formatDate(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-// Helper function to process team members
-const processTeamMembers = async (
-  team: TeamMember[],
+/** Format date string (YYYY-MM-DD) to Dataverse ISO date-time (YYYY-MM-DDTHH:mm:ss.000Z). */
+const toDataverseDate = (dateStr: string | undefined): string | null => {
+  if (!dateStr || !dateStr.trim()) return null;
+  const d = new Date(dateStr.trim());
+  if (isNaN(d.getTime())) return null;
+  return d.toISOString();
+};
+
+const processWorkforceDevelopments = async (
+  items: WorkforceDevelopmentItem[],
   researchId: string,
   callApi: (options: any) => Promise<any>,
 ): Promise<void> => {
-  const upsertPromises = team
-    .filter((member) => member.action !== "remove")
-    .map(async (member) => {
-      const method = member.action === "existing" ? "PATCH" : "POST";
-      const url =
-        member.action === "existing"
-          ? `/_api/${TableName.RESEARCHTEAMMEMBER}(${member.id})`
-          : `/_api/${TableName.RESEARCHTEAMMEMBER}`;
-
-      const data: Record<string, any> = {
-        [ResearchTeamMemberKeys.TEAMMEMBERNAME]: member.name,
-        [ResearchTeamMemberKeys.ROLE]: member.role,
-      };
-
-      if (member.action === "new") {
-        data[ResearchTeamMemberKeys.RESEARCH_ID] =
-          `/${TableName.RESEARCHES}(${researchId})`;
-      }
-
-      return callApi({ url, method, data });
-    });
-
-  const removePromises = team
-    .filter((member) => member.action === "remove" && member.id !== researchId)
-    .map(async (member) =>
-      callApi({
-        url: `/_api/${TableName.RESEARCHTEAMMEMBER}(${member.id})`,
-        method: "DELETE",
-      }),
-    );
-
+  const toUpsert = items.filter((i) => !i.removed);
+  const researchEntitySet = WorkforceDevelopmentFields.RESEARCH_ENTITY_SET;
+  const upsertPromises = toUpsert.map(async (item) => {
+    const isExisting = item.action === "existing";
+    const url = isExisting
+      ? `/_api/${TableName.WORKFORCEDEVELOPMENTS}(${item.id})`
+      : `/_api/${TableName.WORKFORCEDEVELOPMENTS}`;
+    const method = isExisting ? "PATCH" : "POST";
+    const data: Record<string, any> = {
+      [WorkforceDevelopmentFields.NAME]: item.fullName,
+      [WorkforceDevelopmentFields.JOININGDATE]:
+        toDataverseDate(item.joiningDate),
+      [WorkforceDevelopmentFields.ENDDATE]: toDataverseDate(item.endDate),
+      [WorkforceDevelopmentFields.ROLE]: item.roleInProject || null,
+      [WorkforceDevelopmentFields.EDUCATIONALLEVEL]:
+        item.educationalLevel || null,
+    };
+    if (!isExisting) {
+      data[WorkforceDevelopmentFields.RESEARCH_ID] =
+        `/${researchEntitySet}(${researchId})`;
+    }
+    const res = await callApi({ url, method, data });
+    const status = (res as any)?.status;
+    if (status >= 400) {
+      const errMsg =
+        (res as any)?.error?.message ||
+        (res as any)?.value?.error?.message ||
+        `Request failed with status ${status}`;
+      throw new Error(`Workforce development: ${errMsg}`);
+    }
+    return res;
+  });
+  const toRemove = items.filter(
+    (i) => i.removed && i.action === "existing" && i.id,
+  );
+  const removePromises = toRemove.map((item) =>
+    callApi({
+      url: `/_api/${TableName.WORKFORCEDEVELOPMENTS}(${item.id})`,
+      method: "DELETE",
+    }),
+  );
   await Promise.all([...upsertPromises, ...removePromises]);
+};
+
+const processManuscripts = async (
+  items: ManuscriptItem[],
+  researchId: string,
+  callApi: (options: any) => Promise<any>,
+): Promise<void> => {
+  const toAdd = items.filter((i) => !i.removed && i.action === "new");
+  const researchEntitySet = ManuscriptFields.RESEARCH_ENTITY_SET;
+  const addPromises = toAdd.map((item) => {
+    const data: Record<string, any> = {
+      [ManuscriptFields.TITLE]: item.title,
+      [ManuscriptFields.AUTHORS]: item.authors || null,
+      [ManuscriptFields.JOURNAL]: item.journal || null,
+      [ManuscriptFields.STATUS]: item.status,
+      [ManuscriptFields.RESEARCH_ID]: `/${researchEntitySet}(${researchId})`,
+    };
+    return callApi({
+      url: `/_api/${TableName.RESEARCHMANUSCRIPTSANDPUBLICATIONS}`,
+      method: "POST",
+      data,
+    });
+  });
+  await Promise.all(addPromises);
+};
+
+const processResearchActivities = async (
+  items: ResearchActivityItem[],
+  researchId: string,
+  callApi: (options: any) => Promise<any>,
+): Promise<void> => {
+  const toAdd = items.filter((i) => !i.removed && i.action === "new");
+  const researchEntitySet = ResearchActivityFields.RESEARCH_ENTITY_SET;
+  const addPromises = toAdd.map((item) => {
+    const data: Record<string, any> = {
+      [ResearchActivityFields.TITLE]: item.title,
+      [ResearchActivityFields.DATE]: toDataverseDate(item.date),
+      [ResearchActivityFields.DELIVERY_FORMAT]: item.deliveryFormat || null,
+      [ResearchActivityFields.AUDIENCE]: item.audience || null,
+      [ResearchActivityFields.STATUS]: item.status,
+      [ResearchActivityFields.RESEARCH_ID]: `/${researchEntitySet}(${researchId})`,
+    };
+    return callApi({
+      url: `/_api/${TableName.RESEARCHACTIVITIES}`,
+      method: "POST",
+      data,
+    });
+  });
+  await Promise.all(addPromises);
 };
 
 // Helper function to get research number
@@ -475,23 +580,11 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
             onChange={(e, newValue) => onTitleChange(newValue || "")}
             placeholder="Enter project title"
             disabled={form.type === "view"}
-            borderless
-            styles={{
-              root: {
-                border: "1px solid #e2e8f0",
-                borderRadius: "6px",
-                backgroundColor: form.type === "view" ? "#f8fafc" : "#ffffff",
-                paddingLeft: "12px",
-                paddingRight: "12px",
-              },
-              field: {
-                fontSize: "14px",
-                color: "#1e293b",
-                "::placeholder": {
-                  color: "#94a3b8",
-                },
-              },
-            }}
+            styles={
+              form.type === "view"
+                ? popupInputStyles.textFieldDisabled
+                : popupInputStyles.textField
+            }
           />
         </div>
       </div>
@@ -502,13 +595,11 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
             value={form.startDate}
             onSelectDate={onStartDateChange}
             disabled={form.type === "view"}
-            styles={{
-              root: {
-                border: "1px solid #e2e8f0",
-                borderRadius: "6px",
-                backgroundColor: form.type === "view" ? "#f8fafc" : "#ffffff",
-              },
-            }}
+            styles={
+              form.type === "view"
+                ? popupInputStyles.datePickerDisabled
+                : popupInputStyles.datePicker
+            }
           />
         </div>
       </div>
@@ -519,13 +610,11 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
             value={form.endDate}
             onSelectDate={onEndDateChange}
             disabled={form.type === "view"}
-            styles={{
-              root: {
-                border: "1px solid #e2e8f0",
-                borderRadius: "6px",
-                backgroundColor: form.type === "view" ? "#f8fafc" : "#ffffff",
-              },
-            }}
+            styles={
+              form.type === "view"
+                ? popupInputStyles.datePickerDisabled
+                : popupInputStyles.datePicker
+            }
           />
         </div>
       </div>
@@ -541,9 +630,10 @@ export default function FormResearch() {
     ...INITIAL_FORM_STATE,
     submissionDate: formatDate(new Date()),
   }));
-  const [showGeneral, setShowGeneral] = useState(true);
-  const [showTeam, setShowTeam] = useState(true);
-  const [showBudget, setShowBudget] = useState(true);
+  const [showTeam, setShowTeam] = useState(false);
+  const [showBudget, setShowBudget] = useState(false);
+  const [showManuscripts, setShowManuscripts] = useState(false);
+  const [showCapacity, setShowCapacity] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [showLoader, setShowLoader] = useState(false);
@@ -552,7 +642,9 @@ export default function FormResearch() {
 
   // Lazy loading states for optional sections
   const [reportsLoaded, setReportsLoaded] = useState(false);
-  const [disseminationLoaded, setDisseminationLoaded] = useState(false);
+  // const [disseminationLoaded, setDisseminationLoaded] = useState(false); // commented: dissemination not needed for now
+  const [disseminationActivitiesLoaded, setDisseminationActivitiesLoaded] =
+    useState(false);
   const [deliverablesLoaded, setDeliverablesLoaded] = useState(false);
   const { callApi } = useDataverseApi();
   const { triggerFlow } = useFlowApi();
@@ -563,7 +655,7 @@ export default function FormResearch() {
   // console.log("FormResearch state:", form);
   // console.log("Current state:", state);
 
-  // Helper to map budget line items
+  // Helper to map budget line items (without spends)
   const mapBudgetLineItems = (items: any[]): BudgetLineItem[] => {
     if (!items || !Array.isArray(items)) return [];
 
@@ -575,6 +667,55 @@ export default function FormResearch() {
       prmtk_category: item[BudgetLineItemFields.CATEGORY] || "",
       action: "existing" as const,
     }));
+  };
+
+  // Enrich line items with spend summary (Total Spent / Remaining Budget)
+  const addSpendSummaryToLineItems = async (
+    items: BudgetLineItem[],
+  ): Promise<BudgetLineItem[]> => {
+    if (!items.length) return items;
+
+    const updated = await Promise.all(
+      items.map(async (item) => {
+        if (!item.id) return item;
+        try {
+          const res = await callApi<{ value?: any[] }>({
+            url: `/_api/prmtk_budgetspends?$filter=_prmtk_lineitem_value eq ${item.id}`,
+            method: "GET",
+          });
+          const value = Array.isArray(res?.value) ? res.value : [];
+          if (!value.length) {
+            return {
+              ...item,
+              totalSpent: 0,
+              remainingBudget: item.prmtk_amount,
+            };
+          }
+
+          const total = value.reduce((sum, v: any) => {
+            const raw =
+              v.prmtk_spent ??
+              v.prmtk_amount ??
+              v.prmtk_budgetspent ??
+              v["prmtk_spent"] ??
+              v["prmtk_budgetspent"];
+            const n = Number(raw);
+            return sum + (isNaN(n) ? 0 : n);
+          }, 0);
+
+          const remaining = item.prmtk_amount - total;
+          return {
+            ...item,
+            totalSpent: total,
+            remainingBudget: remaining,
+          };
+        } catch {
+          return item;
+        }
+      }),
+    );
+
+    return updated;
   };
 
   // Helper to map budget header
@@ -594,13 +735,12 @@ export default function FormResearch() {
       return;
     }
     try {
-      // Fetch budget header with expanded line items in a single call
-      // Only select necessary fields to reduce payload size
+      // Only select necessary fields (no $expand - fetch line items separately to avoid 400 on navigation property name)
       const budgetHeaderSelect = `${BudgetHeaderFields.BUDGETHEADERID},${BudgetHeaderFields.BUDGETNAME},${BudgetHeaderFields.RESEARCH},${BudgetHeaderFields.TOTALBUDGET},${BudgetHeaderFields.VERSIONNUMBER_BUDGET},${BudgetHeaderFields.STATUS}`;
       const budgetLineItemSelect = `${BudgetLineItemFields.BUDGETLINEITEMID},${BudgetLineItemFields.LINEITEMNAME},${BudgetLineItemFields.CATEGORY},${BudgetLineItemFields.DESCRIPTION},${BudgetLineItemFields.AMOUNT},${BudgetLineItemFields.BUDGETHEADER}`;
 
       const res = await callApi<{ value: any[] }>({
-        url: `/_api/${TableName.BUDGETHEADERS}?$filter=${BudgetHeaderFields.RESEARCH} eq ${applicationId}&$select=${budgetHeaderSelect}&$expand=${ExpandRelations.BUDGET_LINE_ITEMS}($select=${budgetLineItemSelect})`,
+        url: `/_api/${TableName.BUDGETHEADERS}?$filter=${BudgetHeaderFields.RESEARCH} eq ${applicationId}&$select=${budgetHeaderSelect}`,
         method: "GET",
       });
       const budgetData = res.value?.[0];
@@ -609,8 +749,13 @@ export default function FormResearch() {
         return;
       }
 
-      // Use expanded line items from the header response instead of making a separate call
-      const lineItems = budgetData[ExpandRelations.BUDGET_LINE_ITEMS] || [];
+      // Fetch line items in a separate call (navigation property name varies by Dataverse schema)
+      const budgetHeaderId = budgetData[BudgetHeaderFields.BUDGETHEADERID];
+      const lineItemsRes = await callApi<{ value: any[] }>({
+        url: `/_api/${TableName.BUDGETLINEITEMS}?$filter=${BudgetLineItemFields.BUDGETHEADER} eq ${budgetHeaderId}&$select=${budgetLineItemSelect}`,
+        method: "GET",
+      });
+      const lineItems = lineItemsRes?.value ?? [];
       const budgetHeader = mapBudgetHeader(budgetData);
       const budgetLineItems = mapBudgetLineItems(lineItems);
 
@@ -630,7 +775,7 @@ export default function FormResearch() {
       return;
     }
     try {
-      // Select only necessary fields to reduce payload
+      // are not yet on the Dataverse entity; omit from $select until backend adds them.
       const reportSelect = `${StatusReportFields.STATUSREPORTID},${StatusReportFields.REPORTTITLE},${StatusReportFields.REPORTINGYEAR},${StatusReportFields.REPORTINGMONTH},${StatusReportFields.REPORTINGDATE},${StatusReportFields.BUDGETSPENT_BASE},${StatusReportFields.RESEARCHHEALTHINDICATOR},${StatusReportFields.ACHIEVEMENTS},${StatusReportFields.CHALLENGES},${StatusReportFields.KEYACTIVITIES},${StatusReportFields.UPCOMINGACTIVITIES},${StatusReportFields.JOURNALPUBLICATIONS},${StatusReportFields.WORKFORCEDEVELOPMENT}`;
 
       const res2 = await callApi<{ value: any[] }>({
@@ -640,9 +785,17 @@ export default function FormResearch() {
 
       const filteredReports = res2.value || [];
 
-      // Get research number for file loading
-      const researchNumber =
+      // Get research number for file loading (fallback fetch if not in form/state)
+      let researchNumber =
         form.researchNumber || state?.item?.[ResearchKeys.RESEARCHNUMBER];
+      if (!researchNumber) {
+        researchNumber = await getResearchNumber(
+          formType,
+          researchId,
+          state?.item?.[ResearchKeys.RESEARCHNUMBER],
+          callApi,
+        );
+      }
 
       // Load files for each report in parallel
       const reportsWithFiles = await Promise.all(
@@ -682,6 +835,10 @@ export default function FormResearch() {
               item[StatusReportFields.JOURNALPUBLICATIONS] || "",
             prmtk_workforcedevelopment:
               item[StatusReportFields.WORKFORCEDEVELOPMENT] || "",
+            // Not yet on entity: loaded as empty until backend adds these columns
+            prmtk_changes: "",
+            prmtk_lessonslearnedandimplications: "",
+            prmtk_feedback: "",
             files: files,
             action: "existing" as const,
           };
@@ -698,6 +855,7 @@ export default function FormResearch() {
     }
   };
 
+  /* commented: prmtk_disseminationapplicants API and dissemination not needed for now
   const loadDisseminationRequests = async (
     researchId: string,
   ): Promise<void> => {
@@ -705,7 +863,6 @@ export default function FormResearch() {
       return;
     }
     try {
-      // Select only necessary fields to reduce payload
       const disseminationSelect = `${DisseminationRequestFields.DISSEMINATIONAPPLICANTID},${DisseminationRequestFields.TITLE},${DisseminationRequestFields.JOURNALNAME},${DisseminationRequestFields.ABSTRACT},${DisseminationRequestFields.BUDGETNEEDED_BASE},${DisseminationRequestFields.SUBMISSIONDATE},${DisseminationRequestFields.REQUESTSTATUS}`;
 
       const res = await callApi<{ value: any[] }>({
@@ -715,11 +872,9 @@ export default function FormResearch() {
 
       const filteredRequests = res.value || [];
 
-      // Get research number for file loading
       const researchNumber =
         form.researchNumber || state?.item?.[ResearchKeys.RESEARCHNUMBER];
 
-      // Load files for each dissemination request in parallel
       const requestsWithFiles = await Promise.all(
         filteredRequests.map(async (item: any) => {
           let files: { file: File; action: "existing" }[] = [];
@@ -760,7 +915,64 @@ export default function FormResearch() {
       }));
     } catch (error) {
       console.error("Failed to load dissemination requests:", error);
-      // Don't throw error - dissemination requests are optional
+    }
+  };
+  */
+
+  const loadDisseminationActivities = async (
+    researchId: string,
+  ): Promise<DisseminationActivity[]> => {
+    if (formType === "new") return [];
+    try {
+      const activitySelect = `${DisseminationActivityFields.DISSEMINATIONACTIVITYID},${DisseminationActivityFields.NAME},${DisseminationActivityFields.PRESENTER},${DisseminationActivityFields.DATE},${DisseminationActivityFields.TYPE},${DisseminationActivityFields.MATERIALSUSED}`;
+      const res = await callApi<{ value: any[] }>({
+        url: `/_api/${TableName.DISSEMINATIONACTIVITIES}?$filter=${DisseminationActivityFields.RESEARCH} eq ${researchId}&$select=${activitySelect}&$top=100`,
+        method: "GET",
+      });
+      let researchNumber =
+        form.researchNumber || state?.item?.[ResearchKeys.RESEARCHNUMBER];
+      if (!researchNumber) {
+        researchNumber = await getResearchNumber(
+          formType,
+          researchId,
+          state?.item?.[ResearchKeys.RESEARCHNUMBER],
+          callApi,
+        );
+      }
+      const rawList = res?.value ?? [];
+      const listWithFiles = await Promise.all(
+        rawList.map(async (item: any) => {
+          const id = item[DisseminationActivityFields.DISSEMINATIONACTIVITYID];
+          const name = item[DisseminationActivityFields.NAME] || "";
+          const type = item[DisseminationActivityFields.TYPE] ?? 0;
+          const date = item[DisseminationActivityFields.DATE] ?? "";
+          let files: { file: File; action: "existing" }[] = [];
+          if (researchNumber && id) {
+            files = await loadDisseminationActivityFiles(
+              researchNumber,
+              type,
+              date,
+              id,
+              triggerFlow,
+            );
+          }
+          return {
+            id,
+            name,
+            presenter: item[DisseminationActivityFields.PRESENTER] || "",
+            date: item[DisseminationActivityFields.DATE] || "",
+            type: item[DisseminationActivityFields.TYPE] ?? 0,
+            materialsUsed:
+              item[DisseminationActivityFields.MATERIALSUSED] ?? null,
+            files,
+          };
+        }),
+      );
+      setForm((prev) => ({ ...prev, disseminationActivities: listWithFiles }));
+      return listWithFiles;
+    } catch (error) {
+      console.error("Failed to load dissemination activities:", error);
+      return [];
     }
   };
 
@@ -779,9 +991,17 @@ export default function FormResearch() {
 
       const filteredDeliverables = res.value || [];
 
-      // Get research number for file loading
-      const researchNumber =
+      // Get research number for file loading (fallback fetch if not in form/state)
+      let researchNumber =
         form.researchNumber || state?.item?.[ResearchKeys.RESEARCHNUMBER];
+      if (!researchNumber) {
+        researchNumber = await getResearchNumber(
+          formType,
+          researchId,
+          state?.item?.[ResearchKeys.RESEARCHNUMBER],
+          callApi,
+        );
+      }
 
       // Load files for each deliverable in parallel
       const deliverablesWithFiles = await Promise.all(
@@ -863,14 +1083,93 @@ export default function FormResearch() {
     }
   };
 
+  const loadWorkforceDevelopments = async (researchId: string): Promise<void> => {
+    if (formType === "new") return;
+    try {
+      const select = `${WorkforceDevelopmentFields.WORKFORCEDEVELOPMENTID},${WorkforceDevelopmentFields.NAME},${WorkforceDevelopmentFields.JOININGDATE},${WorkforceDevelopmentFields.ENDDATE},${WorkforceDevelopmentFields.ROLE},${WorkforceDevelopmentFields.EDUCATIONALLEVEL}`;
+      const res = await callApi<{ value: any[] }>({
+        url: `/_api/${TableName.WORKFORCEDEVELOPMENTS}?$filter=${WorkforceDevelopmentFields.RESEARCH} eq ${researchId}&$select=${select}&$top=500`,
+        method: "GET",
+      });
+      const value = res.value ?? [];
+      const items: WorkforceDevelopmentItem[] = value.map((row: any) => ({
+        id: row[WorkforceDevelopmentFields.WORKFORCEDEVELOPMENTID],
+        fullName: row[WorkforceDevelopmentFields.NAME] ?? "",
+        joiningDate: row[WorkforceDevelopmentFields.JOININGDATE] ?? "",
+        endDate: row[WorkforceDevelopmentFields.ENDDATE] ?? "",
+        roleInProject: row[WorkforceDevelopmentFields.ROLE] ?? "",
+        educationalLevel: row[WorkforceDevelopmentFields.EDUCATIONALLEVEL] ?? "",
+        action: "existing",
+      }));
+      setForm((prev) => ({ ...prev, workforceDevelopments: items }));
+    } catch (error) {
+      console.error("Failed to load workforce developments:", error);
+    }
+  };
+
+  const loadManuscripts = async (researchId: string): Promise<void> => {
+    if (formType === "new") return;
+    try {
+      const select = `${ManuscriptFields.MANUSCRIPTID},${ManuscriptFields.TITLE},${ManuscriptFields.AUTHORS},${ManuscriptFields.JOURNAL},${ManuscriptFields.STATUS}`;
+      const filter = `${ManuscriptFields.RESEARCH} eq ${researchId}`;
+      const res = await callApi<{ value: any[] }>({
+        url: `/_api/${TableName.RESEARCHMANUSCRIPTSANDPUBLICATIONS}?$filter=${filter}&$select=${select}&$top=500`,
+        method: "GET",
+      });
+      const value = res.value ?? [];
+      const items: ManuscriptItem[] = value.map((row: any) => ({
+        id: row[ManuscriptFields.MANUSCRIPTID],
+        title: row[ManuscriptFields.TITLE] ?? "",
+        authors: row[ManuscriptFields.AUTHORS] ?? "",
+        journal: row[ManuscriptFields.JOURNAL] ?? "",
+        status: row[ManuscriptFields.STATUS] ?? 1,
+        action: "existing",
+      }));
+      setForm((prev) => ({ ...prev, manuscripts: items }));
+    } catch (error) {
+      console.error("Failed to load manuscripts:", error);
+    }
+  };
+
+  const loadResearchActivities = async (researchId: string): Promise<void> => {
+    if (formType === "new") return;
+    try {
+      const select = `${ResearchActivityFields.ACTIVITYID},${ResearchActivityFields.TITLE},${ResearchActivityFields.DATE},${ResearchActivityFields.DELIVERY_FORMAT},${ResearchActivityFields.AUDIENCE},${ResearchActivityFields.STATUS},${ResearchActivityFields.OBJECTIVE},${ResearchActivityFields.KEY_OUTPUTS}`;
+      const filter = `${ResearchActivityFields.RESEARCH} eq ${researchId}`;
+      const res = await callApi<{ value: any[] }>({
+        url: `/_api/${TableName.RESEARCHACTIVITIES}?$filter=${filter}&$select=${select}&$top=500`,
+        method: "GET",
+      });
+      const value = res.value ?? [];
+      const items: ResearchActivityItem[] = value.map((row: any) => ({
+        id: row[ResearchActivityFields.ACTIVITYID],
+        title: row[ResearchActivityFields.TITLE] ?? "",
+        date: row[ResearchActivityFields.DATE] ?? "",
+        deliveryFormat: row[ResearchActivityFields.DELIVERY_FORMAT] ?? "",
+        audience: row[ResearchActivityFields.AUDIENCE] ?? "",
+        status: row[ResearchActivityFields.STATUS] ?? 1,
+        objective: row[ResearchActivityFields.OBJECTIVE] ?? "",
+        keyOutputsOrLessons: row[ResearchActivityFields.KEY_OUTPUTS] ?? "",
+        action: "existing",
+      }));
+      setForm((prev) => ({ ...prev, researchActivities: items }));
+    } catch (error) {
+      console.error("Failed to load research activities:", error);
+    }
+  };
+
   // Load research details if editing
   const loadResearchDetails = useCallback(
     async (researchId: string) => {
       setShowLoader(true);
       try {
-        // Select only necessary fields to reduce payload
+        // Select only necessary fields to reduce payload; expand for summary display names
         const select = `${ResearchKeys.RESEARCHID},${ResearchKeys.RESEARCHTITLE},${ResearchKeys.STARTDATE},${ResearchKeys.ENDDATE},${ResearchKeys.RESEARCHAREA},${ResearchKeys.APPLICATIONREFERENCE},${ResearchKeys.PRINCIPALINVESTIGATOR},${ResearchKeys.RESEARCHNUMBER}`;
-        const expand = ExpandRelations.RESEARCH_TEAM_MEMBER;
+        const expand =
+          `${ExpandRelations.RESEARCH_TEAM_MEMBER},` +
+          `prmtk_ApplicationReference($select=prmtk_applicationtitle),` +
+          `prmtk_ResearchArea($select=prmtk_areaname),` +
+          `prmtk_PrincipalInvestigator($select=fullname)`;
         const currentUserContactId = user?.contact?.[ContactFields.CONTACTID];
 
         if (!currentUserContactId) {
@@ -912,7 +1211,15 @@ export default function FormResearch() {
         await Promise.all([
           loadBudgetDetails(researchAreaId),
           loadTeamMembers(researchId),
+          loadWorkforceDevelopments(researchId),
+          loadManuscripts(researchId),
+          loadResearchActivities(researchId),
         ]);
+        // Resolve display names from expanded entities
+        const appRef = research.prmtk_ApplicationReference;
+        const resArea = research.prmtk_ResearchArea;
+        const pi = research.prmtk_PrincipalInvestigator;
+
         // Update form state
         setForm((prev) => ({
           ...prev,
@@ -931,6 +1238,9 @@ export default function FormResearch() {
           type: formType === "view" ? "view" : "edit",
           files: files || [],
           researchNumber: research[ResearchKeys.RESEARCHNUMBER] || null,
+          applicationTitle: appRef?.prmtk_applicationtitle ?? undefined,
+          researchAreaName: resArea?.prmtk_areaname ?? undefined,
+          principalInvestigatorName: pi?.fullname ?? undefined,
         }));
       } catch (error) {
         console.error("Failed to load research details:", error);
@@ -952,7 +1262,7 @@ export default function FormResearch() {
     if (!researchNumber) return [];
 
     try {
-      const applicationFiles = await triggerFlow<any, any[]>(
+      const applicationFiles = await triggerFlow<any, any>(
         APIURL.FileGetEndpoint,
         {
           Library: "Researches",
@@ -960,13 +1270,12 @@ export default function FormResearch() {
         },
       );
 
-      // console.log("Fetched application files:", applicationFiles);
-      return (
-        applicationFiles?.data?.map((f: any) => ({
-          file: getFile(f),
-          action: "existing" as const,
-        })) || []
-      );
+      if (!applicationFiles?.success) return [];
+      const normalized = normalizeGetFilesResponse(applicationFiles.data);
+      return normalized.map((f) => ({
+        file: getFile(f),
+        action: "existing" as const,
+      }));
     } catch (error) {
       console.error("Failed to load application files:", error);
       return [];
@@ -992,6 +1301,7 @@ export default function FormResearch() {
     [formType, reportsLoaded],
   );
 
+  /* commented: dissemination not needed for now
   const loadOptionalDisseminationData = useCallback(
     async (researchId: string) => {
       if (disseminationLoaded || formType === "new") return;
@@ -999,6 +1309,16 @@ export default function FormResearch() {
       setDisseminationLoaded(true);
     },
     [formType, disseminationLoaded],
+  );
+  */
+
+  const loadOptionalDisseminationActivitiesData = useCallback(
+    async (researchId: string) => {
+      if (disseminationActivitiesLoaded || formType === "new") return;
+      await loadDisseminationActivities(researchId);
+      setDisseminationActivitiesLoaded(true);
+    },
+    [formType, disseminationActivitiesLoaded],
   );
 
   const loadOptionalDeliverableData = useCallback(
@@ -1021,12 +1341,21 @@ export default function FormResearch() {
           method: "GET",
         });
 
-        const versions: BudgetVersion[] = (res?.value || []).map((v: any) => ({
+        const rawVersions = (res?.value || []).map((v: any) => ({
           id: v[BudgetHeaderFields.BUDGETHEADERID],
           version: v[BudgetHeaderFields.VERSIONNUMBER_BUDGET] || 1,
           status: v[BudgetHeaderFields.STATUS] || 101,
           name: v[BudgetHeaderFields.BUDGETNAME] || "",
-          isActive: v[BudgetHeaderFields.STATUS] === 103, // 103 = Approved
+        }));
+
+        // Mark only one version as active in the UI:
+        // the first "Approved" (status 103) in the list (latest version due to desc order).
+        const activeApprovedId =
+          rawVersions.find((v) => v.status === 103)?.id ?? null;
+
+        const versions: BudgetVersion[] = rawVersions.map((v) => ({
+          ...v,
+          isActive: activeApprovedId !== null && v.id === activeApprovedId,
         }));
 
         setForm((prev) => ({
@@ -1050,29 +1379,34 @@ export default function FormResearch() {
   const loadBudgetByVersion = useCallback(
     async (budgetHeaderId: string) => {
       try {
-        // Select only necessary fields and fetch header with expanded line items
+        // Select only necessary fields; fetch header then line items separately (no $expand)
         const budgetHeaderSelect = `${BudgetHeaderFields.BUDGETHEADERID},${BudgetHeaderFields.BUDGETNAME},${BudgetHeaderFields.RESEARCH},${BudgetHeaderFields.TOTALBUDGET},${BudgetHeaderFields.VERSIONNUMBER_BUDGET},${BudgetHeaderFields.STATUS}`;
         const budgetLineItemSelect = `${BudgetLineItemFields.BUDGETLINEITEMID},${BudgetLineItemFields.LINEITEMNAME},${BudgetLineItemFields.CATEGORY},${BudgetLineItemFields.DESCRIPTION},${BudgetLineItemFields.AMOUNT},${BudgetLineItemFields.BUDGETHEADER}`;
 
-        // Fetch budget header with expanded line items
         const headerRes = await callApi<{ value: any[] }>({
-          url: `/_api/${TableName.BUDGETHEADERS}?$filter=${BudgetHeaderFields.BUDGETHEADERID} eq ${budgetHeaderId}&$select=${budgetHeaderSelect}&$expand=${ExpandRelations.BUDGET_LINE_ITEMS}($select=${budgetLineItemSelect})`,
+          url: `/_api/${TableName.BUDGETHEADERS}?$filter=${BudgetHeaderFields.BUDGETHEADERID} eq ${budgetHeaderId}&$select=${budgetHeaderSelect}`,
           method: "GET",
         });
 
         const budgetData = headerRes?.value?.[0];
         if (!budgetData) return;
 
-        // Use expanded line items instead of separate call
-        const lineItems = budgetData[ExpandRelations.BUDGET_LINE_ITEMS] || [];
+        const lineItemsRes = await callApi<{ value: any[] }>({
+          url: `/_api/${TableName.BUDGETLINEITEMS}?$filter=${BudgetLineItemFields.BUDGETHEADER} eq ${budgetHeaderId}&$select=${budgetLineItemSelect}`,
+          method: "GET",
+        });
+        const lineItems = lineItemsRes?.value ?? [];
 
         const budgetHeader = mapBudgetHeader(budgetData);
         const budgetLineItems = mapBudgetLineItems(lineItems);
+        const itemsWithSpends = await addSpendSummaryToLineItems(
+          budgetLineItems,
+        );
 
         setForm((prev) => ({
           ...prev,
           budgetHeaders: budgetHeader,
-          budgetLineItems: budgetLineItems,
+          budgetLineItems: itemsWithSpends,
           selectedBudgetVersion: budgetHeaderId,
         }));
       } catch (error) {
@@ -1084,6 +1418,19 @@ export default function FormResearch() {
 
   // Handle Update Budget (clone current budget)
   const [showCloneBudgetConfirm, setShowCloneBudgetConfirm] = useState(false);
+  const [spendDialogOpen, setSpendDialogOpen] = useState(false);
+  const [selectedSpendLineItem, setSelectedSpendLineItem] =
+    useState<BudgetLineItem | null>(null);
+
+  const handleOpenSpendDialog = (lineItem: BudgetLineItem) => {
+    setSelectedSpendLineItem(lineItem);
+    setSpendDialogOpen(true);
+  };
+
+  const handleCloseSpendDialog = () => {
+    setSpendDialogOpen(false);
+    setSelectedSpendLineItem(null);
+  };
   const handleUpdateBudgetClick = () => {
     setShowCloneBudgetConfirm(true);
   };
@@ -1218,7 +1565,8 @@ export default function FormResearch() {
       const timer = setTimeout(async () => {
         await Promise.all([
           loadOptionalReportData(researchAreaId),
-          loadOptionalDisseminationData(researchAreaId),
+          // loadOptionalDisseminationData(researchAreaId), // commented: dissemination not needed for now
+          loadOptionalDisseminationActivitiesData(researchAreaId),
           loadOptionalDeliverableData(researchAreaId),
         ]);
       }, 500); // Load optional sections 500ms after main content
@@ -1230,129 +1578,605 @@ export default function FormResearch() {
     form.title,
     formType,
     loadOptionalReportData,
-    loadOptionalDisseminationData,
+    // loadOptionalDisseminationData, // commented: dissemination not needed for now
+    loadOptionalDisseminationActivitiesData,
     loadOptionalDeliverableData,
   ]);
 
   const canSubmit = useMemo(() => form.title.trim().length > 0, [form.title]);
 
-  const handleAddMember = useCallback(
-    async (member: AddMemberForm) => {
-      const newMember: TeamMember = {
-        id: crypto.randomUUID(),
-        name: member.name,
-        role: member.role,
-        customRoleName: member.customRoleName,
-        educationLevel: member.educationLevel,
-        action: "new",
-      } as any;
-      if (formType !== "new") {
+  const handleAddWorkforceDevelopment = useCallback(
+    async (payload: {
+      fullName: string;
+      joiningDate: string;
+      endDate: string;
+      roleInProject: string;
+      educationalLevel: string;
+    }) => {
+      if (formType !== "new" && researchAreaId) {
         setShowLoader(true);
         try {
-          const memberData: Record<string, any> = {
-            [ResearchTeamMemberKeys.TEAMMEMBERNAME]: newMember.name,
-            [ResearchTeamMemberKeys.ROLE]: newMember.role,
-            [ResearchTeamMemberKeys.RESEARCH_ID]: `/${TableName.RESEARCHES}(${researchAreaId})`,
+          const researchEntitySet =
+            WorkforceDevelopmentFields.RESEARCH_ENTITY_SET;
+          const data: Record<string, any> = {
+            [WorkforceDevelopmentFields.NAME]: payload.fullName,
+            [WorkforceDevelopmentFields.JOININGDATE]:
+              toDataverseDate(payload.joiningDate),
+            [WorkforceDevelopmentFields.ENDDATE]:
+              toDataverseDate(payload.endDate),
+            [WorkforceDevelopmentFields.ROLE]: payload.roleInProject || null,
+            [WorkforceDevelopmentFields.EDUCATIONALLEVEL]:
+              payload.educationalLevel || null,
+            [WorkforceDevelopmentFields.RESEARCH_ID]: `/${researchEntitySet}(${researchAreaId})`,
           };
-          if (member.customRoleName) {
-            memberData[ApplicationTeamMemberFields.CUSTOMROLE] =
-              member.customRoleName;
-          }
-          if (member.educationLevel) {
-            memberData[ResearchTeamMemberKeys.EDUCATIONLEVEL] =
-              member.educationLevel;
-          }
-          await callApi({
-            url: `/_api/${TableName.RESEARCHTEAMMEMBER}`,
+          const res = await callApi<{ status?: number; headers?: Headers }>({
+            url: `/_api/${TableName.WORKFORCEDEVELOPMENTS}`,
             method: "POST",
-            data: memberData,
+            data,
           });
-
-          // Refetch team members to get the correct IDs from the database
-          await loadTeamMembers(researchAreaId);
+          const status = (res as any)?.status;
+          if (status >= 400) {
+            const errMsg =
+              (res as any)?.error?.message ||
+              (res as any)?.value?.error?.message ||
+              `Request failed with status ${status}`;
+            throw new Error(errMsg);
+          }
+          await loadWorkforceDevelopments(researchAreaId);
+          toast({
+            title: "Success",
+            description: "Emirates Workforce Development added successfully.",
+          });
         } catch (error) {
+          console.error("Failed to add workforce development:", error);
           toast({
             title: "Error",
-            description: "Failed to add team member.",
+            description:
+              error instanceof Error
+                ? error.message
+                : "Failed to add record.",
+            variant: "destructive",
           });
         } finally {
           setShowLoader(false);
         }
       } else {
-        // For new forms, add to state immediately
-        setForm((prev) => ({ ...prev, team: [...prev.team, newMember] }));
+        const newItem: WorkforceDevelopmentItem = {
+          id: crypto.randomUUID(),
+          fullName: payload.fullName,
+          joiningDate: payload.joiningDate,
+          endDate: payload.endDate,
+          roleInProject: payload.roleInProject,
+          educationalLevel: payload.educationalLevel,
+          action: "new",
+        };
+        setForm((prev) => ({
+          ...prev,
+          workforceDevelopments: [...prev.workforceDevelopments, newItem],
+        }));
       }
     },
-    [formType, researchAreaId, callApi, loadTeamMembers],
+    [formType, researchAreaId, callApi, loadWorkforceDevelopments],
   );
 
-  const handleRemoveMember = useCallback(async (id: string) => {
-    if (formType !== "new") {
-      const itemToRemove = form.budgetLineItems.find((li) => li.id === id);
-      setShowLoader(true);
-      const api = await callApi({
-        url: `/_api/${TableName.RESEARCHTEAMMEMBER}(${id})`,
-        method: "DELETE",
-      });
-      setShowLoader(false);
-    }
-    setForm((prev) => ({
-      ...prev,
-      team: prev.team.filter((m) => m.id !== id),
-    }));
-  }, []);
-
-  const handleEditMember = useCallback(
-    async (id: string, member: AddMemberForm) => {
-      if (formType !== "new") {
+  const handleRemoveWorkforceDevelopment = useCallback(
+    async (id: string) => {
+      const item = form.workforceDevelopments.find((i) => i.id === id);
+      if (formType !== "new" && item?.action === "existing") {
         setShowLoader(true);
-        const memberData: Record<string, any> = {
-          [ResearchTeamMemberKeys.TEAMMEMBERNAME]: member.name,
-          [ResearchTeamMemberKeys.ROLE]: member.role,
-          [ResearchTeamMemberKeys.RESEARCH_ID]: `/${TableName.RESEARCHES}(${researchAreaId})`,
-        };
-        if (member.customRoleName) {
-          memberData[ApplicationTeamMemberFields.CUSTOMROLE] =
-            member.customRoleName;
-        }
-        if (member.educationLevel) {
-          memberData[ResearchTeamMemberKeys.EDUCATIONLEVEL] =
-            member.educationLevel;
-        }
         try {
           await callApi({
-            url: `/_api/${TableName.RESEARCHTEAMMEMBER}(${id})`,
-            method: "PATCH",
-            data: memberData,
+            url: `/_api/${TableName.WORKFORCEDEVELOPMENTS}(${id})`,
+            method: "DELETE",
           });
+          setForm((prev) => ({
+            ...prev,
+            workforceDevelopments: prev.workforceDevelopments.filter(
+              (i) => i.id !== id,
+            ),
+          }));
           toast({
             title: "Success",
-            description: "Team member updated successfully.",
+            description: "Record removed successfully.",
+          });
+        } catch (error) {
+          console.error("Failed to remove workforce development:", error);
+          toast({
+            title: "Error",
+            description: "Failed to remove record.",
+            variant: "destructive",
+          });
+        } finally {
+          setShowLoader(false);
+        }
+      } else {
+        setForm((prev) => ({
+          ...prev,
+          workforceDevelopments: prev.workforceDevelopments.map((i) =>
+            i.id === id ? { ...i, removed: true } : i,
+          ),
+        }));
+      }
+    },
+    [formType, form.workforceDevelopments, callApi],
+  );
+
+  const handleEditWorkforceDevelopment = useCallback(
+    async (
+      id: string,
+      payload: {
+        fullName: string;
+        joiningDate: string;
+        endDate: string;
+        roleInProject: string;
+        educationalLevel: string;
+      },
+    ) => {
+      const item = form.workforceDevelopments.find((i) => i.id === id);
+      if (formType !== "new" && item?.action === "existing") {
+        setShowLoader(true);
+        try {
+          const data: Record<string, any> = {
+            [WorkforceDevelopmentFields.NAME]: payload.fullName,
+            [WorkforceDevelopmentFields.JOININGDATE]:
+              toDataverseDate(payload.joiningDate),
+            [WorkforceDevelopmentFields.ENDDATE]:
+              toDataverseDate(payload.endDate),
+            [WorkforceDevelopmentFields.ROLE]: payload.roleInProject || null,
+            [WorkforceDevelopmentFields.EDUCATIONALLEVEL]:
+              payload.educationalLevel || null,
+          };
+          const res = await callApi({
+            url: `/_api/${TableName.WORKFORCEDEVELOPMENTS}(${id})`,
+            method: "PATCH",
+            data,
+          });
+          const status = (res as any)?.status;
+          if (status >= 400) {
+            const errMsg =
+              (res as any)?.error?.message ||
+              (res as any)?.value?.error?.message ||
+              `Request failed with status ${status}`;
+            throw new Error(errMsg);
+          }
+          setForm((prev) => ({
+            ...prev,
+            workforceDevelopments: prev.workforceDevelopments.map((i) =>
+              i.id === id
+                ? {
+                    ...i,
+                    fullName: payload.fullName,
+                    joiningDate: payload.joiningDate,
+                    endDate: payload.endDate,
+                    roleInProject: payload.roleInProject,
+                    educationalLevel: payload.educationalLevel,
+                  }
+                : i,
+            ),
+          }));
+          toast({
+            title: "Success",
+            description: "Record updated successfully.",
+          });
+        } catch (error) {
+          console.error("Failed to update workforce development:", error);
+          toast({
+            title: "Error",
+            description:
+              error instanceof Error
+                ? error.message
+                : "Failed to update record.",
+            variant: "destructive",
+          });
+        } finally {
+          setShowLoader(false);
+        }
+      } else {
+        setForm((prev) => ({
+          ...prev,
+          workforceDevelopments: prev.workforceDevelopments.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  fullName: payload.fullName,
+                  joiningDate: payload.joiningDate,
+                  endDate: payload.endDate,
+                  roleInProject: payload.roleInProject,
+                  educationalLevel: payload.educationalLevel,
+                }
+              : item,
+          ),
+        }));
+      }
+    },
+    [formType, form.workforceDevelopments, callApi],
+  );
+
+  const handleAddManuscript = useCallback(
+    async (payload: {
+      title: string;
+      authors: string;
+      journal: string;
+      status: number;
+    }) => {
+      if (formType !== "new" && researchAreaId) {
+        setShowLoader(true);
+        try {
+          const researchEntitySet = ManuscriptFields.RESEARCH_ENTITY_SET;
+          const data: Record<string, any> = {
+            [ManuscriptFields.TITLE]: payload.title,
+            [ManuscriptFields.AUTHORS]: payload.authors || null,
+            [ManuscriptFields.JOURNAL]: payload.journal || null,
+            [ManuscriptFields.STATUS]: payload.status,
+            [ManuscriptFields.RESEARCH_ID]: `/${researchEntitySet}(${researchAreaId})`,
+          };
+          const res = await callApi<{ status?: number }>({
+            url: `/_api/${TableName.RESEARCHMANUSCRIPTSANDPUBLICATIONS}`,
+            method: "POST",
+            data,
+          });
+          const status = (res as any)?.status;
+          if (status >= 400) {
+            const errMsg =
+              (res as any)?.error?.message ||
+              (res as any)?.value?.error?.message ||
+              `Request failed with status ${status}`;
+            throw new Error(errMsg);
+          }
+          await loadManuscripts(researchAreaId);
+          toast({
+            title: "Success",
+            description: "Manuscript / Journal publication added successfully.",
+          });
+        } catch (error) {
+          console.error("Failed to add manuscript:", error);
+          toast({
+            title: "Error",
+            description:
+              error instanceof Error
+                ? error.message
+                : "Failed to add record.",
+            variant: "destructive",
+          });
+        } finally {
+          setShowLoader(false);
+        }
+      } else {
+        const newItem: ManuscriptItem = {
+          id: crypto.randomUUID(),
+          title: payload.title,
+          authors: payload.authors,
+          journal: payload.journal,
+          status: payload.status,
+          action: "new",
+        };
+        setForm((prev) => ({
+          ...prev,
+          manuscripts: [...prev.manuscripts, newItem],
+        }));
+      }
+    },
+    [formType, researchAreaId, callApi, loadManuscripts],
+  );
+
+  const handleRemoveManuscript = useCallback(
+    async (id: string) => {
+      const item = form.manuscripts.find((i) => i.id === id);
+      if (formType !== "new" && item?.action === "existing") {
+        setShowLoader(true);
+        try {
+          await callApi({
+            url: `/_api/${TableName.RESEARCHMANUSCRIPTSANDPUBLICATIONS}(${id})`,
+            method: "DELETE",
+          });
+          setForm((prev) => ({
+            ...prev,
+            manuscripts: prev.manuscripts.filter((i) => i.id !== id),
+          }));
+          toast({
+            title: "Success",
+            description: "Record removed successfully.",
+          });
+        } catch (error) {
+          console.error("Failed to remove manuscript:", error);
+          toast({
+            title: "Error",
+            description: "Failed to remove record.",
+            variant: "destructive",
+          });
+        } finally {
+          setShowLoader(false);
+        }
+      } else {
+        setForm((prev) => ({
+          ...prev,
+          manuscripts: prev.manuscripts.map((i) =>
+            i.id === id ? { ...i, removed: true } : i,
+          ),
+        }));
+      }
+    },
+    [formType, form.manuscripts, callApi],
+  );
+
+  const handleEditManuscript = useCallback(
+    async (
+      id: string,
+      payload: {
+        title: string;
+        authors: string;
+        journal: string;
+        status: number;
+      },
+    ) => {
+      const item = form.manuscripts.find((i) => i.id === id);
+      if (formType !== "new" && item?.action === "existing") {
+        setShowLoader(true);
+        try {
+          const data: Record<string, any> = {
+            [ManuscriptFields.TITLE]: payload.title,
+            [ManuscriptFields.AUTHORS]: payload.authors || null,
+            [ManuscriptFields.JOURNAL]: payload.journal || null,
+            [ManuscriptFields.STATUS]: payload.status,
+          };
+          const res = await callApi({
+            url: `/_api/${TableName.RESEARCHMANUSCRIPTSANDPUBLICATIONS}(${id})`,
+            method: "PATCH",
+            data,
+          });
+          const status = (res as any)?.status;
+          if (status >= 400) {
+            const errMsg =
+              (res as any)?.error?.message ||
+              (res as any)?.value?.error?.message ||
+              `Request failed with status ${status}`;
+            throw new Error(errMsg);
+          }
+          setForm((prev) => ({
+            ...prev,
+            manuscripts: prev.manuscripts.map((i) =>
+              i.id === id
+                ? {
+                    ...i,
+                    title: payload.title,
+                    authors: payload.authors,
+                    journal: payload.journal,
+                    status: payload.status,
+                  }
+                : i,
+            ),
+          }));
+          toast({
+            title: "Success",
+            description: "Record updated successfully.",
+          });
+        } catch (error) {
+          console.error("Failed to update manuscript:", error);
+          toast({
+            title: "Error",
+            description:
+              error instanceof Error
+                ? error.message
+                : "Failed to update record.",
+            variant: "destructive",
+          });
+        } finally {
+          setShowLoader(false);
+        }
+      } else {
+        setForm((prev) => ({
+          ...prev,
+          manuscripts: prev.manuscripts.map((i) =>
+            i.id === id
+              ? {
+                  ...i,
+                  title: payload.title,
+                  authors: payload.authors,
+                  journal: payload.journal,
+                  status: payload.status,
+                }
+              : i,
+          ),
+        }));
+      }
+    },
+    [formType, form.manuscripts, callApi],
+  );
+
+  const handleAddResearchActivity = useCallback(
+    async (payload: {
+      title: string;
+      date: string;
+      deliveryFormat: string;
+      audience: string;
+      status: number;
+      objective: string;
+      keyOutputsOrLessons: string;
+    }) => {
+      // Use Research record ID from URL (researchAreaId = searchParams "researchId"), not form.researchArea (Research Area ID)
+      if (formType !== "new" && researchAreaId) {
+        setShowLoader(true);
+        try {
+          const researchEntitySet = ResearchActivityFields.RESEARCH_ENTITY_SET;
+          const data: Record<string, any> = {
+            [ResearchActivityFields.TITLE]: payload.title,
+            [ResearchActivityFields.DATE]: toDataverseDate(payload.date),
+            [ResearchActivityFields.DELIVERY_FORMAT]: payload.deliveryFormat || null,
+            [ResearchActivityFields.AUDIENCE]: payload.audience || null,
+            [ResearchActivityFields.STATUS]: payload.status,
+            [ResearchActivityFields.OBJECTIVE]: payload.objective || null,
+            [ResearchActivityFields.KEY_OUTPUTS]: payload.keyOutputsOrLessons || null,
+            [ResearchActivityFields.RESEARCH_ID]: `/${researchEntitySet}(${researchAreaId})`,
+          };
+          await callApi({
+            url: `/_api/${TableName.RESEARCHACTIVITIES}`,
+            method: "POST",
+            data,
+          });
+          await loadResearchActivities(researchAreaId);
+          toast({
+            title: "Success",
+            description: "Research activity added.",
           });
         } catch (error) {
           toast({
             title: "Error",
-            description: "Failed to update team member.",
+            description:
+              error instanceof Error
+                ? error.message
+                : "Failed to add research activity.",
+            variant: "destructive",
+          });
+        } finally {
+          setShowLoader(false);
+        }
+      } else {
+        const newItem: ResearchActivityItem = {
+          id: `new-${Date.now()}`,
+          title: payload.title,
+          date: payload.date,
+          deliveryFormat: payload.deliveryFormat,
+          audience: payload.audience,
+          status: payload.status,
+          objective: payload.objective,
+          keyOutputsOrLessons: payload.keyOutputsOrLessons,
+          action: "new",
+        };
+        setForm((prev) => ({
+          ...prev,
+          researchActivities: [...prev.researchActivities, newItem],
+        }));
+      }
+    },
+    [formType, researchAreaId, callApi, loadResearchActivities],
+  );
+
+  const handleRemoveResearchActivity = useCallback(
+    async (id: string) => {
+      const item = form.researchActivities.find((i) => i.id === id);
+      const isExisting = item?.action === "existing";
+      if (isExisting) {
+        try {
+          await callApi({
+            url: `/_api/${TableName.RESEARCHACTIVITIES}(${id})`,
+            method: "DELETE",
+          });
+          setForm((prev) => ({
+            ...prev,
+            researchActivities: prev.researchActivities.filter((i) => i.id !== id),
+          }));
+          toast({
+            title: "Success",
+            description: "Research activity removed.",
+          });
+        } catch (error) {
+          toast({
+            title: "Error",
+            description:
+              error instanceof Error
+                ? error.message
+                : "Failed to remove research activity.",
+            variant: "destructive",
           });
         }
-        setShowLoader(false);
+      } else {
+        setForm((prev) => ({
+          ...prev,
+          researchActivities: prev.researchActivities.map((i) =>
+            i.id === id ? { ...i, removed: true } : i,
+          ),
+        }));
       }
-      setForm((prev) => ({
-        ...prev,
-        team: prev.team.map((m) =>
-          m.id === id
-            ? {
-                ...m,
-                name: member.name,
-                role: member.role,
-                customRoleName: member.customRoleName,
-                educationLevel: member.educationLevel,
-              }
-            : m,
-        ),
-      }));
     },
-    [formType],
+    [form.researchActivities, callApi],
+  );
+
+  const handleEditResearchActivity = useCallback(
+    async (
+      id: string,
+      payload: {
+        title: string;
+        date: string;
+        deliveryFormat: string;
+        audience: string;
+        status: number;
+        objective: string;
+        keyOutputsOrLessons: string;
+      },
+    ) => {
+      const item = form.researchActivities.find((i) => i.id === id);
+      const isExisting = item?.action === "existing";
+      if (isExisting) {
+        setShowLoader(true);
+        try {
+          const data: Record<string, any> = {
+            [ResearchActivityFields.TITLE]: payload.title,
+            [ResearchActivityFields.DATE]: toDataverseDate(payload.date),
+            [ResearchActivityFields.DELIVERY_FORMAT]: payload.deliveryFormat || null,
+            [ResearchActivityFields.AUDIENCE]: payload.audience || null,
+            [ResearchActivityFields.STATUS]: payload.status,
+            [ResearchActivityFields.OBJECTIVE]: payload.objective || null,
+            [ResearchActivityFields.KEY_OUTPUTS]: payload.keyOutputsOrLessons || null,
+          };
+          await callApi({
+            url: `/_api/${TableName.RESEARCHACTIVITIES}(${id})`,
+            method: "PATCH",
+            data,
+          });
+          setForm((prev) => ({
+            ...prev,
+            researchActivities: prev.researchActivities.map((i) =>
+              i.id === id
+                ? {
+                    ...i,
+                    title: payload.title,
+                    date: payload.date,
+                    deliveryFormat: payload.deliveryFormat,
+                    audience: payload.audience,
+                    status: payload.status,
+                    objective: payload.objective,
+                    keyOutputsOrLessons: payload.keyOutputsOrLessons,
+                  }
+                : i,
+            ),
+          }));
+          toast({
+            title: "Success",
+            description: "Research activity updated.",
+          });
+        } catch (error) {
+          toast({
+            title: "Error",
+            description:
+              error instanceof Error
+                ? error.message
+                : "Failed to update research activity.",
+            variant: "destructive",
+          });
+        } finally {
+          setShowLoader(false);
+        }
+      } else {
+        setForm((prev) => ({
+          ...prev,
+          researchActivities: prev.researchActivities.map((i) =>
+            i.id === id
+              ? {
+                  ...i,
+                  title: payload.title,
+                  date: payload.date,
+                  deliveryFormat: payload.deliveryFormat,
+                  audience: payload.audience,
+                  status: payload.status,
+                  objective: payload.objective,
+                  keyOutputsOrLessons: payload.keyOutputsOrLessons,
+                }
+              : i,
+          ),
+        }));
+      }
+    },
+    [form.researchActivities, callApi],
   );
 
   const handleFilesAdd = useCallback(
@@ -1403,6 +2227,9 @@ export default function FormResearch() {
       prmtk_upcomingactivities: string;
       prmtk_journalpublications: string;
       prmtk_workforcedevelopment: string;
+      prmtk_changes?: string;
+      prmtk_lessonslearnedandimplications?: string;
+      prmtk_feedback?: string;
       files?: { file: File; action: "new" | "existing" | "remove" }[];
     }) => {
       const newReport: ReportItem = {
@@ -1421,6 +2248,10 @@ export default function FormResearch() {
         prmtk_upcomingactivities: item.prmtk_upcomingactivities,
         prmtk_journalpublications: item.prmtk_journalpublications,
         prmtk_workforcedevelopment: item.prmtk_workforcedevelopment,
+        prmtk_changes: item.prmtk_changes ?? "",
+        prmtk_lessonslearnedandimplications:
+          item.prmtk_lessonslearnedandimplications ?? "",
+        prmtk_feedback: item.prmtk_feedback ?? "",
         files: item.files || [],
         action: "new",
       };
@@ -1468,6 +2299,8 @@ export default function FormResearch() {
             reportData[StatusReportFields.WORKFORCEDEVELOPMENT] =
               item.prmtk_workforcedevelopment;
           }
+          // Omit prmtk_changes, prmtk_lessonslearnedandimplications, prmtk_feedback
+          // until the Dataverse entity has these columns.
 
           await callApi({
             url: `/_api/${TableName.STATUSREPORT}`,
@@ -1567,6 +2400,9 @@ export default function FormResearch() {
         prmtk_upcomingactivities: string;
         prmtk_journalpublications: string;
         prmtk_workforcedevelopment: string;
+        prmtk_changes?: string;
+        prmtk_lessonslearnedandimplications?: string;
+        prmtk_feedback?: string;
         files?: { file: File; action: "new" | "existing" | "remove" }[];
       },
     ) => {
@@ -1640,6 +2476,8 @@ export default function FormResearch() {
             reportData[StatusReportFields.WORKFORCEDEVELOPMENT] =
               item.prmtk_workforcedevelopment;
           }
+          // Omit prmtk_changes, prmtk_lessonslearnedandimplications, prmtk_feedback
+          // until the Dataverse entity has these columns.
 
           await callApi({
             url: `/_api/${TableName.STATUSREPORT}(${id})`,
@@ -1702,6 +2540,10 @@ export default function FormResearch() {
                 prmtk_upcomingactivities: item.prmtk_upcomingactivities,
                 prmtk_journalpublications: item.prmtk_journalpublications,
                 prmtk_workforcedevelopment: item.prmtk_workforcedevelopment,
+                prmtk_changes: item.prmtk_changes ?? "",
+                prmtk_lessonslearnedandimplications:
+                  item.prmtk_lessonslearnedandimplications ?? "",
+                prmtk_feedback: item.prmtk_feedback ?? "",
                 files: item.files || [],
                 action: "existing" as const,
               }
@@ -1712,6 +2554,7 @@ export default function FormResearch() {
     [formType, callApi],
   );
 
+  /* commented: dissemination handlers not needed for now
   // Dissemination Request handlers
   const handleAddDisseminationRequest = useCallback(
     async (item: {
@@ -1969,6 +2812,314 @@ export default function FormResearch() {
     },
     [formType, callApi],
   );
+  */ // end commented: dissemination handlers
+
+  // File handlers (used by Dissemination Activities and other sections)
+  const handleDeleteFile = useCallback(
+    async (fileName: string, folder: string): Promise<void> => {
+      try {
+        await triggerFlow(APIURL.FileDeleteEndpoint, {
+          FileName: fileName,
+          Library: "Researches",
+          Folder: folder,
+        });
+      } catch (error) {
+        console.error(`Failed to delete file ${fileName}:`, error);
+        throw error;
+      }
+    },
+    [triggerFlow],
+  );
+
+  const handleUploadFile = useCallback(
+    async (files: File[], folder: string): Promise<void> => {
+      try {
+        const uploadPromises = files.map(async (file) => {
+          const base64Content = await fileToBase64(file);
+          const payload: any = {
+            FileContent: base64Content,
+            FileName: file.name,
+            Library: "Researches",
+            Folder: folder,
+            FileType: "other",
+            UserEmail: user?.contact?.[ContactFields.EMAILADDRESS1] || "",
+          };
+
+          const response = await triggerFlow(
+            APIURL.FileUploadEndpoint,
+            payload,
+          );
+
+          if (!response.success) {
+            throw new Error(`Failed to upload ${file.name}`);
+          }
+        });
+
+        await Promise.all(uploadPromises);
+      } catch (error) {
+        console.error(`Failed to upload files:`, error);
+        throw error;
+      }
+    },
+    [triggerFlow, user],
+  );
+
+  // Dissemination Activities handlers
+  const handleAddDisseminationActivity = useCallback(
+    async (item: AddDisseminationActivityForm) => {
+      if (formType !== "new") {
+        setShowLoader(true);
+        try {
+          const payload: Record<string, unknown> = {
+            [DisseminationActivityFields.NAME]: item.name,
+            [DisseminationActivityFields.PRESENTER]: item.presenter || null,
+            [DisseminationActivityFields.DATE]: item.date || null,
+            [DisseminationActivityFields.TYPE]: item.type
+              ? parseInt(item.type, 10)
+              : null,
+            [DisseminationActivityFields.MATERIALSUSED]:
+              item.materialsUsed || null,
+            [DisseminationActivityFields.RESEARCH_ID]: `/${TableName.RESEARCHES}(${researchAreaId})`,
+          };
+          await callApi({
+            url: `/_api/${TableName.DISSEMINATIONACTIVITIES}`,
+            method: "POST",
+            data: payload,
+          });
+          const list = await loadDisseminationActivities(researchAreaId);
+          const researchNumber =
+            form.researchNumber || state?.item?.[ResearchKeys.RESEARCHNUMBER];
+          const newFiles = (item.files || []).filter((f) => f.action === "new");
+          if (
+            researchNumber &&
+            newFiles.length > 0 &&
+            list.length > 0 &&
+            handleUploadFile
+          ) {
+            const newActivity = list.find((a) => a.name === item.name) || list[list.length - 1];
+            const folder = getDisseminationActivityFolderPath(
+              researchNumber,
+              newActivity.type ?? 0,
+              newActivity.date ?? "",
+              newActivity.id,
+            );
+            await handleUploadFile(
+              newFiles.map((f) => f.file),
+              folder,
+            );
+            const existingFiles = newFiles.map((f) => ({
+              file: f.file,
+              action: "existing" as const,
+            }));
+            const mergedActivities = list.map((a) =>
+              a.id === newActivity.id
+                ? { ...a, files: [...(a.files || []), ...existingFiles] }
+                : a,
+            );
+            setForm((prev) => ({
+              ...prev,
+              disseminationActivities: mergedActivities,
+            }));
+          }
+          toast({
+            title: "Success",
+            description: "Dissemination activity added successfully.",
+          });
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: "Failed to add dissemination activity.",
+            variant: "destructive",
+          });
+        } finally {
+          setShowLoader(false);
+        }
+      } else {
+        setForm((prev) => ({
+          ...prev,
+          disseminationActivities: [
+            ...prev.disseminationActivities,
+            {
+              id: crypto.randomUUID(),
+              name: item.name,
+              presenter: item.presenter,
+              date: item.date,
+              type: item.type ? parseInt(item.type, 10) : 0,
+              materialsUsed: item.materialsUsed || null,
+              files: item.files || [],
+            },
+          ],
+        }));
+      }
+    },
+    [
+      formType,
+      researchAreaId,
+      callApi,
+      form.researchNumber,
+      state?.item,
+      handleUploadFile,
+    ],
+  );
+
+  const handleRemoveDisseminationActivity = useCallback(
+    async (id: string) => {
+      if (formType !== "new") {
+        setShowLoader(true);
+        try {
+          await callApi({
+            url: `/_api/${TableName.DISSEMINATIONACTIVITIES}(${id})`,
+            method: "DELETE",
+          });
+          await loadDisseminationActivities(researchAreaId);
+          toast({
+            title: "Success",
+            description: "Dissemination activity removed successfully.",
+          });
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: "Failed to remove dissemination activity.",
+            variant: "destructive",
+          });
+        } finally {
+          setShowLoader(false);
+        }
+      }
+      setForm((prev) => ({
+        ...prev,
+        disseminationActivities: prev.disseminationActivities.filter(
+          (a) => a.id !== id,
+        ),
+      }));
+    },
+    [formType, researchAreaId, callApi],
+  );
+
+  const handleEditDisseminationActivity = useCallback(
+    async (id: string, item: AddDisseminationActivityForm) => {
+      const researchNumber =
+        form.researchNumber || state?.item?.[ResearchKeys.RESEARCHNUMBER];
+      const typeNum = item.type ? parseInt(item.type, 10) : 0;
+      const folder = researchNumber
+        ? getDisseminationActivityFolderPath(
+            researchNumber,
+            typeNum,
+            item.date ?? "",
+            id,
+          )
+        : "";
+
+      if (formType !== "new") {
+        setShowLoader(true);
+        try {
+          if (item.files && folder && handleDeleteFile) {
+            const toDelete = item.files.filter((f) => f.action === "remove");
+            for (const f of toDelete) {
+              try {
+                await handleDeleteFile(f.file.name, folder);
+              } catch (err) {
+                console.error(`Failed to delete file ${f.file.name}:`, err);
+              }
+            }
+          }
+
+          await callApi({
+            url: `/_api/${TableName.DISSEMINATIONACTIVITIES}(${id})`,
+            method: "PATCH",
+            data: {
+              [DisseminationActivityFields.NAME]: item.name,
+              [DisseminationActivityFields.PRESENTER]: item.presenter || null,
+              [DisseminationActivityFields.DATE]: item.date || null,
+              [DisseminationActivityFields.TYPE]: item.type
+                ? parseInt(item.type, 10)
+                : null,
+              [DisseminationActivityFields.MATERIALSUSED]:
+                item.materialsUsed || null,
+            },
+          });
+
+          if (item.files && folder && handleUploadFile) {
+            const newFiles = item.files.filter((f) => f.action === "new");
+            if (newFiles.length > 0) {
+              await handleUploadFile(
+                newFiles.map((x) => x.file),
+                folder,
+              );
+            }
+          }
+
+          const keptExisting = (item.files || []).filter(
+            (f) => f.action !== "remove",
+          );
+          const newAsExisting = (item.files || [])
+            .filter((f) => f.action === "new")
+            .map((f) => ({ file: f.file, action: "existing" as const }));
+          const mergedFiles = [
+            ...keptExisting.filter((f) => f.action === "existing"),
+            ...newAsExisting,
+          ];
+
+          setForm((prev) => ({
+            ...prev,
+            disseminationActivities: prev.disseminationActivities.map((a) =>
+              a.id === id
+                ? {
+                    ...a,
+                    name: item.name,
+                    presenter: item.presenter,
+                    date: item.date,
+                    type: item.type ? parseInt(item.type, 10) : 0,
+                    materialsUsed: item.materialsUsed || null,
+                    files: mergedFiles,
+                  }
+                : a,
+            ),
+          }));
+
+          toast({
+            title: "Success",
+            description: "Dissemination activity updated successfully.",
+          });
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: "Failed to update dissemination activity.",
+            variant: "destructive",
+          });
+        } finally {
+          setShowLoader(false);
+        }
+      } else {
+        setForm((prev) => ({
+          ...prev,
+          disseminationActivities: prev.disseminationActivities.map((a) =>
+            a.id === id
+              ? {
+                  ...a,
+                  name: item.name,
+                  presenter: item.presenter,
+                  date: item.date,
+                  type: item.type ? parseInt(item.type, 10) : 0,
+                  materialsUsed: item.materialsUsed || null,
+                  files: item.files || [],
+                }
+              : a,
+          ),
+        }));
+      }
+    },
+    [
+      formType,
+      researchAreaId,
+      callApi,
+      form.researchNumber,
+      form.disseminationActivities,
+      state?.item,
+      handleDeleteFile,
+      handleUploadFile,
+    ],
+  );
 
   // Deliverables handlers
   const handleAddDeliverable = useCallback(
@@ -2137,57 +3288,6 @@ export default function FormResearch() {
     [formType, form.deliverables, callApi],
   );
 
-  // Handler for immediate file deletion
-  const handleDeleteFile = useCallback(
-    async (fileName: string, folder: string): Promise<void> => {
-      try {
-        await triggerFlow(APIURL.FileDeleteEndpoint, {
-          FileName: fileName,
-          Library: "Researches",
-          Folder: folder,
-        });
-      } catch (error) {
-        console.error(`Failed to delete file ${fileName}:`, error);
-        throw error;
-      }
-    },
-    [triggerFlow],
-  );
-
-  // Handler for immediate file upload
-  const handleUploadFile = useCallback(
-    async (files: File[], folder: string): Promise<void> => {
-      try {
-        const uploadPromises = files.map(async (file) => {
-          const base64Content = await fileToBase64(file);
-          const payload: any = {
-            FileContent: base64Content,
-            FileName: file.name,
-            Library: "Researches",
-            Folder: folder,
-            FileType: "other",
-            UserEmail: user?.contact?.[ContactFields.EMAILADDRESS1] || "",
-          };
-
-          const response = await triggerFlow(
-            APIURL.FileUploadEndpoint,
-            payload,
-          );
-
-          if (!response.success) {
-            throw new Error(`Failed to upload ${file.name}`);
-          }
-        });
-
-        await Promise.all(uploadPromises);
-      } catch (error) {
-        console.error(`Failed to upload files:`, error);
-        throw error;
-      }
-    },
-    [triggerFlow, user],
-  );
-
   // Handler to update files in form state after immediate operations
   const handleUpdateReportFiles = useCallback(
     (
@@ -2204,6 +3304,7 @@ export default function FormResearch() {
     [],
   );
 
+  /* commented: dissemination not needed for now
   const handleUpdateDisseminationFiles = useCallback(
     (
       itemId: string,
@@ -2218,6 +3319,7 @@ export default function FormResearch() {
     },
     [],
   );
+  */
 
   const handleUpdateDeliverableFiles = useCallback(
     (
@@ -2227,6 +3329,21 @@ export default function FormResearch() {
       setForm((prev) => ({
         ...prev,
         deliverables: prev.deliverables.map((item) =>
+          item.id === itemId ? { ...item, files } : item,
+        ),
+      }));
+    },
+    [],
+  );
+
+  const handleUpdateDisseminationActivityFiles = useCallback(
+    (
+      itemId: string,
+      files: { file: File; action: "new" | "existing" | "remove" }[],
+    ) => {
+      setForm((prev) => ({
+        ...prev,
+        disseminationActivities: prev.disseminationActivities.map((item) =>
           item.id === itemId ? { ...item, files } : item,
         ),
       }));
@@ -2404,7 +3521,17 @@ export default function FormResearch() {
 
       // Process all related data in parallel
       await Promise.all([
-        processTeamMembers(form.team, researchId, callApi),
+        processWorkforceDevelopments(
+          form.workforceDevelopments,
+          researchId,
+          callApi,
+        ),
+        processManuscripts(form.manuscripts, researchId, callApi),
+        processResearchActivities(
+          form.researchActivities,
+          researchId,
+          callApi,
+        ),
         processBudgetData(
           form.budgetHeaders,
           form.budgetLineItems,
@@ -2433,132 +3560,153 @@ export default function FormResearch() {
       setShowLoader(false);
     }
   };
+
+  const location = useLocation();
+  const isReportingSubRoute = location.pathname.includes("/reporting/");
+  if (isReportingSubRoute) {
+    return (
+      <Outlet
+        context={{
+          form,
+          reportItems: form.reportItems,
+          handleAddReport,
+          handleEditReport,
+          handleDeleteFile,
+          handleUploadFile,
+          handleUpdateReportFiles,
+        }}
+      />
+    );
+  }
+
   return (
     <section className="bg-white">
       <div className="container py-16">
         <Reveal>
-          <div>
-            <div className="text-xs tracking-[0.25em] text-[#475569] uppercase">
-              Research
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            {/* Header */}
+            <div className="border-b border-slate-100 bg-slate-50 px-5 py-4">
+              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+                Research
+              </p>
+              <h1 className="mt-1 text-xl font-bold text-slate-900 md:text-2xl">
+                {form.type === "new"
+                  ? "New Application"
+                  : form.title || state?.item?.[ResearchKeys.RESEARCHNUMBER] || "Research"}
+              </h1>
+              <p className="mt-1 text-sm text-slate-500">
+                Complete the sections below and submit your proposal.
+              </p>
             </div>
-            <h1 className="mt-1 text-3xl md:text-4xl font-bold tracking-tight text-[#1e293b]">
-              {form.type === "new"
-                ? "New Application"
-                : `Research : ${state?.item?.[ResearchKeys.RESEARCHNUMBER] || ""}`}
-            </h1>
-            <p className="mt-2 text-[#475569]">
-              Complete the sections below and submit your proposal.
-            </p>
-            {form.type !== "new" && (
-              <div className="mt-3 text-sm text-[#475569]">
-                <span className="opacity-80">Submission Date:</span>
-                <span className="ml-2 font-semibold text-[#1e293b]">
-                  {form.submissionDate}
-                </span>
+
+            {/* Overview + Team: 8 cols | 4 cols */}
+            {(form.type !== "new" || form.team.length > 0) && (
+              <div className="grid grid-cols-1 lg:grid-cols-12">
+                {form.type !== "new" && (
+                  <div className="border-b border-slate-100 px-5 py-4 lg:col-span-8 lg:border-b-0 lg:border-r lg:py-5">
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Overview
+                    </p>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      {[
+                        {
+                          label: "Submission Date",
+                          value: form.submissionDate,
+                          iconName: "Calendar",
+                        },
+                        {
+                          label: "Application Reference",
+                          value: form.applicationTitle ?? "—",
+                          iconName: "Page",
+                        },
+                        {
+                          label: "Research Area",
+                          value: form.researchAreaName ?? "—",
+                          iconName: "FolderSearch",
+                        },
+                        {
+                          label: "Start Date",
+                          value: form.startDate
+                            ? form.startDate.toLocaleDateString()
+                            : "—",
+                          iconName: "CalendarDay",
+                        },
+                        {
+                          label: "End Date",
+                          value: form.endDate
+                            ? form.endDate.toLocaleDateString()
+                            : "—",
+                          iconName: "CalendarDay",
+                        },
+                        {
+                          label: "Principal Investigator",
+                          value: form.principalInvestigatorName ?? "—",
+                          iconName: "Contact",
+                        },
+                      ].map(({ label, value, iconName }) => (
+                        <div
+                          key={label}
+                          className="flex items-start gap-2.5 rounded-md border border-slate-100 bg-slate-50/50 px-3 py-2"
+                        >
+                          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-600">
+                            <Icon
+                              iconName={iconName}
+                              styles={{ root: { fontSize: 14 } }}
+                            />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="text-xs text-slate-500">
+                              {label}
+                            </span>
+                            <span className="mt-0.5 block text-sm font-medium text-slate-800">
+                              {value}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {form.team.length > 0 && (
+                  <div className="px-5 py-4 lg:col-span-4 lg:py-5">
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Team members
+                    </p>
+                    <ul className="space-y-2">
+                      {form.team.map((member) => (
+                        <li
+                          key={member.id}
+                          className="flex items-center gap-3 rounded-md border border-slate-100 bg-slate-50/50 px-3 py-2"
+                        >
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-600">
+                            <Icon
+                              iconName="Contact"
+                              styles={{ root: { fontSize: 16 } }}
+                            />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-slate-900">
+                              {member.name || "—"}
+                            </p>
+                            <p className="truncate text-xs text-slate-500">
+                              {teamMemberRoles.find(
+                                (r) => String(r.key) === String(member.role),
+                              )?.text ?? member.role ?? "—"}
+                            </p>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             )}
           </div>
         </Reveal>
 
-        {/* Application Reference and Research Area Section */}
-        <div className="mt-8 grid gap-6 md:grid-cols-2">
-          <div>
-            <Label>Application Reference</Label>
-            <div className="mt-1">
-              <LookupPicker
-                key={`application-${form.application || "none"}`}
-                displayField={ApplicationKeys.APPLICATIONTITLE}
-                keyField={ApplicationKeys.APPLICATIONID}
-                secondaryField={ApplicationKeys.ABSTRACT}
-                searchField={ApplicationKeys.APPLICATIONTITLE}
-                tableName={TableName.APPLICATIONS}
-                maxSelection={1}
-                label="Application"
-                cascadeField={ApplicationKeys.APPLICATIONID}
-                cascadeValue={applicationId}
-                isDefaultSelected={applicationId != null}
-                disabled={form.type === "view"}
-                onSelect={(values) => {
-                  setForm((prev) => ({
-                    ...prev,
-                    application:
-                      values && values.length > 0
-                        ? values[0][ApplicationKeys.APPLICATIONID]
-                        : null,
-                  }));
-                }}
-              />
-            </div>
-          </div>
-          <div>
-            <Label>Research Area</Label>
-            <div className="mt-1">
-              <LookupPicker
-                key={`research-area-${form.researchArea || "none"}`}
-                displayField={ResearchAreaKeys.AREANAME}
-                keyField={ResearchAreaKeys.RESEARCHAREAID}
-                secondaryField={ResearchAreaKeys.AREADESCRIPTION}
-                searchField={ResearchAreaKeys.AREANAME}
-                tableName={TableName.RESEARCHAREAS}
-                maxSelection={1}
-                label="Research Area"
-                cascadeField={ResearchAreaKeys.RESEARCHAREAID}
-                cascadeValue={form.researchArea || undefined}
-                isDefaultSelected={form.researchArea != null}
-                disabled={form.type === "view"}
-                onSelect={(values) => {
-                  setForm((prev) => ({
-                    ...prev,
-                    researchArea:
-                      values && values.length > 0
-                        ? values[0][ResearchAreaKeys.RESEARCHAREAID]
-                        : null,
-                  }));
-                }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* General Information Section */}
-        <div className="mt-8 rounded-xl border border-[#e2e8f0] bg-white p-6">
-          <div className="flex items-center justify-between">
-            <h2 className={HEADING_TEXT}>General information</h2>
-            <IconButton
-              iconProps={{
-                iconName: showGeneral ? "ChevronUp" : "ChevronDown",
-              }}
-              onClick={() => setShowGeneral((prev) => !prev)}
-              ariaLabel="Toggle general information"
-            />
-          </div>
-          {showGeneral && (
-            <GeneralInformationSection
-              key={`${user?.adxUserId}`}
-              form={form}
-              onTitleChange={(value) =>
-                setForm((prev) => ({ ...prev, title: value }))
-              }
-              onPrincipalInvestigatorChange={(contactId) =>
-                setForm((prev) => ({
-                  ...prev,
-                  principalInvestigator: contactId,
-                }))
-              }
-              onStartDateChange={(date) =>
-                setForm((prev) => ({ ...prev, startDate: date }))
-              }
-              onEndDateChange={(date) =>
-                setForm((prev) => ({ ...prev, endDate: date }))
-              }
-              userAdxUserId={user?.adxUserId}
-            />
-          )}
-        </div>
-
         {/* Budget Details Section */}
         <div className="mt-8 rounded-xl border border-[#e2e8f0] bg-white p-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between min-h-[52px]">
             <div className="flex items-center gap-3">
               <h2 className={HEADING_TEXT}>Budget Management</h2>
               {form.budgetHeaders && form.budgetVersions.length > 0 && (
@@ -2602,77 +3750,113 @@ export default function FormResearch() {
                           (v) => v.id === form.selectedBudgetVersion,
                         )?.status === 102
                       ? "Submitted"
-                      : form.budgetVersions.find(
+                    : form.budgetVersions.find(
                             (v) => v.id === form.selectedBudgetVersion,
                           )?.status === 103
-                        ? "Approved"
+                      ? "Approved"
+                    : form.budgetVersions.find(
+                          (v) => v.id === form.selectedBudgetVersion,
+                        )?.status === 104
+                      ? "Rejected"
+                        : form.budgetVersions.find(
+                          (v) => v.id === form.selectedBudgetVersion,
+                        )?.status === 105
+                      ? "Archived"
                         : "Unknown"}
                 </Badge>
               )}
             </div>
-            <div className="flex items-center gap-4">
-              {form.budgetVersions.length > 0 && (
-                <Dropdown
-                  label=""
-                  options={form.budgetVersions.map((v) => ({
-                    key: v.id,
-                    text: `Version ${v.version} - ${
-                      v.status === 101
-                        ? "Draft"
-                        : v.status === 102
-                          ? "Submitted"
-                          : v.status === 103
-                            ? "Approved"
-                            : "Unknown"
-                    }${v.isActive ? " (Active)" : ""}`,
-                  }))}
-                  selectedKey={form.selectedBudgetVersion}
-                  onChange={handleBudgetVersionChange}
-                  styles={{ root: { minWidth: 250 } }}
+            <IconButton
+              iconProps={{
+                iconName: showBudget ? "ChevronUp" : "ChevronDown",
+              }}
+              onClick={() => setShowBudget((prev) => !prev)}
+              ariaLabel="Toggle budget section"
+            />
+          </div>
+          {showBudget && (
+            <>
+              <div className="flex items-center justify-between gap-4 mt-4 mb-4">
+                {form.budgetVersions.length > 0 ? (
+                  <Dropdown
+                    label=""
+                    options={form.budgetVersions.map((v) => ({
+                      key: v.id,
+                      text: `Version ${v.version} - ${
+                        v.status === 101
+                          ? "Draft"
+                          : v.status === 102
+                            ? "Submitted"
+                            : v.status === 103
+                              ? "Approved"
+                              : v.status === 104
+                              ? "Rejected"
+                              : v.status === 105
+                              ? "Archived"
+                              : "Unknown"
+                      }${v.isActive ? " (Active)" : ""}`,
+                    }))}
+                    selectedKey={form.selectedBudgetVersion}
+                    onChange={handleBudgetVersionChange}
+                    styles={{ root: { minWidth: 250 } }}
+                  />
+                ) : (
+                  <span />
+                )}
+                <div className="flex items-center gap-4">
+                  <PrimaryButton
+                  text="Update Budget"
+                  onClick={handleUpdateBudgetClick}
+                  iconProps={{ iconName: "Copy" }}
+                  styles={popupInputStyles.researchPrimaryButton}
+                  disabled={
+                    !form.budgetHeaders ||
+                    !form.budgetVersions.find(
+                      (v) => v.id === form.selectedBudgetVersion,
+                    )?.isActive ||
+                    form.budgetVersions.some(
+                      (v) =>
+                        v.version >
+                        (form.budgetVersions.find(
+                          (ver) => ver.id === form.selectedBudgetVersion,
+                        )?.version || 0),
+                    )
+                  }
                 />
-              )}
-              <PrimaryButton
-                text="Update Budget"
-                onClick={handleUpdateBudgetClick}
-                iconProps={{ iconName: "Copy" }}
-                disabled={
-                  !form.budgetHeaders ||
-                  !form.budgetVersions.find(
-                    (v) => v.id === form.selectedBudgetVersion,
-                  )?.isActive ||
-                  form.budgetVersions.some(
-                    (v) =>
-                      v.version >
-                      (form.budgetVersions.find(
-                        (ver) => ver.id === form.selectedBudgetVersion,
-                      )?.version || 0),
-                  )
-                }
-              />
-              <DefaultButton
-                text="Submit Budget"
-                onClick={handleEditBudgetClick}
-                iconProps={{ iconName: "Send" }}
-                disabled={
-                  !form.budgetHeaders ||
+                <DefaultButton
+                  text="Submit Budget"
+                  onClick={handleEditBudgetClick}
+                  iconProps={{ iconName: "Send" }}
+                  styles={popupInputStyles.researchPrimaryButton}
+                  disabled={
+                    !form.budgetHeaders ||
+                    form.budgetVersions.find(
+                      (v) => v.id === form.selectedBudgetVersion,
+                    )?.status !== 101
+                  }
+                />
+                </div>
+              </div>
+              <BudgetSection
+                key={`${form.budgetLineItems}`}
+                budgetHeader={form.budgetHeaders}
+                budgetLineItem={form.budgetLineItems}
+                budgetCategories={BudgetCategorys}
+                edit={
                   form.budgetVersions.find(
                     (v) => v.id === form.selectedBudgetVersion,
-                  )?.status !== 101
+                  )?.status === 101
                 }
-              />
-            </div>
-          </div>
-          <BudgetSection
-            key={`${form.budgetLineItems}`}
-            budgetHeader={form.budgetHeaders}
-            budgetLineItem={form.budgetLineItems}
-            budgetCategories={BudgetCategorys}
-            edit={
-              form.budgetVersions.find(
-                (v) => v.id === form.selectedBudgetVersion,
-              )?.status === 101
-            }
-            onAddBudgetLineItem={(item) => {
+                canEditSpend={
+                  form.budgetVersions.find(
+                    (v) => v.id === form.selectedBudgetVersion,
+                  )?.status === 103 &&
+                  form.budgetVersions.find(
+                    (v) => v.id === form.selectedBudgetVersion,
+                  )?.isActive
+                }
+                onEditSpend={handleOpenSpendDialog}
+                onAddBudgetLineItem={(item) => {
               const newLineItem: BudgetLineItem = {
                 id: crypto.randomUUID(), // Ensure a unique ID is generated
                 prmtk_lineitemname: item.name,
@@ -2686,7 +3870,7 @@ export default function FormResearch() {
                 budgetLineItems: [...prev.budgetLineItems, newLineItem],
               }));
             }}
-            onEditBudgetLineItem={async (id, item) => {
+                onEditBudgetLineItem={async (id, item) => {
               if (formType !== "new") {
                 setShowLoader(true);
                 try {
@@ -2732,7 +3916,7 @@ export default function FormResearch() {
                     : li,
                 ),
               }));
-            }}
+                }}
             onRemoveBudgetLineItem={async (id) => {
               if (formType !== "new") {
                 const itemToRemove = form.budgetLineItems.find(
@@ -2751,9 +3935,11 @@ export default function FormResearch() {
                   (li) => li.id !== id,
                 ),
               }));
-            }}
+                }}
             form={form}
           />
+            </>
+          )}
         </div>
 
         {/* Report Section */}
@@ -2769,7 +3955,7 @@ export default function FormResearch() {
           form={form}
         />
 
-        {/* Dissemination Request Section */}
+        {/* commented: DisseminationRequestSection not needed for now
         <DisseminationRequestSection
           disseminationRequests={form.disseminationRequests}
           edit={true}
@@ -2781,8 +3967,98 @@ export default function FormResearch() {
           onUpdateItemFiles={handleUpdateDisseminationFiles}
           form={form}
         />
+        */}
 
-        {/* Deliverables Section */}
+        {/* Dissemination Activities Section */}
+        <DisseminationActivitiesSection
+          activities={form.disseminationActivities}
+          edit={true}
+          onAddActivity={handleAddDisseminationActivity}
+          onEditActivity={handleEditDisseminationActivity}
+          onRemoveActivity={handleRemoveDisseminationActivity}
+          onDeleteFile={handleDeleteFile}
+          onUploadFile={handleUploadFile}
+          onUpdateItemFiles={handleUpdateDisseminationActivityFiles}
+          form={form}
+        />
+
+        {/* Emirates Workforce Development Section */}
+        <div className="mt-6 rounded-xl border border-[#e2e8f0] bg-white p-6">
+          <div className="flex items-center justify-between">
+            <h2 className={HEADING_TEXT}>Emirates Workforce Development</h2>
+            <IconButton
+              iconProps={{
+                iconName: showTeam ? "ChevronUp" : "ChevronDown",
+              }}
+              onClick={() => setShowTeam((prev) => !prev)}
+              ariaLabel="Toggle Emirates Workforce Development"
+              disabled={form.type === "view"}
+            />
+          </div>
+          {showTeam && (
+            <>
+              <WorkforceDevelopmentSection
+                items={form.workforceDevelopments}
+                onAdd={handleAddWorkforceDevelopment}
+                onRemove={handleRemoveWorkforceDevelopment}
+                onEdit={handleEditWorkforceDevelopment}
+                form={form}
+              />
+            </>
+          )}
+        </div>
+
+        {/* Manuscripts Drafts and Journal Publications Section */}
+        <div className="mt-6 rounded-xl border border-[#e2e8f0] bg-white p-6">
+          <div className="flex items-center justify-between">
+            <h2 className={HEADING_TEXT}>
+              Manuscripts Drafts and Journal Publications
+            </h2>
+            <IconButton
+              iconProps={{
+                iconName: showManuscripts ? "ChevronUp" : "ChevronDown",
+              }}
+              onClick={() => setShowManuscripts((prev) => !prev)}
+              ariaLabel="Toggle manuscripts section"
+            />
+          </div>
+          {showManuscripts && (
+            <ManuscriptsSection
+              items={form.manuscripts}
+              onAdd={handleAddManuscript}
+              onRemove={handleRemoveManuscript}
+              onEdit={handleEditManuscript}
+              form={form}
+            />
+          )}
+        </div>
+
+        {/* Capacity Building Workshops, Training, and Engagement Activities */}
+        <div className="mt-6 rounded-xl border border-[#e2e8f0] bg-white p-6">
+          <div className="flex items-center justify-between">
+            <h2 className={HEADING_TEXT}>
+              Capacity Building Workshops, Training, and Engagement Activities
+            </h2>
+            <IconButton
+              iconProps={{
+                iconName: showCapacity ? "ChevronUp" : "ChevronDown",
+              }}
+              onClick={() => setShowCapacity((prev) => !prev)}
+              ariaLabel="Toggle capacity building section"
+            />
+          </div>
+          {showCapacity && (
+            <CapacityBuildingSection
+              items={form.researchActivities}
+              onAdd={handleAddResearchActivity}
+              onRemove={handleRemoveResearchActivity}
+              onEdit={handleEditResearchActivity}
+              form={form}
+            />
+          )}
+        </div>
+
+        {/* Final Deliverables Section */}
         <DeliverablesSection
           deliverables={form.deliverables}
           edit={true}
@@ -2795,33 +4071,7 @@ export default function FormResearch() {
           form={form}
         />
 
-        {/* Team Members Section */}
-        <div className="mt-6 rounded-xl border border-[#e2e8f0] bg-white p-6">
-          <div className="flex items-center justify-between">
-            <h2 className={HEADING_TEXT}>Team members</h2>
-            <IconButton
-              iconProps={{
-                iconName: showTeam ? "ChevronUp" : "ChevronDown",
-              }}
-              onClick={() => setShowTeam((prev) => !prev)}
-              ariaLabel="Toggle team members"
-              disabled={form.type === "view"}
-            />
-          </div>
-          {showTeam && (
-            <TeamMemberSection
-              team={form.team}
-              teamMemberRoles={teamMemberRoles}
-              onAddMember={handleAddMember}
-              onRemoveMember={handleRemoveMember}
-              onEditMember={handleEditMember}
-              form={form}
-            />
-          )}
-        </div>
-
-        {/* File Upload Section */}
-
+        {/* Extra Attachments (File Upload) Section */}
         <FileUploadSectionResearch
           onFilesAdd={handleFilesAdd}
           onFileRemove={handleFileRemove}
@@ -2834,23 +4084,7 @@ export default function FormResearch() {
             <PrimaryButton
               onClick={submit}
               disabled={!canSubmit}
-              styles={{
-                root: {
-                  backgroundColor: "#1D2054",
-                  borderColor: "#1D2054",
-                  height: "44px",
-                  fontSize: "16px",
-                  fontWeight: "600",
-                },
-                rootHovered: {
-                  backgroundColor: "#151b41",
-                  borderColor: "#151b41",
-                },
-                rootDisabled: {
-                  backgroundColor: "#cbd5e1",
-                  borderColor: "#cbd5e1",
-                },
-              }}
+              styles={popupInputStyles.researchPrimaryButton}
             >
               {form.type === "edit" ? "Update Research" : "Submit Research"}
             </PrimaryButton>
@@ -2862,7 +4096,7 @@ export default function FormResearch() {
         message={dialogMessage}
         onDismiss={() => {
           navigate("/researches", { state: {} });
-        }}
+                }}
       />
       <ErrorDialog
         hidden={!showErrorDialog}
@@ -2873,18 +4107,39 @@ export default function FormResearch() {
       />
       <ConfirmDialog
         hidden={!showCloneBudgetConfirm}
-        title="Clone Budget"
-        message="Are you sure you want to create a new budget version? This will clone the current budget header and all line items with Draft status."
+        title="Request Budget Change"
+        message="Are you sure you want to request for a budget change? This will require additional approval from ECA Research Team."
         onConfirm={handleUpdateBudgetConfirm}
         onCancel={() => setShowCloneBudgetConfirm(false)}
       />
       <ConfirmDialog
         hidden={!showSubmitBudgetConfirm}
         title="Submit Budget"
-        message="Are you sure you want to submit this budget version? Once submitted, it cannot be edited until reviewed."
+        message="Are you sure you want to submit this budget version? Once submitted, it cannot be edited until reviewed and approved."
         onConfirm={handleEditBudgetConfirm}
         onCancel={() => setShowSubmitBudgetConfirm(false)}
       />
+      {selectedSpendLineItem && (
+        <BudgetSpendDialog
+          open={spendDialogOpen}
+          onClose={handleCloseSpendDialog}
+          lineItem={selectedSpendLineItem}
+          onSaved={({ totalSpend, remainingBudget }) => {
+            setForm((prev) => ({
+              ...prev,
+              budgetLineItems: prev.budgetLineItems.map((item) =>
+                item.id === selectedSpendLineItem.id
+                  ? {
+                      ...item,
+                      totalSpent: totalSpend,
+                      remainingBudget,
+                    }
+                  : item,
+              ),
+            }));
+          }}
+        />
+      )}
       <OverlayLoader
         isVisible={showLoader}
         label="Your request is being processed..."

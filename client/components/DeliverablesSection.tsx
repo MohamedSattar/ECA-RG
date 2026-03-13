@@ -19,6 +19,7 @@ import {
   DeliverableTypeOptions,
   getDeliverableTypeText,
 } from "@/constants/deliverables";
+import { popupInputStyles } from "@/styles/popupInputStyles";
 
 export interface Deliverable {
   id?: string;
@@ -91,7 +92,7 @@ export const DeliverablesSection: React.FC<DeliverablesSectionProps> = ({
   form,
   edit = true,
 }) => {
-  const [showSection, setShowSection] = useState(true);
+  const [showSection, setShowSection] = useState(false);
   const [deliverableForm, setDeliverableForm] = useState<AddDeliverableForm>(
     INITIAL_DELIVERABLE_FORM,
   );
@@ -322,8 +323,8 @@ export const DeliverablesSection: React.FC<DeliverablesSectionProps> = ({
 
   return (
     <div className="mt-8 rounded-xl border bg-white p-6">
-      <div className="flex items-center justify-between">
-        <h2 className={HEADING_TEXT}>Deliverables</h2>
+      <div className="flex items-center justify-between min-h-[52px]">
+        <h2 className={HEADING_TEXT}>Final Deliverables</h2>
         <IconButton
           iconProps={{
             iconName: showSection ? "ChevronUp" : "ChevronDown",
@@ -332,8 +333,9 @@ export const DeliverablesSection: React.FC<DeliverablesSectionProps> = ({
           ariaLabel="Toggle deliverables section"
         />
       </div>
-      <Reveal className="mt-8">
-        {showSection && (
+
+      {showSection && (
+        <Reveal className="mt-8">
           <div style={{ marginTop: "20px" }}>
             <div className="flex items-center justify-end mb-4">
               {edit && (
@@ -344,6 +346,7 @@ export const DeliverablesSection: React.FC<DeliverablesSectionProps> = ({
                     setIsDialogOpen(true);
                   }}
                   disabled={form.type === "view"}
+                  styles={popupInputStyles.researchPrimaryButton}
                 >
                   Add Deliverable
                 </PrimaryButton>
@@ -503,6 +506,7 @@ export const DeliverablesSection: React.FC<DeliverablesSectionProps> = ({
                                     }
                                     title="Remove file"
                                     ariaLabel="Remove file"
+                                    styles={popupInputStyles.deleteButton}
                                   />
                                 </div>
                               </div>
@@ -526,6 +530,7 @@ export const DeliverablesSection: React.FC<DeliverablesSectionProps> = ({
                   onClick={handleAddDeliverable}
                   text={editingDeliverableId ? "Update" : "Add"}
                   disabled={isUploading}
+                  styles={popupInputStyles.researchPrimaryButton}
                 />
                 <DefaultButton
                   onClick={() => {
@@ -535,6 +540,7 @@ export const DeliverablesSection: React.FC<DeliverablesSectionProps> = ({
                   }}
                   text="Cancel"
                   disabled={isUploading}
+                  styles={popupInputStyles.researchSecondaryButton}
                 />
               </FluentDialogFooter>
             </FluentDialog>
@@ -567,9 +573,8 @@ export const DeliverablesSection: React.FC<DeliverablesSectionProps> = ({
                   {deliverables.map((item, index) => (
                     <tr
                       key={item.id || index}
-                      className={`border-t border-[#e2e8f0] transition-colors ${
-                        index % 2 === 0 ? "bg-white" : "bg-[#f8fafc]"
-                      } hover:bg-[#f0f4f8]`}
+                      className={`border-t border-[#e2e8f0] transition-colors ${index % 2 === 0 ? "bg-white" : "bg-[#f8fafc]"
+                        } hover:bg-[#f0f4f8]`}
                     >
                       <td className="px-6 py-3 font-medium text-[#1e293b]">
                         {item.deliverableName}
@@ -632,14 +637,7 @@ export const DeliverablesSection: React.FC<DeliverablesSectionProps> = ({
                                 iconProps={{ iconName: "Edit" }}
                                 title="Edit"
                                 ariaLabel="Edit"
-                                styles={{
-                                  root: {
-                                    color: "#1D2054",
-                                  },
-                                  rootDisabled: {
-                                    color: "#cbd5e1",
-                                  },
-                                }}
+                                styles={popupInputStyles.editButton}
                               />
                               <IconButton
                                 disabled={form.type === "view"}
@@ -647,14 +645,7 @@ export const DeliverablesSection: React.FC<DeliverablesSectionProps> = ({
                                 iconProps={{ iconName: "Delete" }}
                                 title="Remove"
                                 ariaLabel="Remove"
-                                styles={{
-                                  root: {
-                                    color: "#dc2626",
-                                  },
-                                  rootDisabled: {
-                                    color: "#cbd5e1",
-                                  },
-                                }}
+                                styles={popupInputStyles.deleteButton}
                               />
                             </div>
                           )}
@@ -676,8 +667,8 @@ export const DeliverablesSection: React.FC<DeliverablesSectionProps> = ({
               </table>
             </div>
           </div>
-        )}
-      </Reveal>
+        </Reveal>
+      )}
     </div>
   );
 };

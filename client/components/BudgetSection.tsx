@@ -14,6 +14,7 @@ import { TextField } from "@fluentui/react/lib/TextField";
 import { IconButton } from "@fluentui/react/lib/Button";
 import { aedFormat } from "@/services/utility";
 import { HEADING_TEXT } from "@/styles/constants";
+import { popupInputStyles } from "@/styles/popupInputStyles";
 
 export interface BudgetHeader {
   id: string;
@@ -31,6 +32,8 @@ export interface BudgetLineItem {
   prmtk_amount: number;
   prmtk_category: string;
   action?: "new" | "existing" | "remove";
+  totalSpent?: number;
+  remainingBudget?: number;
 }
 
 interface AddBudgetLineForm {
@@ -49,6 +52,8 @@ interface BudgetSectionProps {
   onEditBudgetLineItem: (id: string, item: AddBudgetLineForm) => void;
   form: any;
   edit?: boolean;
+  canEditSpend?: boolean;
+  onEditSpend?: (lineItem: BudgetLineItem) => void;
 }
 
 const INITIAL_LINE_FORM: AddBudgetLineForm = {
@@ -67,6 +72,8 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
   onEditBudgetLineItem,
   form,
   edit = true,
+  canEditSpend = false,
+  onEditSpend,
 }) => {
   const [showSection, setShowSection] = useState(true);
   const [lineForm, setLineForm] =
@@ -140,16 +147,7 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                     setEditingLineId(null);
                     setIsLineDialogOpen(true);
                   }}
-                  styles={{
-                    root: {
-                      backgroundColor: "#1D2054",
-                      borderColor: "#1D2054",
-                    },
-                    rootHovered: {
-                      backgroundColor: "#151b41",
-                      borderColor: "#151b41",
-                    },
-                  }}
+                  styles={popupInputStyles.researchPrimaryButton}
                 >
                   + Add Line Item
                 </PrimaryButton>
@@ -175,7 +173,7 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
             >
               <div className="grid gap-4 py-2">
                 <div>
-                  <Label htmlFor="lineName">Item Name</Label>
+                  <Label htmlFor="lineName">Activity</Label>
                   <TextField
                     id="lineName"
                     value={lineForm.name}
@@ -233,6 +231,7 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                 <PrimaryButton
                   onClick={handleAddBudgetLine}
                   text={editingLineId ? "Update" : "Add"}
+                  styles={popupInputStyles.researchPrimaryButton}
                 />
                 <DefaultButton
                   onClick={() => {
@@ -241,6 +240,7 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                     setLineForm(INITIAL_LINE_FORM);
                   }}
                   text="Cancel"
+                  styles={popupInputStyles.researchSecondaryButton}
                 />
               </FluentDialogFooter>
             </FluentDialog>
@@ -250,7 +250,7 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                 <thead className="bg-[#1D2054]">
                   <tr className="text-left">
                     <th className="px-6 py-3 font-semibold text-white">
-                      Item Name
+                      Activity
                     </th>
                     <th className="px-6 py-3 font-semibold text-white">
                       Description
@@ -261,9 +261,20 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                     <th className="px-6 py-3 font-semibold text-white text-right">
                       Amount
                     </th>
+                    <th className="px-6 py-3 font-semibold text-white text-right">
+                      Total Spent
+                    </th>
+                    <th className="px-6 py-3 font-semibold text-white text-right">
+                      Remaining Budget
+                    </th>
                     {edit && (
                       <th className="px-6 py-3 font-semibold text-white text-right">
                         Actions
+                      </th>
+                    )}
+                    {canEditSpend && (
+                      <th className="px-6 py-3 font-semibold text-white text-right">
+                        Update Spend
                       </th>
                     )}
                   </tr>
@@ -290,6 +301,16 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                       <td className="px-6 py-3 text-right font-medium text-[#1e293b]">
                         {aedFormat(item.prmtk_amount)}
                       </td>
+                      <td className="px-6 py-3 text-right font-medium text-[#1e293b]">
+                        {item.totalSpent != null
+                          ? aedFormat(item.totalSpent)
+                          : "-"}
+                      </td>
+                      <td className="px-6 py-3 text-right font-medium text-[#1e293b]">
+                        {item.remainingBudget != null
+                          ? aedFormat(item.remainingBudget)
+                          : "-"}
+                      </td>
                       {edit && form.type !== "view" && (
                         <td className="px-6 py-3 text-right">
                           {item.action === "remove" ? (
@@ -303,25 +324,28 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                                 iconProps={{ iconName: "Edit" }}
                                 title="Edit"
                                 ariaLabel="Edit"
-                                styles={{
-                                  root: {
-                                    color: "#1D2054",
-                                  },
-                                }}
+                                styles={popupInputStyles.editButton}
                               />
                               <IconButton
                                 onClick={() => onRemoveBudgetLineItem(item.id)}
                                 iconProps={{ iconName: "Delete" }}
                                 title="Remove"
                                 ariaLabel="Remove"
-                                styles={{
-                                  root: {
-                                    color: "#dc2626",
-                                  },
-                                }}
+                                styles={popupInputStyles.deleteButton}
                               />
                             </div>
                           )}
+                        </td>
+                      )}
+                      {canEditSpend && (
+                        <td className="px-6 py-3 text-right">
+                          <IconButton
+                            onClick={() => onEditSpend?.(item)}
+                            iconProps={{ iconName: "Edit" }}
+                            title="Edit spend"
+                            ariaLabel="Edit spend"
+                            styles={popupInputStyles.editButton}
+                          />
                         </td>
                       )}
                     </tr>
@@ -329,7 +353,7 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                   {budgetLineItem.length === 0 && (
                     <tr>
                       <td
-                        colSpan={edit ? 5 : 4}
+                        colSpan={edit ? 7 : 6}
                         className="px-6 py-8 text-center text-[#94a3b8]"
                       >
                         No budget line items added.
@@ -340,15 +364,15 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                 <tfoot className="bg-[#f8fafc] border-t-2 border-[#e2e8f0]">
                   <tr>
                     <td
-                      colSpan={edit ? 3 : 2}
+                      colSpan={edit ? 5 : 4}
                       className="px-6 py-3 font-semibold text-[#1D2054]"
                     >
                       Total Amount
                     </td>
-                    <td className="px-6 py-3 font-bold text-right text-[#1D2054] text-lg">
+                    <td colSpan={3} className="px-6 py-3 font-bold text-right text-[#1D2054] text-lg">
                       {aedFormat(totalLineItemAmount)}
                     </td>
-                    <td></td>
+                   
                   </tr>
                 </tfoot>
               </table>

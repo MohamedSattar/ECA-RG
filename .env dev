@@ -2,7 +2,7 @@
 # For secret variables is better to use DevServerControl tool with set_env_variable: ["KEY", "SECRET"]
 
 # API Base URL - Production Power Pages Portal
-VITE_PUBLIC_API_BASE_URL="https://ecacrmdev.crm15.dynamics.com"
+VITE_PUBLIC_API_BASE_URL=/
 
 # Server-side Azure AD client credentials (used by server proxy to call Dataverse)
 # Set these to enable server-side client-credentials token acquisition.
@@ -37,5 +37,3 @@ VITE_FILE_DOWNLOAD_ENDPOINT=https://d2b51a037ca4edf98f016454711544.54.environmen
 # DEVELOPMENT ONLY: Static fallback token for local testing (expires Feb 10, 2026)
 # This allows development/testing when client credentials flow is unavailable
 # NEVER use this token in production—it has a short lifetime and is committed to git
-VITE_B2C_AUTHORITY=https://ecab2cdev.b2clogin.com/tfp/20204571-3776-41c1-8358-b82ae0114e6e/b2c_1a_rg_dev_susi/v2.0/
-VITE_B2C_KNOWN_AUTHORITIES=ecab2cdev.b2clogin.com

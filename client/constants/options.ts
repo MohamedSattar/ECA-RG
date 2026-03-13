@@ -9,6 +9,7 @@ export const TeamMemberRoles = {
     { key: "4", text: "Assistant" },
     { key: "5", text: "Other" },
   ],
+  //Not in use (to be deleted) - Research Uses same codes as Application for team members
   RESEARCH: [
     { key: "912180000", text: "Principal Investigator" },
     { key: "912180001", text: "Co-Principal Investigator" },
@@ -33,13 +34,13 @@ export const ApplicationStatus = [
 ] as const;
 
 export const BudgetCategorys = [
-  { text: "Institutional Overhead", key: 912180000 },
-  { text: "Research Personnel", key: 912180001 },
-  { text: "Supplies", key: 912180002 },
-  { text: "Research Dissemination and communication", key: 912180003 },
-  { text: "Administrative Personnel Costs", key: 912180004 },
-  { text: "Consultants and Subgrants", key: 912180005 },
-  { text: "VAT", key: 912180006 },
+  { text: "A. Research Personnel", key: 1,Direct:true },
+  { text: "B. Consultants and Subgrants", key: 2 ,Direct:true},
+  { text: "C. Supplies", key: 3,Direct:true },
+  { text: "D. Research Dissemination and Communication", key: 4,Direct:true },
+  { text: "E. Administrative Personnel Costs", key: 5 ,Direct:true},
+  { text: "F. Administrative Personnel Costs (Specific to Project)", key: 6 ,Direct:true},
+  { text: "G. Indirect Costs", key: 7 ,Direct:false},
 ];
 
 export const PreferredContactMethodCode = [

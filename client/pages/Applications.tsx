@@ -5,13 +5,16 @@ import Reveal from "@/motion/Reveal";
 import { useDataverseApi } from "@/hooks/useDataverseApi";
 import {
   ApplicationKeys,
+  APPLICATION_STATUS_LABELS,
   ContactKeys,
   GrantCycleFields,
+  ResearchAreaFields,
   TableName,
 } from "@/constants/index";
 import { useAuth } from "@/state/auth";
 import { OverlayLoader } from "@/components/Loader";
 import { IconButton } from "@fluentui/react";
+import { popupInputStyles } from "@/styles/popupInputStyles";
 import { applicationsSample } from "@/samples/applications";
 
 function StatusBadge({ value }: { value?: string | null }) {
@@ -48,10 +51,11 @@ export default function Applications() {
   // TODO: replace with actual current user id from auth context
   const currentUserId = user?.contact?.[ContactKeys.CONTACTID] || "";
 
-  const select = `${ApplicationKeys.APPLICATIONID},${ApplicationKeys.APPLICATIONTITLE},${ApplicationKeys.SUBMISSIONDATE_FORMATTED},
-  ${ApplicationKeys.RESEARCHAREA_FORMATTED},${ApplicationKeys.GRANTCYCLE_FORMATTED},${ApplicationKeys.STATUS_FORMATTED}`;
   const filter = `${ApplicationKeys.MAINAPPLICANT} eq ${currentUserId}`;
-  const currentUserApplicationURL = `/_api/${TableName.APPLICATIONS}?$select=*&$filter=${filter}`;
+  // Use $expand to get Grant Cycle and Research Area names (FormattedValue in $select causes 400)
+  const expand =
+    "prmtk_GrantCycle($select=prmtk_cyclename),prmtk_ResearchArea($select=prmtk_areaname)";
+  const currentUserApplicationURL = `/_api/${TableName.APPLICATIONS}?$select=*&$filter=${filter}&$expand=${expand}`;
 
   const loadApps = async () => {
     setLoading(true);
@@ -81,11 +85,38 @@ export default function Applications() {
 
   const applications = useMemo(() => apps || [], [apps]);
 
+  const getStatusLabel = (app: any): string => {
+    const statusCode = app[ApplicationKeys.STATUS];
+    const num =
+      statusCode !== undefined && statusCode !== null
+        ? Number(statusCode)
+        : null;
+    if (num !== null && APPLICATION_STATUS_LABELS[num as keyof typeof APPLICATION_STATUS_LABELS]) {
+      return APPLICATION_STATUS_LABELS[num as keyof typeof APPLICATION_STATUS_LABELS];
+    }
+    return (app[ApplicationKeys.STATUS_FORMATTED] as string) ?? "Unknown";
+  };
+
+  const mapStatusToColor = (status: string) => {
+    const s = status.toLowerCase();
+    if (s.includes("awarded") || s.includes("approved")) return "bg-green-100 text-green-800 border-green-200";
+    if (s.includes("rejected")) return "bg-red-100 text-red-800 border-red-200";
+    if (s.includes("disqualified")) return "bg-red-100 text-red-800 border-red-200";
+    if (s.includes("submitted")) return "bg-blue-100 text-blue-800 border-blue-200";
+    if (s === "draft") return "bg-slate-100 text-slate-800 border-slate-200";
+    if (s.includes("return for updates")) return "bg-amber-100 text-amber-800 border-amber-200";
+    if (s.includes("shortlisted")) return "bg-emerald-100 text-emerald-800 border-emerald-200";
+    if (s.includes("pending review")) return "bg-amber-100 text-amber-800 border-amber-200";
+    if (s.includes("review completed")) return "bg-sky-100 text-sky-800 border-sky-200";
+    if (s.includes("active")) return "bg-green-100 text-green-800 border-green-200";
+    if (s.includes("archived")) return "bg-slate-100 text-slate-600 border-slate-200";
+    return "bg-slate-100 text-slate-800 border-slate-200";
+  };
+
   const onView = (item: any) => {
-    const title =
-      (item[ApplicationKeys.APPLICATIONTITLE] as string) ?? "Application";
+    const statusLabel = getStatusLabel(item);
     navigate(
-      `/applyapplication?item=${item[ApplicationKeys.APPLICATIONID]}&grantCycleId=${item[ApplicationKeys.GRANTCYCLE]}&researchAreaId=${item[ApplicationKeys.RESEARCHAREA]}&status=${item[GrantCycleFields.STATUS_FORMATTED]}&applicationNumber=${item[ApplicationKeys.APPLICATIONNUMBER]}&formType=view`,
+      `/applyapplication?item=${item[ApplicationKeys.APPLICATIONID]}&grantCycleId=${item[ApplicationKeys.GRANTCYCLE]}&researchAreaId=${item[ApplicationKeys.RESEARCHAREA]}&status=${encodeURIComponent(statusLabel)}&applicationNumber=${item[ApplicationKeys.APPLICATIONNUMBER]}&formType=view`,
       {
         state: {
           applicationId: item[ApplicationKeys.APPLICATIONID],
@@ -93,17 +124,16 @@ export default function Applications() {
           researchAreaId: item[ApplicationKeys.RESEARCHAREA],
           formType: "view",
           item: item,
-          status: item[GrantCycleFields.STATUS_FORMATTED],
+          status: statusLabel,
         },
       },
     );
   };
 
   const onEdit = (item: any) => {
-    const title =
-      (item[ApplicationKeys.APPLICATIONTITLE] as string) ?? "Application";
+    const statusLabel = getStatusLabel(item);
     navigate(
-      `/applyapplication?item=${item[ApplicationKeys.APPLICATIONID]}&grantCycleId=${item[ApplicationKeys.GRANTCYCLE]}&researchAreaId=${item[ApplicationKeys.RESEARCHAREA]}&status=${item[GrantCycleFields.STATUS_FORMATTED]}&applicationNumber=${item[ApplicationKeys.APPLICATIONNUMBER]}&formType=edit`,
+      `/applyapplication?item=${item[ApplicationKeys.APPLICATIONID]}&grantCycleId=${item[ApplicationKeys.GRANTCYCLE]}&researchAreaId=${item[ApplicationKeys.RESEARCHAREA]}&status=${encodeURIComponent(statusLabel)}&applicationNumber=${item[ApplicationKeys.APPLICATIONNUMBER]}&formType=edit`,
       {
         state: {
           applicationId: item[ApplicationKeys.APPLICATIONID],
@@ -111,19 +141,10 @@ export default function Applications() {
           researchAreaId: item[ApplicationKeys.RESEARCHAREA],
           formType: "edit",
           item: item,
+          status: statusLabel,
         },
       },
     );
-  };
-  const mapStatusToColor = (status: string) => {
-    const upperStatus = status.toUpperCase();
-    if (upperStatus.indexOf("APPROVE") !== -1) {
-      return "bg-green-500 text-white";
-    } else if (upperStatus.indexOf("REJECT") !== -1) {
-      return "bg-red-500 text-white";
-    } else {
-      return "bg-blue-300 text-black";
-    }
   };
 
   const ApplicationRow = ({
@@ -163,7 +184,7 @@ export default function Applications() {
           {/* Status and Action */}
           <div className="flex items-center gap-3 flex-shrink-0">
             <div
-              className={`px-3 py-1.5 rounded-full text-xs font-bold text-center whitespace-nowrap ${mapStatusToColor(status)}`}
+              className={`px-3 py-1.5 rounded-full text-xs font-bold text-center whitespace-nowrap border ${mapStatusToColor(status)}`}
             >
               {status}
             </div>
@@ -181,10 +202,7 @@ export default function Applications() {
                 }
               }}
               aria-label={`Edit ${title}`}
-              styles={{
-                root: { color: "#1D2054" },
-                rootDisabled: { color: "#cbd5e1" },
-              }}
+              styles={popupInputStyles.editButton}
             />
           </div>
         </div>
@@ -241,6 +259,8 @@ export default function Applications() {
     );
   };
   const SummaryCards = () => {
+    const getStatus = (app: any) => getStatusLabel(app).toLowerCase();
+
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-white p-6 border border-[#e2e8f0] rounded-xl mt-10 mb-6">
         <SummaryCard
@@ -254,9 +274,7 @@ export default function Applications() {
           number={applications
             .filter(
               (app) =>
-                app[ApplicationKeys.STATUS_FORMATTED]
-                  .toLowerCase()
-                  .indexOf("reject") !== -1,
+                getStatus(app).includes("reject"),
             )
             .length.toString()}
           label="Rejected"
@@ -268,9 +286,7 @@ export default function Applications() {
           number={applications
             .filter(
               (app) =>
-                app[ApplicationKeys.STATUS_FORMATTED]
-                  .toLowerCase()
-                  .indexOf("approve") !== -1,
+                getStatus(app).includes("approve"),
             )
             .length.toString()}
           label="Approved"
@@ -347,19 +363,30 @@ export default function Applications() {
                     const title =
                       (app[ApplicationKeys.APPLICATIONTITLE] as string) ??
                       "Untitled";
+                    const submittedFormatted = app[
+                      ApplicationKeys.SUBMISSIONDATE_FORMATTED
+                    ] as string | undefined;
+                    const submittedRaw = app[
+                      ApplicationKeys.SUBMISSIONDATE
+                    ] as string | undefined;
                     const submitted =
-                      (app[
-                        ApplicationKeys.SUBMISSIONDATE_FORMATTED
-                      ] as string) ?? "-";
+                      submittedFormatted ||
+                      (submittedRaw
+                        ? new Date(submittedRaw).toLocaleDateString()
+                        : "-");
                     const researchArea =
+                      (app.prmtk_ResearchArea?.[
+                        ResearchAreaFields.AREANAME
+                      ] as string) ??
                       (app[ApplicationKeys.RESEARCHAREA_FORMATTED] as string) ??
                       "-";
                     const grantCycle =
+                      (app.prmtk_GrantCycle?.[
+                        GrantCycleFields.CYCLENAME
+                      ] as string) ??
                       (app[ApplicationKeys.GRANTCYCLE_FORMATTED] as string) ??
                       "-";
-                    const status =
-                      (app[ApplicationKeys.STATUS_FORMATTED] as string) ??
-                      "Unknown";
+                    const status = getStatusLabel(app);
                     const applicationNumber =
                       (app[ApplicationKeys.APPLICATIONNUMBER] as string) ?? "-";
                     const desc =

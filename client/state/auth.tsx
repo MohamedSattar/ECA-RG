@@ -228,9 +228,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
           const requestType = isSignup ? "signup" : "login";
           console.log(`[Auth] Starting SSO ${requestType}...`);
 
-          // Use redirect for full page navigation
           const request = isSignup ? signupRequest : loginRequest;
+          console.log("[Auth] Using redirect flow for authentication");
+
+          // Use redirect for all environments
           await instance.loginRedirect(request);
+          // Note: Control won't return here as redirect navigates away
         } catch (error: any) {
           // Handle specific MSAL errors
           if (error?.errorCode === "user_cancelled") {
@@ -269,8 +272,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
         try {
           console.log("[Auth] Logging out...");
           clearAuthState(setAuthed, setUser);
-          // Use popup for iframe compatibility (vs redirect which doesn't work in iframes)
-          await instance.logoutPopup();
+          // Use redirect for logout
+          await instance.logoutRedirect();
           console.log("[Auth] Logout successful");
           toast.success("You have been logged out.");
         } catch (error) {

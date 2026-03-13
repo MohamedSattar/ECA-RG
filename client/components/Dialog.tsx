@@ -7,6 +7,7 @@ import {
 } from "@fluentui/react/lib/Dialog";
 import { PrimaryButton, DefaultButton } from "@fluentui/react/lib/Button";
 import { IModalProps } from "@fluentui/react/lib/Modal";
+import { popupInputStyles } from "@/styles/popupInputStyles";
 
 export interface MessageDialogProps {
   hidden: boolean;
@@ -81,8 +82,18 @@ export const MessageDialog: React.FC<MessageDialogProps> = ({
     >
       {children}
       <DialogFooter>
-        <PrimaryButton onClick={handleConfirm} text={confirmText} />
-        {showCancel && <DefaultButton onClick={handleCancel} text={cancelText} />}
+        <PrimaryButton
+          onClick={handleConfirm}
+          text={confirmText}
+          styles={popupInputStyles.researchPrimaryButton}
+        />
+        {showCancel && (
+          <DefaultButton
+            onClick={handleCancel}
+            text={cancelText}
+            styles={popupInputStyles.researchSecondaryButton}
+          />
+        )}
       </DialogFooter>
     </FluentDialog>
   );
