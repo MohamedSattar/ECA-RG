@@ -3595,7 +3595,7 @@ export default function FormResearch() {
                   : form.title || state?.item?.[ResearchKeys.RESEARCHNUMBER] || "Research"}
               </h1>
               <p className="mt-1 text-sm text-slate-500">
-                Complete the sections below and submit your proposal.
+                You can save your progress and come back to complete the form at any time.
               </p>
             </div>
 
@@ -3609,11 +3609,7 @@ export default function FormResearch() {
                     </p>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       {[
-                        {
-                          label: "Submission Date",
-                          value: form.submissionDate,
-                          iconName: "Calendar",
-                        },
+                      
                         {
                           label: "Application Reference",
                           value: form.applicationTitle ?? "—",
@@ -3641,6 +3637,11 @@ export default function FormResearch() {
                         {
                           label: "Principal Investigator",
                           value: form.principalInvestigatorName ?? "—",
+                          iconName: "Contact",
+                        },
+                          {
+                          label: "Lead Institute",
+                          value: form.leadInstitute ?? "—",
                           iconName: "Contact",
                         },
                       ].map(({ label, value, iconName }) => (

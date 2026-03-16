@@ -176,6 +176,21 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
               minWidth={"50vw"}
             >
               <div className="grid gap-4 py-2">
+                    <div>
+                  <Label htmlFor="lineCategory">Category</Label>
+                  <Dropdown
+                    id="lineCategory"
+                    placeholder="Select a category"
+                    options={categoryOptions}
+                    selectedKey={lineForm.category || null}
+                    onChange={(_, option) =>
+                      setLineForm({
+                        ...lineForm,
+                        category: (option?.key as string) || "",
+                      })
+                    }
+                  />
+                </div>
                 <div>
                   <Label htmlFor="lineName">Activity</Label>
                   <TextField
@@ -215,21 +230,7 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                     type="number"
                   />
                 </div>
-                <div>
-                  <Label htmlFor="lineCategory">Category</Label>
-                  <Dropdown
-                    id="lineCategory"
-                    placeholder="Select a category"
-                    options={categoryOptions}
-                    selectedKey={lineForm.category || null}
-                    onChange={(_, option) =>
-                      setLineForm({
-                        ...lineForm,
-                        category: (option?.key as string) || "",
-                      })
-                    }
-                  />
-                </div>
+            
                 <div>
                   <Label htmlFor="lineJustification">Add Justification</Label>
                   <TextField
