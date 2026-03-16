@@ -178,7 +178,7 @@ export default function GrantDetail() {
         // Navigate to view/edit the existing application
         toast.success("Redirecting to your application...");
         navigate(
-          `/applyapplication?grantCycleId=${grantCycleId}&researchAreaId=${researchAreaId}&formType=view&item=${existingApplication.prmtk_applicationid}`,
+          `/applyapplication?grantCycleId=${grantCycleId}&researchAreaId=${researchAreaId}&formType=edit&item=${existingApplication.prmtk_applicationid}`,
         );
       } else {
         // Create a new draft application
@@ -216,7 +216,7 @@ export default function GrantDetail() {
 
         toast.success("Application created successfully!");
         navigate(
-          `/applyapplication?item=${applicationId}&grantCycleId=${grantCycleId}&researchAreaId=${researchAreaId}&formType=view`,
+          `/applyapplication?item=${applicationId}&grantCycleId=${grantCycleId}&researchAreaId=${researchAreaId}&formType=edit`,
         );
       }
     } catch (error) {

@@ -169,7 +169,7 @@ export default function Researches() {
           <div className="container py-4 md:py-4 grid gap-10 md:grid-cols-2 items-center">
             <div className="max-w-2xl">
               <h1 className="text-4xl md:text-6xl font-extrabold leading-tight tracking-tight text-white">
-                My Research Status
+                My Researches
               </h1>
             </div>
 

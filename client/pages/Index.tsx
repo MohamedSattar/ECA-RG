@@ -519,7 +519,7 @@ export default function Index() {
         // Navigate to view/edit the existing application
         toast.success("Redirecting to your application...");
         navigate(
-          `/applyapplication?grantCycleId=${grantCycleId}&researchAreaId=${researchAreaId}&formType=view&item=${existingApplication.prmtk_applicationid}`,
+          `/applyapplication?grantCycleId=${grantCycleId}&researchAreaId=${researchAreaId}&formType=edit&item=${existingApplication.prmtk_applicationid}`,
         );
       } else {
         // Create a new draft application
@@ -581,7 +581,8 @@ export default function Index() {
                 zIndex: 1,
                 width: "175px",
               }}
-              src="/images/girl.png"
+              src="/images/application.png"
+              // src="/images/girl.png"
               alt="Background pattern"
             />
           </div>
@@ -652,7 +653,7 @@ export default function Index() {
 
             {/* Hero Collage */}
             <div className="relative h-[380px] md:h-[440px]">
-              <img
+              {/* <img
                 style={{
                   position: "absolute",
                   right: "0px",
@@ -662,13 +663,15 @@ export default function Index() {
                 }}
                 src="/images/girl.png"
                 alt="Background pattern"
-              />
+              /> */}
 
+            <div className="relative flex justify-center md:justify-end">
               <img
-                src="images/bg2.png"
-                alt="Hero collage"
-                className="absolute right-0 top-0 h-full w-auto max-w-none"
+                src="/images/application.png"
+                alt="Illustration"
+                className="h-auto w-auto max-w-none"
               />
+            </div>
             </div>
           </div>
         </Reveal>

@@ -1270,17 +1270,17 @@ export default function FormApplication() {
           <div className="container py-4 md:py-4 grid gap-10 md:grid-cols-2 items-center">
             <div className="max-w-2xl flex flex-col gap-4">
               <h1 className="text-2xl md:text-6xl font-extrabold leading-tight tracking-tight text-white">
-                My Grant Status
+                Application Status
                 <span className=" font-normal ml-2 text-[#F7D85C]">
                   ({status ? status : "New"})
                 </span>
               </h1>
               {applicationNumber && (
                 <div className="text-2xl text-[#F7D85C]">
-                  Grant : {applicationNumber}
+                  Application Number : {applicationNumber}
                 </div>
               )}
-              {formType !== "new" && (
+              {formType === "view" && (
                 <div className="text-sm text-white">
                   <span className="opacity-80">Submission Date:</span>
                   <span className="ml-2 font-semibold text-[#F7D85C]">
@@ -1616,7 +1616,7 @@ export default function FormApplication() {
           <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-6 shadow-xl">
             <div className="mb-4">
               <h2 className="text-xl font-bold text-gray-900">
-                Confirm Submission
+                Confirm Application Submission
               </h2>
             </div>
             <div className="mb-6">
@@ -1624,7 +1624,8 @@ export default function FormApplication() {
                 Are you sure you want to submit this application?
               </p>
               <p className="mt-2 text-sm text-red-600 font-semibold">
-                ⚠️ Once submitted, you will not be able to edit the information.
+                ⚠️ Your application must be complete including all sections and attachments before submission. You will not be able to make changes after submission.
+                The Proposal will be reviewed and you will be notified of the outcome. Please ensure all information is accurate and all required documents are attached before confirming submission.
               </p>
             </div>
             <div className="flex justify-end gap-3">
