@@ -34,6 +34,7 @@ export interface BudgetLineItem {
   action?: "new" | "existing" | "remove";
   totalSpent?: number;
   remainingBudget?: number;
+  justification:string;
 }
 
 interface AddBudgetLineForm {
@@ -41,6 +42,7 @@ interface AddBudgetLineForm {
   description: string;
   amount: string;
   category: string;
+  justification:string;
 }
 
 interface BudgetSectionProps {
@@ -61,6 +63,7 @@ const INITIAL_LINE_FORM: AddBudgetLineForm = {
   description: "",
   amount: "",
   category: "",
+  justification:""
 };
 
 export const BudgetSection: React.FC<BudgetSectionProps> = ({
@@ -114,6 +117,7 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
       description: item.prmtk_description,
       amount: item.prmtk_amount.toString(),
       category: item.prmtk_category,
+      justification:item.justification
     });
     setEditingLineId(item.id);
     setIsLineDialogOpen(true);
@@ -226,7 +230,24 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                     }
                   />
                 </div>
+                <div>
+                  <Label htmlFor="lineJustification">Add Justification</Label>
+                  <TextField
+                    id="lineJustification"
+                    value={lineForm.justification}
+                    onChange={(e, newValue) =>
+                      setLineForm({
+                        ...lineForm,
+                        justification: newValue || "",
+                      })
+                    }
+                    placeholder="Enter Justification"
+                    multiline
+                    rows={3}
+                  />
+                </div>
               </div>
+              
               <FluentDialogFooter>
                 <PrimaryButton
                   onClick={handleAddBudgetLine}

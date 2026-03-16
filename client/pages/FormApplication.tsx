@@ -691,6 +691,7 @@ export default function FormApplication() {
       prmtk_amount: parseFloat(item[BudgetLineItemFields.AMOUNT] || "0"),
       prmtk_category: item[BudgetLineItemFields.CATEGORY] || "",
       action: "existing" as const,
+      justification:item["prmtk_justification"] || ""
     }));
   };
 
@@ -1439,6 +1440,7 @@ export default function FormApplication() {
                       prmtk_description: item.description,
                       prmtk_amount: parseFloat(item.amount),
                       prmtk_category: item.category,
+                      prmtk_justification:item.justification
                     },
                   })) as { headers?: Headers; status?: number };
                   if (res?.status >= 400) {
@@ -1454,7 +1456,10 @@ export default function FormApplication() {
                     prmtk_category: item.category,
                     prmtk_description: item.description,
                     prmtk_amount: parseFloat(item.amount),
+                    justification:item.justification,
                     action: "existing",
+                    
+                    
                   };
                   setForm((prev) => ({
                     ...prev,
@@ -1470,7 +1475,9 @@ export default function FormApplication() {
                   prmtk_category: item.category,
                   prmtk_description: item.description,
                   prmtk_amount: parseFloat(item.amount),
-                  action: "new",
+                  justification:item.justification,
+                  action: "new"
+                  
                 };
                 setForm((prev) => ({
                   ...prev,
@@ -1485,6 +1492,7 @@ export default function FormApplication() {
                 prmtk_description: item.description,
                 prmtk_amount: parseFloat(item.amount),
                 prmtk_category: item.category,
+                prmtk_justification:item.justification
               };
               if (existing?.action === "existing" && id) {
                 setShowLoader(true);

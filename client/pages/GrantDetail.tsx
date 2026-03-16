@@ -61,6 +61,15 @@ export default function GrantDetail() {
     }
   };
 
+  function formatDate(date: Date): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  }).format(date);
+}
+
   const loadGrantCycles = async () => {
     if (!id) return;
 
@@ -124,21 +133,48 @@ export default function GrantDetail() {
   const applications = useMemo(() => apps || [], [apps]);
 
   // Function to download template file
-  const downloadTemplate = async (fieldName: string, fileName: string) => {
-    if (!grantTemplate) {
-      toast.error("Grant template not loaded");
-      return;
+const downloadTemplate = async (fieldName: string, fileName: string) => {
+  if (!grantTemplate) {
+    toast.error("Grant template not loaded");
+    return;
+  }
+
+  try {
+    const grantTemplateId = grantTemplate.prmtk_granttemplateid;
+
+    const url = `/_api/prmtk_granttemplates(${grantTemplateId})/${fieldName}/$value`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Accept: "application/octet-stream",
+        "OData-Version": "4.0",
+        "OData-MaxVersion": "4.0"
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error("Download failed");
     }
 
-    try {
-      const grantTemplateId = grantTemplate.prmtk_granttemplateid;
-      const downloadUrl = `/_api/prmtk_granttemplates(${grantTemplateId})/${fieldName}/$value`;
-      return window.open(downloadUrl, "_blank");
-    } catch (err) {
-      console.error("Failed to download template:", err);
-      toast.error("Failed to download file. Please try again.");
-    }
-  };
+    const blob = await response.blob();
+
+    const downloadUrl = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = downloadUrl;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    window.URL.revokeObjectURL(downloadUrl);
+
+  } catch (err) {
+    console.error("Failed to download template:", err);
+    toast.error("Failed to download file. Please try again.");
+  }
+};
 
   const handleApplyForGrant = async () => {
     if (!user?.contact?.[ContactKeys.CONTACTID]) {
@@ -514,17 +550,17 @@ export default function GrantDetail() {
                   <InfoRow
                     label="Application Opens:"
                     value={
-                      researchArea?.prmtk_GrantCycle?.[
+                      formatDate(researchArea?.prmtk_GrantCycle?.[
                         GrantCycleKeys.STARTDATE_FORMATTED
-                      ] || "Jan 15, 2025"
+                      ]) || "Jan 15, 2025"
                     }
                   />
                   <InfoRow
                     label="Application Deadline:"
                     value={
-                      researchArea?.prmtk_GrantCycle?.[
+                      formatDate(researchArea?.prmtk_GrantCycle?.[
                         GrantCycleKeys.ENDDATE_FORMATTED
-                      ] || "Mar 15, 2025"
+                      ])  || "Mar 15, 2025"
                     }
                   />
                   {/* <InfoRow

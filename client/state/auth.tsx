@@ -87,6 +87,23 @@ async function getCurrentUserContact(
       method: "GET",
     });
 
+    if(response?.value?.length ==0)
+    {
+      const data={
+        emailaddress1:email
+      }
+      const resp = await callApi<{ value: any[] }>({
+      url: `/_api/${TableName.CONTACTS}?$filter=${filter}`,
+      method: "POST",
+      data
+    });
+    const response = await callApi<{ value: any[] }>({
+      url: `/_api/${TableName.CONTACTS}?$filter=${filter}`,
+      method: "GET",
+    });
+    return response?.value?.length ? response.value[0] : null;
+    }
+
     return response?.value?.length ? response.value[0] : null;
   } catch (error) {
     console.error("Error fetching user contact:", error);

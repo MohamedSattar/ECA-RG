@@ -13,7 +13,7 @@ export const getBudgetHeadersByApplication: RequestHandler = async (req, res) =>
     if (!applicationId) {
       return res.status(400).json({ error: "applicationId required" });
     }
-    const select = "prmtk_budgetheaderid,prmtk_budgetname,_prmtk_application_value,prmtk_totalbudget,prmtk_versionnumber,prmtk_status";
+    const select = "prmtk_budgetheaderid,prmtk_budgetname,_prmtk_application_value,prmtk_totalbudget,prmtk_versionnumber,prmtk_status,prmtk_justification";
     const path = `/${BUDGETHEADERS}?$filter=_prmtk_application_value eq ${applicationId}&$select=${select}`;
     const response = await dataverseFetch("GET", path);
     const data = response.ok ? await response.json() : await response.text();
@@ -90,7 +90,7 @@ export const getBudgetLineItems: RequestHandler = async (req, res) => {
     if (!budgetHeaderId) {
       return res.status(400).json({ error: "budgetHeaderId required" });
     }
-    const select = "prmtk_budgetlineitemid,prmtk_lineitemname,prmtk_category,prmtk_description,prmtk_amount,_prmtk_budgetheader_value";
+    const select = "prmtk_budgetlineitemid,prmtk_lineitemname,prmtk_category,prmtk_description,prmtk_amount,_prmtk_budgetheader_value,prmtk_justification";
     const path = `/${BUDGETLINEITEMS}?$filter=_prmtk_budgetheader_value eq ${budgetHeaderId}&$select=${select}`;
     const response = await dataverseFetch("GET", path);
     const data = response.ok ? await response.json() : await response.text();
