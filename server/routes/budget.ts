@@ -201,6 +201,9 @@ export const getBudgetSpendsByLineItem: RequestHandler = async (req, res) => {
       res.setHeader("Content-Type", contentType);
     }
     if (typeof data === "object") res.json(data);
+    else if(contentType?.includes("application/octet-stream")){
+      res.end(Buffer.from(data));
+    }
     else res.send(data);
   } catch (err) {
     console.error("[Budget] getBudgetSpendsByLineItem error:", err);

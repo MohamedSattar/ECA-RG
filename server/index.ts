@@ -163,7 +163,12 @@ async function handleDataverseProxy(
 
     if (contentType?.includes("application/json")) {
       data = await response.json();
-    } else {
+    }
+    else if(contentType?.includes("application/octet-stream"))
+    {
+      data= await response.arrayBuffer();
+    }
+    else {
       data = await response.text();
     }
 
@@ -197,7 +202,11 @@ async function handleDataverseProxy(
     // Send response
     if (contentType?.includes("application/json")) {
       res.json(data);
-    } else {
+    } 
+    else if(contentType?.includes("application/octet-stream")){
+      res.end(Buffer.from(data));
+    }
+    else {
       res.send(data);
     }
   } catch (err: any) {

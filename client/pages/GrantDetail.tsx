@@ -147,17 +147,21 @@ const downloadTemplate = async (fieldName: string, fileName: string) => {
     const response = await fetch(url, {
       method: "GET",
       headers: {
-        Accept: "application/octet-stream",
-        "OData-Version": "4.0",
-        "OData-MaxVersion": "4.0"
-      }
+        "Accept": "application/octet-stream",
+        "If-None-Match": ""        
+      },
+      cache: "no-store"
     });
 
     if (!response.ok) {
       throw new Error("Download failed");
     }
 
-    const blob = await response.blob();
+    //const blob = await response.blob();
+    const buffer = await response.arrayBuffer();
+
+// ✅ Force correct PDF type
+const blob = new Blob([buffer], { type:  "application/octet-stream"});
 
     const downloadUrl = window.URL.createObjectURL(blob);
 
@@ -166,8 +170,9 @@ const downloadTemplate = async (fieldName: string, fileName: string) => {
     a.download = fileName;
     document.body.appendChild(a);
     a.click();
-    a.remove();
+    document.body.appendChild(a);
 
+    document.body.removeChild(a);
     window.URL.revokeObjectURL(downloadUrl);
 
   } catch (err) {
