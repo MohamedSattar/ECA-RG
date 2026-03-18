@@ -63,9 +63,14 @@ export default function FormApplication() {
     try {
       // Fetch application data
       // Call the local proxy so the server can attach the server-side token and avoid CORS issues.
+      const prefer = 'odata.include-annotations="OData.Community.Display.V1.FormattedValue"';
       let res = await callApi<{ value: any[]; status?: number }>({
-        url: `/_api/${TableName.CONTACTS}?$filter=${ContactKeys.EMAILADDRESS1} eq '${user.email}'`,
+        url: `/_api/${TableName.CONTACTS}?$select=*&$filter=${ContactKeys.EMAILADDRESS1} eq '${user.email}'&$expand=parentcustomerid_account($select=name)`,
         method: "GET",
+        headers: { 
+          "Cache-Control": "no-cache",
+          "Prefer": prefer 
+        }
       });
 
       const app = res?.value?.[0];
@@ -83,7 +88,7 @@ export default function FormApplication() {
         preferredMethodOfContact:
           app[ContactKeys.PREFERREDCONTACTMETHODCODE] || 0,
         contactId: app[ContactKeys.CONTACTID] || "",
-        Institute: app[ContactKeys.institute] || "",
+        Institute: app?.parentcustomerid_account?.name || "",
       }));
     } catch (error) {
       console.error("Failed to load application details:", error);

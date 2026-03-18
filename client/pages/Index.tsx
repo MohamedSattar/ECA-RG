@@ -519,7 +519,7 @@ export default function Index() {
         // Navigate to view/edit the existing application
         toast.success("Redirecting to your application...");
         navigate(
-          `/applyapplication?grantCycleId=${grantCycleId}&researchAreaId=${researchAreaId}&formType=edit&item=${existingApplication.prmtk_applicationid}`,
+          `/application?grantCycleId=${grantCycleId}&researchAreaId=${researchAreaId}&formType=edit&item=${existingApplication.prmtk_applicationid}`,
         );
       } else {
         // Create a new draft application
@@ -557,7 +557,7 @@ export default function Index() {
 
         toast.success("Application created successfully!");
         navigate(
-          `/applyapplication?item=${applicationId}&grantCycleId=${grantCycleId}&researchAreaId=${researchAreaId}&formType=edit`,
+          `/application?item=${applicationId}&grantCycleId=${grantCycleId}&researchAreaId=${researchAreaId}&formType=edit`,
         );
       }
     } catch (error) {
@@ -608,7 +608,7 @@ export default function Index() {
                   onClick={() => {
                     console.log("Navigating to apply for research area:", grant?.[GrantCycleKeys.GRANTCYCLEID]);
 
-                    navigate("/applyapplication", {
+                    navigate("/application", {
                       state: {
                         grantCycleId: grant?.[GrantCycleKeys.GRANTCYCLEID],
                         researchAreaId: null
@@ -776,7 +776,7 @@ export default function Index() {
               childhood development through research excellence
             </p>
             <Link
-              to="/applyapplication"
+              to="/application"
               className="mt-6 inline-flex items-center text-brown font-semibold hover:underline"
             >
               Contact Us

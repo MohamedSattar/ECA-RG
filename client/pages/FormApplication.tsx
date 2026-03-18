@@ -16,7 +16,7 @@ import {
 import { Label } from "@fluentui/react/lib/Label";
 import { Dropdown, IDropdownOption } from "@fluentui/react/lib/Dropdown";
 import { BudgetCategorys } from "@/constants/options";
-import { ContactFields, GrantCycleFields } from "@/constants";
+import { APPLICATION_STATUS_LABELS, ContactFields, GrantCycleFields } from "@/constants";
 import {
   ApplicationKeys,
   ApplicationTeamMemberKeys,
@@ -69,6 +69,7 @@ interface FormState {
   generalFiles: { file: File; action: "new" | "existing" | "remove" }[];
   team: TeamMember[];
   type: "new" | "edit" | "view";
+  status:string;
   applicationNumber?: string;
 }
 
@@ -91,6 +92,7 @@ const INITIAL_FORM_STATE: FormState = {
   team: [],
   budgetHeaders: null,
   budgetLineItems: [],
+  status:"",
   type: "new",
 };
 
@@ -316,6 +318,7 @@ interface GeneralInformationSectionProps {
   onAbstractChange: (value: string) => void;
   onGrantCycleChange: (value: string | null) => void;
   onResearchAreaChange: (value: string | null) => void;
+  onMainApplicantChange: (value: string | null) => void;
   grantCycleId?: string | null;
   researchAreaId?: string | null;
   userAdxUserId?: string;
@@ -327,6 +330,7 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
   onAbstractChange,
   onGrantCycleChange,
   onResearchAreaChange,
+  onMainApplicantChange,
   grantCycleId,
   researchAreaId,
   userAdxUserId,
@@ -352,6 +356,7 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
               label="Grant Cycle"
               cascadeField={GrantCycleKeys.GRANTCYCLEID}
               cascadeValue={grantCycleId}
+              readonly={true}
               isDefaultSelected={grantCycleId != null}
               onSelect={(values) => {
                 onGrantCycleChange(
@@ -378,11 +383,38 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
               cascadeField={ResearchAreaKeys.RESEARCHAREAID}
               cascadeValue={researchAreaId}
               isDefaultSelected={researchAreaId != null}
+              readonly={true}
               disabled={formType === "view"}
               onSelect={(values) => {
                 onResearchAreaChange(
                   values && values.length > 0
                     ? values[0][ResearchAreaKeys.RESEARCHAREAID]
+                    : null,
+                );
+              }}
+            />
+          </div>
+        </div>
+          <div>
+          <Label>Main Applicant Name</Label>
+          <div className="mt-1">
+            <LookupPicker
+              key={`research-Applicant-${form.mainApplicant || "none"}`}
+              displayField={ContactFields.FULLNAME}
+              keyField={ContactFields.CONTACTID}
+              secondaryField={ContactFields.EMAILADDRESS1}
+              searchField={ContactFields.EMAILADDRESS1}
+              tableName={TableName.CONTACTS}
+              maxSelection={1}
+              label="Main Applicant Name"
+              cascadeField={ContactFields.CONTACTID}
+              cascadeValue={form.mainApplicant}
+              isDefaultSelected={form.mainApplicant != null}
+              disabled={formType === "view"}
+              onSelect={(values) => {
+                onMainApplicantChange(
+                  values && values.length > 0
+                    ? values[0][ContactFields.CONTACTID]
                     : null,
                 );
               }}
@@ -454,7 +486,7 @@ export default function FormApplication() {
   const researchAreaId = searchParams.get("researchAreaId");
   const formType = searchParams.get("formType") || "new";
   const applicationNumber = searchParams.get("applicationNumber");
-  const status = searchParams.get("status");
+  let status = searchParams.get("status");
 
   const [form, setForm] = useState<FormState>(() => ({
     ...INITIAL_FORM_STATE,
@@ -477,7 +509,17 @@ export default function FormApplication() {
   const [showWorkflowDialog, setShowWorkflowDialog] = useState(false);
   const { callApi } = useDataverseApi();
   const { triggerFlow } = useFlowApi();
-
+  const getStatusLabel = (app: any): string => {
+    const statusCode = app[ApplicationKeys.STATUS];
+    const num =
+      statusCode !== undefined && statusCode !== null
+        ? Number(statusCode)
+        : null;
+    if (num !== null && APPLICATION_STATUS_LABELS[num as keyof typeof APPLICATION_STATUS_LABELS]) {
+      return APPLICATION_STATUS_LABELS[num as keyof typeof APPLICATION_STATUS_LABELS];
+    }
+    return (app[ApplicationKeys.STATUS_FORMATTED] as string) ?? "Unknown";
+  };
   const mapApplicationToForm = (
     app: any,
     files: any[],
@@ -554,6 +596,7 @@ export default function FormApplication() {
       return [];
     }
   };
+     
 
   const loadApplicationDetails = useCallback(
     async (applicationId: string) => {
@@ -601,8 +644,10 @@ export default function FormApplication() {
           ...prev,
           grantCycle: app[ApplicationKeys.GRANTCYCLE] || "",
           researchArea: app[ApplicationKeys.RESEARCHAREA] || "",
+          status:getStatusLabel(app)|| ""
         }));
-        const applicationNumber = app[ApplicationKeys.APPLICATIONNUMBER] || "";
+        const applicationNumber = app[ApplicationKeys.APPLICATIONNUMBER] || "";      
+ 
         const [files] = await Promise.all([
           loadApplicationFiles(applicationNumber),
         ]);
@@ -789,7 +834,7 @@ export default function FormApplication() {
               existingApp[ApplicationKeys.STATUS] ||
               "";
             navigate(
-              `/applyapplication?item=${existingApp[ApplicationKeys.APPLICATIONID]}&grantCycleId=${existingApp[ApplicationKeys.GRANTCYCLE]}&researchAreaId=${existingApp[ApplicationKeys.RESEARCHAREA]}&status=${statusFormatted}&applicationNumber=${existingApp[ApplicationKeys.APPLICATIONNUMBER]}&formType=edit`,
+              `/application?item=${existingApp[ApplicationKeys.APPLICATIONID]}&grantCycleId=${existingApp[ApplicationKeys.GRANTCYCLE]}&researchAreaId=${existingApp[ApplicationKeys.RESEARCHAREA]}&status=${statusFormatted}&applicationNumber=${existingApp[ApplicationKeys.APPLICATIONNUMBER]}&formType=edit`,
               { replace: true },
             );
           }
@@ -1308,35 +1353,33 @@ export default function FormApplication() {
             <div className="flex justify-end gap-4">
               <button
                 onClick={() => handleSubmitClick(status)}
-                className="flex items-center gap-2 px-4 py-1 border border-[#7BAAA3] text-[#7BAAA3] rounded text-sm hover:bg-[#7BAAA3]/10 transition"
+                className="px-4 py-1 border border-[#7BAAA3] text-[#7BAAA3] rounded text-sm hover:bg-[#7BAAA3]/10 transition"
               >
                 <Icon iconName="SingleBookmark" />
                 SAVE DRAFT
               </button>
 
-              {status !== "Draft" && (
+              {form.status != "Draft" && (
                 <button
                   onClick={() => loadWorkFlowHistory(applicationId as string)}
-                  className="flex items-center gap-2 px-4 py-1 border border-[#7BAAA3] text-[#7BAAA3] rounded text-sm hover:bg-[#7BAAA3]/10 transition"
+                  className="gap-2 px-4 py-1 border border-[#7BAAA3] text-[#7BAAA3] rounded text-sm hover:bg-[#7BAAA3]/10 transition"
                 >
                   <Icon iconName="MailReminder" />
                   History
                 </button>
               )}
+               {form.type !== "view" && (
+                <PrimaryButton                  
+                  onClick={() => handleSubmitClick("Submitted")}
+                  disabled={!canSubmit || formType === "view" || showLoader}
+                >
+                  {showLoader ? "Submitting..." : "Submit Application"}
+                </PrimaryButton>
+              )}
             </div>
           )}
 
-          {formType === "view" && status !== "Draft" && (
-            <div className="flex justify-end gap-4">
-              <button
-                onClick={() => loadWorkFlowHistory(applicationId as string)}
-                className="flex items-center gap-2 px-4 py-1 border border-[#7BAAA3] text-[#7BAAA3] rounded text-sm hover:bg-[#7BAAA3]/10 transition"
-              >
-                <Icon iconName="MailReminder" />
-                History
-              </button>
-            </div>
-          )}
+
 
           {/* General Information Section */}
           <div className="mt-8 rounded-xl border bg-white p-6">
@@ -1365,6 +1408,9 @@ export default function FormApplication() {
                 }
                 onResearchAreaChange={(value) =>
                   setForm((prev) => ({ ...prev, researchArea: value }))
+                }
+                onMainApplicantChange={(value) =>
+                  setForm((prev) => ({ ...prev, mainApplicant: value }))
                 }
                 grantCycleId={grantCycleId}
                 researchAreaId={researchAreaId}
@@ -1573,31 +1619,29 @@ export default function FormApplication() {
           />
           {/* )} */}
 
-          <Reveal className="mt-8 flex justify-center ">
-            <div className="flex items-center gap-5">
+          <Reveal className="mt-8 flex gap-5 justify-end">           
+
               {form.type !== "view" && (
-                <PrimaryButton
-                  styles={{ root: { width: "100%" } }}
+                  <button
+                    onClick={() => handleSubmitClick(status)}
+                    disabled={formType === "view"}
+                    className="px-4 py-1 border border-[#7BAAA3] text-[#7BAAA3] rounded text-sm hover:bg-[#7BAAA3]/10 transition w-[9rem]"
+                  >
+                    <Icon iconName="SingleBookmark" />
+                    SAVE DRAFT
+                  </button>
+
+                  
+                )}
+               {form.type !== "view" && (
+                <PrimaryButton                 
                   onClick={() => handleSubmitClick("Submitted")}
                   disabled={!canSubmit || formType === "view" || showLoader}
                 >
                   {showLoader ? "Submitting..." : "Submit Application"}
                 </PrimaryButton>
               )}
-
-              <div className="flex justify-end gap-4">
-                {form.type !== "view" && (
-                  <button
-                    onClick={() => handleSubmitClick(status)}
-                    disabled={formType === "view"}
-                    className="flex items-center gap-2 px-4 py-1 border border-[#7BAAA3] text-[#7BAAA3] rounded text-sm hover:bg-[#7BAAA3]/10 transition w-[9rem]"
-                  >
-                    <Icon iconName="SingleBookmark" />
-                    SAVE DRAFT
-                  </button>
-                )}
-              </div>
-            </div>
+           
           </Reveal>
         </div>
         <SuccessDialog

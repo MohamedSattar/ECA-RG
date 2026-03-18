@@ -87,7 +87,7 @@ const App = () => (
                       }
                     />
                     <Route
-                      path="/applyapplication"
+                      path="/application"
                       element={
                         <ProtectedRoute>
                           <FormApplication />

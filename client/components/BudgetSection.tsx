@@ -283,18 +283,20 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                     <th className="px-6 py-3 font-semibold text-white text-right">
                       Amount
                     </th>
-                    <th className="px-6 py-3 font-semibold text-white text-right">
+                    
+                    {/*<th className="px-6 py-3 font-semibold text-white text-right">
                       Total Spent
                     </th>
                     <th className="px-6 py-3 font-semibold text-white text-right">
                       Remaining Budget
                     </th>
-                    {edit && (
+                    */}
+                    {edit && form.type !== "view"  && (
                       <th className="px-6 py-3 font-semibold text-white text-right">
                         Actions
                       </th>
                     )}
-                    {canEditSpend && (
+                    {canEditSpend && form.type !== "view" && (
                       <th className="px-6 py-3 font-semibold text-white text-right">
                         Update Spend
                       </th>
@@ -323,6 +325,7 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                       <td className="px-6 py-3 text-right font-medium text-[#1e293b]">
                         {aedFormat(item.prmtk_amount)}
                       </td>
+                      {/*
                       <td className="px-6 py-3 text-right font-medium text-[#1e293b]">
                         {item.totalSpent != null
                           ? aedFormat(item.totalSpent)
@@ -333,6 +336,7 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                           ? aedFormat(item.remainingBudget)
                           : "-"}
                       </td>
+                      */}
                       {edit && form.type !== "view" && (
                         <td className="px-6 py-3 text-right">
                           {item.action === "remove" ? (
@@ -386,12 +390,12 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                 <tfoot className="bg-[#f8fafc] border-t-2 border-[#e2e8f0]">
                   <tr>
                     <td
-                      colSpan={edit ? 5 : 4}
+                      colSpan={edit ? 3 : 2}
                       className="px-6 py-3 font-semibold text-[#1D2054]"
                     >
                       Total Amount
                     </td>
-                    <td colSpan={3} className="px-6 py-3 font-bold text-right text-[#1D2054] text-lg">
+                    <td  className="px-6 py-3 font-bold text-right text-[#1D2054] text-lg">
                       {aedFormat(totalLineItemAmount)}
                     </td>
                    

@@ -62,12 +62,47 @@ export default function GrantDetail() {
   };
 
   function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat('en-GB', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  }).format(date);
+  if(!date)
+    return ""
+ return new Date(date).toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
+const getYMD=(start:string, end:string) =>{
+  let startDate = new Date(start);
+  let endDate = new Date(end);
+
+  let years = endDate.getFullYear() - startDate.getFullYear();
+  let months = endDate.getMonth() - startDate.getMonth();
+  let days = endDate.getDate() - startDate.getDate();
+
+  // Adjust days
+  if (days < 0) {
+    months--;
+    const prevMonth = new Date(
+      endDate.getFullYear(),
+      endDate.getMonth(),
+      0
+    ).getDate();
+    days += prevMonth;
+  }
+
+  // Adjust months
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+  let returnValue=""
+  if(years>0)
+    returnValue+=`${years} year(s) `
+  if(months>0)
+    returnValue+=`${months} month(s) `
+  if(days>0)
+    returnValue+=`${days} day(s) `
+  return returnValue
 }
 
   const loadGrantCycles = async () => {
@@ -219,13 +254,13 @@ const blob = new Blob([buffer], { type:  "application/octet-stream"});
         // Navigate to view/edit the existing application
         toast.success("Redirecting to your application...");
         navigate(
-          `/applyapplication?grantCycleId=${grantCycleId}&researchAreaId=${researchAreaId}&formType=edit&item=${existingApplication.prmtk_applicationid}`,
+          `/application?grantCycleId=${grantCycleId}&researchAreaId=${researchAreaId}&formType=edit&item=${existingApplication.prmtk_applicationid}`,
         );
       } else {
         // Create a new draft application
         const applicationData = {
           [ApplicationKeys.APPLICATIONTITLE]: "Draft Application",
-          [ApplicationKeys.ABSTRACT]: "Draft",
+          [ApplicationKeys.ABSTRACT]: "",
           [ApplicationKeys.SUBMISSIONDATE]: new Date().toISOString(),
           [ApplicationKeys.MAINAPPLICANT_ID]: `/${TableName.CONTACTS}(${user.contact[ContactKeys.CONTACTID]})`,
           [ApplicationKeys.GRANTCYCLE_ID]: `/${TableName.GRANTCYCLES}(${grantCycleId})`,
@@ -257,7 +292,7 @@ const blob = new Blob([buffer], { type:  "application/octet-stream"});
 
         toast.success("Application created successfully!");
         navigate(
-          `/applyapplication?item=${applicationId}&grantCycleId=${grantCycleId}&researchAreaId=${researchAreaId}&formType=edit`,
+          `/application?item=${applicationId}&grantCycleId=${grantCycleId}&researchAreaId=${researchAreaId}&formType=edit`,
         );
       }
     } catch (error) {
@@ -363,9 +398,9 @@ const blob = new Blob([buffer], { type:  "application/octet-stream"});
                 </span>
                 <span className="text-sm font-medium">
                   Deadline:{" "}
-                  {researchArea?.prmtk_GrantCycle?.[
-                    GrantCycleKeys.ENDDATE_FORMATTED
-                  ] || "March 15, 2025"}
+                  {formatDate(researchArea?.prmtk_GrantCycle?.[
+                    GrantCycleKeys.ENDDATE
+                  ] )}
                 </span>
                 {/* Apply Button */}
               </div>
@@ -547,25 +582,29 @@ const blob = new Blob([buffer], { type:  "application/octet-stream"});
                   <InfoRow
                     label="Duration:"
                     value={
-                      researchArea?.prmtk_GrantCycle?.[
-                        "prmtk_cycleduration@OData.Community.Display.V1.FormattedValue"
-                      ] || "12–24 months"
+                      researchArea?.prmtk_GrantCycle?.[GrantCycleKeys.STARTDATE] &&
+                      researchArea?.prmtk_GrantCycle?.[GrantCycleKeys.ENDDATE]
+                      ?
+                      getYMD(researchArea?.prmtk_GrantCycle?.[GrantCycleKeys.STARTDATE],researchArea?.prmtk_GrantCycle?.[GrantCycleKeys.ENDDATE])
+                    :""
                     }
                   />
                   <InfoRow
                     label="Application Opens:"
                     value={
-                      formatDate(researchArea?.prmtk_GrantCycle?.[
-                        GrantCycleKeys.STARTDATE_FORMATTED
-                      ]) || "Jan 15, 2025"
+                      researchArea?.prmtk_GrantCycle?.[
+                        GrantCycleKeys.STARTDATE]?formatDate(researchArea?.prmtk_GrantCycle?.[
+                        GrantCycleKeys.STARTDATE
+                      ]):""
                     }
                   />
                   <InfoRow
                     label="Application Deadline:"
                     value={
-                      formatDate(researchArea?.prmtk_GrantCycle?.[
-                        GrantCycleKeys.ENDDATE_FORMATTED
-                      ])  || "Mar 15, 2025"
+                      researchArea?.prmtk_GrantCycle?.[
+                        GrantCycleKeys.ENDDATE ] ? formatDate(researchArea?.prmtk_GrantCycle?.[
+                        GrantCycleKeys.ENDDATE 
+                      ]) :""
                     }
                   />
                   {/* <InfoRow
