@@ -348,9 +348,93 @@ export function createServer() {
     }
   });
 
+  app.get("/api/dataverse-image", async (req, res) => {
+    const rawUrl = typeof req.query.url === "string" ? req.query.url : null;
+    const forceFullImage = String(req.query.full || "").toLowerCase() === "true";
+
+    if (!rawUrl) {
+      return res.status(400).json({ error: "Missing image url" });
+    }
+
+    if (!DATAVERSE_BASE_URL) {
+      return res.status(500).json({ error: "DATAVERSE_BASE_URL is not configured" });
+    }
+
+    try {
+      const baseUrl = new URL(DATAVERSE_BASE_URL);
+      const targetUrl = new URL(rawUrl, `${baseUrl.origin}/`);
+      const entity = targetUrl.searchParams.get("Entity")?.toLowerCase();
+      const recordId = targetUrl.searchParams.get("Id");
+      const attribute = targetUrl.searchParams.get("Attribute");
+
+      if (targetUrl.origin !== baseUrl.origin) {
+        return res.status(400).json({ error: "Image host is not allowed" });
+      }
+
+      if (!entity || !recordId || !attribute) {
+        return res.status(400).json({ error: "Missing image metadata" });
+      }
+
+      const entitySetMap: Record<string, string> = {
+        prmtk_researcharea: "prmtk_researchareas",
+      };
+      const entitySetName = entitySetMap[entity] || `${entity}s`;
+      const imagePath = `/api/data/v9.2/${entitySetName}(${recordId})/${attribute}/$value${forceFullImage ? "?size=full" : ""}`;
+
+      const serverToken = await acquireServerToken();
+      if (!serverToken) {
+        return res.status(503).json({ error: "Server-side Dataverse token unavailable" });
+      }
+
+      console.log("[DataverseImage] Fetching:", baseUrl.origin + imagePath);
+      const response = await fetch(baseUrl.origin + imagePath, {
+        headers: {
+          Authorization: `Bearer ${serverToken}`,
+          Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+        },
+      });
+
+      console.log("[DataverseImage] Response:", response.status, response.statusText, response.headers.get("content-type"));
+      res.status(response.status);
+
+      const imageBuffer = Buffer.from(await response.arrayBuffer());
+      const contentType = response.headers.get("content-type");
+      const inferredContentType =
+        contentType && contentType !== "application/octet-stream"
+          ? contentType
+          : imageBuffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+            ? "image/png"
+            : imageBuffer.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]))
+              ? "image/jpeg"
+              : imageBuffer.subarray(0, 6).toString("ascii") === "GIF87a" || imageBuffer.subarray(0, 6).toString("ascii") === "GIF89a"
+                ? "image/gif"
+                : imageBuffer.subarray(0, 4).toString("ascii") === "RIFF" && imageBuffer.subarray(8, 12).toString("ascii") === "WEBP"
+                  ? "image/webp"
+                  : "image/jpeg";
+      if (inferredContentType) {
+        res.setHeader("Content-Type", inferredContentType);
+      }
+      const cacheControl = response.headers.get("cache-control");
+      if (cacheControl) {
+        res.setHeader("Cache-Control", cacheControl);
+      }
+      const contentLength = response.headers.get("content-length");
+      if (contentLength) {
+        res.setHeader("Content-Length", contentLength);
+      }
+
+      return res.end(imageBuffer);
+    } catch (err: any) {
+      console.error("[DataverseImage] Failed to proxy image:", err);
+      return res.status(502).json({
+        error: "Image proxy error",
+        details: err?.message || String(err),
+      });
+    }
+  });
+
   // Dataverse API proxy - forward all /_api and /_layout requests
   app.all(/^\/((_api|_layout)\/)/, handleDataverseProxy);
-
 
   return app;
 }
