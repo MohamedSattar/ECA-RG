@@ -646,7 +646,7 @@ const blob = new Blob([buffer], { type:  "application/octet-stream"});
                 )}
                 {grantTemplate?.prmtk_applicanthandbook && (
                   <ResourceButton
-                    label="Application Handbook"
+                    label="User Manual"
                     iconName="Application"
                     onClick={() =>
                       downloadTemplate(
@@ -691,8 +691,12 @@ const blob = new Blob([buffer], { type:  "application/octet-stream"});
               {/* Contact Box */}
               <div className="bg-white-100 border-8 border-yellow-300 p-4 rounded-xl">
                 <h3 className="font-semibold mb-5">Need Help?</h3>
-                <p className="font-medium mb-3">ECA Research Team</p>
-                <p className="text-sm mb-1">📧 Research@eca.gov.ae</p>
+                 <p className="mt-1 text-sm text-slate-500">
+                <p className="font-medium mb-3">    If you have other question regarding research, grants or other opportunities at ECA please contact  ECA Research Team</p>
+              </p>
+                <p className="text-sm mb-1">📧 <a href="mailto:Research@eca.gov.ae" className="text-blue-500 hover:underline">
+                  Research@eca.gov.ae
+                </a></p>
               </div>
             </div>
           </div>

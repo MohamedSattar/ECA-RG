@@ -136,7 +136,7 @@ export const WorkforceDevelopmentSection: React.FC<
             onClick={handleOpenAdd}
             styles={popupInputStyles.researchPrimaryButton}
           >
-            Add Emirates Workforce Development
+            Add Emiraties Workforce Development
           </PrimaryButton>
         </div>
       )}
@@ -148,8 +148,8 @@ export const WorkforceDevelopmentSection: React.FC<
         dialogContentProps={{
           type: DialogType.normal,
           title: editingId
-            ? "Edit Emirates Workforce Development"
-            : "Add Emirates Workforce Development",
+            ? "Edit Emirati Workforce Development"
+            : "Add Emirati Workforce Development",
           subText: editingId
             ? "Update the record."
             : "Enter full name, dates, role and educational level.",
@@ -313,7 +313,7 @@ export const WorkforceDevelopmentSection: React.FC<
                   colSpan={isView ? 5 : 6}
                   className="px-6 py-8 text-center text-[#94a3b8]"
                 >
-                  No Emirates Workforce Development records.
+                  No Emirati Workforce Development records.
                 </td>
               </tr>
             )}

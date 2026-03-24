@@ -1625,7 +1625,7 @@ export default function FormResearch() {
           await loadWorkforceDevelopments(researchAreaId);
           toast({
             title: "Success",
-            description: "Emirates Workforce Development added successfully.",
+            description: "Emirati Workforce Development added successfully.",
           });
         } catch (error) {
           console.error("Failed to add workforce development:", error);
@@ -3594,9 +3594,7 @@ export default function FormResearch() {
                   ? "New Application"
                   : form.title || state?.item?.[ResearchKeys.RESEARCHNUMBER] || "Research"}
               </h1>
-              <p className="mt-1 text-sm text-slate-500">
-                You can save your progress and come back to complete the form at any time.
-              </p>
+             
             </div>
 
             {/* Overview + Team: 8 cols | 4 cols */}
@@ -3986,13 +3984,13 @@ export default function FormResearch() {
         {/* Emirates Workforce Development Section */}
         <div className="mt-6 rounded-xl border border-[#e2e8f0] bg-white p-6">
           <div className="flex items-center justify-between">
-            <h2 className={HEADING_TEXT}>Emirates Workforce Development</h2>
+            <h2 className={HEADING_TEXT}>Emirati Workforce Development</h2>
             <IconButton
               iconProps={{
                 iconName: showTeam ? "ChevronUp" : "ChevronDown",
               }}
               onClick={() => setShowTeam((prev) => !prev)}
-              ariaLabel="Toggle Emirates Workforce Development"
+              ariaLabel="Toggle Emirati Workforce Development"
               disabled={form.type === "view"}
             />
           </div>
