@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { ChevronDown, User } from "lucide-react";
 import Reveal from "@/motion/Reveal";
 import { useDataverseApi } from "@/hooks/useDataverseApi";
-import { normalizeImageUrl } from "@/lib/utils";
+import { formatDate, normalizeImageUrl } from "@/lib/utils";
 import {
   ApplicationFields,
   ApplicationKeys,
@@ -697,7 +697,7 @@ export default function Index() {
                       Start Date
                     </div>
                     <div className="font-medium text-right text-light-brown">
-                      {grant[GrantCycleKeys.STARTDATE_FORMATTED]}
+                      {formatDate(grant[GrantCycleKeys.STARTDATE])}
                     </div>
                   </div>
                   <div className="grid grid-cols-[1fr_auto] items-center text-sm">
@@ -705,7 +705,7 @@ export default function Index() {
                       End Date
                     </div>
                     <div className="font-medium text-right text-light-brown">
-                      {grant[GrantCycleKeys.ENDDATE_FORMATTED]}
+                      {formatDate(grant[GrantCycleKeys.ENDDATE])}
                     </div>
                   </div>
                 </div>

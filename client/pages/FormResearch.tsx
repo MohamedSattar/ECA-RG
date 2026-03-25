@@ -3841,6 +3841,7 @@ export default function FormResearch() {
                 budgetHeader={form.budgetHeaders}
                 budgetLineItem={form.budgetLineItems}
                 budgetCategories={BudgetCategorys}
+                formType="Research"
                 edit={
                   form.budgetVersions.find(
                     (v) => v.id === form.selectedBudgetVersion,

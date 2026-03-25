@@ -16,7 +16,7 @@ import {
 import { Label } from "@fluentui/react/lib/Label";
 import { Dropdown, IDropdownOption } from "@fluentui/react/lib/Dropdown";
 import { BudgetCategorys } from "@/constants/options";
-import { APPLICATION_STATUS_LABELS, ContactFields, GrantCycleFields } from "@/constants";
+import { APPLICATION_STATUS_LABELS, ContactFields, GrantCycleFields, ResearchKeys } from "@/constants";
 import {
   ApplicationKeys,
   ApplicationTeamMemberKeys,
@@ -46,6 +46,7 @@ import { HEADING_TEXT } from "@/styles/constants";
 import { FileUploadSection } from "@/components/FileUploadSection";
 import WorkflowTimeline from "@/components/WorkFlowHistory";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/ui/dialog";
+import { popupInputStyles } from "@/styles/popupInputStyles";
 
 interface TeamMember {
   id: string;
@@ -65,6 +66,9 @@ interface FormState {
   grantCycle: string | null;
   researchArea: string | null;
   mainApplicant: string;
+  grantCycleDisplayValue: string | null;
+  researchAreaDisplayValue: string | null;
+  mainApplicantDisplayValue: string;
   applicationFiles: { file: File; action: "new" | "existing" | "remove" }[];
   generalFiles: { file: File; action: "new" | "existing" | "remove" }[];
   team: TeamMember[];
@@ -87,6 +91,9 @@ const INITIAL_FORM_STATE: FormState = {
   grantCycle: null,
   researchArea: null,
   mainApplicant: "",
+  grantCycleDisplayValue:"",
+  researchAreaDisplayValue: "",
+  mainApplicantDisplayValue: "",
   applicationFiles: [],
   generalFiles: [],
   team: [],
@@ -341,6 +348,7 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
   return (
     <Reveal className="mt-8">
       <div className="mt-4 grid gap-6 md:grid-cols-2">
+        {/*
         <div>
           <Label>Grant Cycle</Label>
           <div className="mt-1">
@@ -421,6 +429,7 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
             />
           </div>
         </div>
+*/}
         <div className="md:col-span-2">
           <Label htmlFor="title">
             Title <span className="text-red-500">*</span>
@@ -520,6 +529,7 @@ export default function FormApplication() {
     }
     return (app[ApplicationKeys.STATUS_FORMATTED] as string) ?? "Unknown";
   };
+  
   const mapApplicationToForm = (
     app: any,
     files: any[],
@@ -529,6 +539,9 @@ export default function FormApplication() {
     grantCycle: app[ApplicationKeys.GRANTCYCLE] || null,
     researchArea: app[ApplicationKeys.RESEARCHAREA] || null,
     mainApplicant: app[ApplicationKeys.MAINAPPLICANT] || "",
+    grantCycleDisplayValue: app?.prmtk_GrantCycle?.prmtk_cyclename,
+    researchAreaDisplayValue:app?.prmtk_ResearchArea?.prmtk_areaname,
+    mainApplicantDisplayValue: app?.prmtk_MainApplicant?.fullname,
     submissionDate:
       app[ApplicationKeys.SUBMISSIONDATE_FORMATTED] || formatDate(new Date()),
     team: (app[ExpandRelations.APPLICATION_TEAM_MEMBER] || []).map(
@@ -617,7 +630,7 @@ export default function FormApplication() {
 
         // Fetch application data with user filter
         const res = await callApi<{ value: any[] }>({
-          url: `/_api/${TableName.APPLICATIONS}?$filter=${ApplicationKeys.APPLICATIONID} eq ${applicationId} and ${ApplicationKeys.MAINAPPLICANT} eq ${currentUserContactId}&$select=*&$expand=${ExpandRelations.APPLICATION_TEAM_MEMBER}`,
+          url: `/_api/${TableName.APPLICATIONS}?$filter=${ApplicationKeys.APPLICATIONID} eq ${applicationId} and ${ApplicationKeys.MAINAPPLICANT} eq ${currentUserContactId}&$select=*&$expand=${ExpandRelations.APPLICATION_TEAM_MEMBER},prmtk_MainApplicant($select=fullname),prmtk_ResearchArea($select=prmtk_areaname),prmtk_GrantCycle($select=prmtk_cyclename)`,
           method: "GET",
         });
 
@@ -1312,6 +1325,7 @@ export default function FormApplication() {
   return (
     <>
       <section className="relative overflow-hidden bg-[#1D2054]">
+         
         <Reveal>
           <div className="container py-4 md:py-4 grid gap-10 md:grid-cols-2 items-center">
             <div className="max-w-2xl flex flex-col gap-4">
@@ -1349,6 +1363,7 @@ export default function FormApplication() {
       </section>
       <section className="bg-white">
         <div className="container py-4">
+          
           {formType !== "view" && (
             <div className="flex justify-end gap-4">
               <button
@@ -1372,6 +1387,7 @@ export default function FormApplication() {
                 <PrimaryButton                  
                   onClick={() => handleSubmitClick("Submitted")}
                   disabled={!canSubmit || formType === "view" || showLoader}
+                  styles={popupInputStyles.researchPrimaryButton}
                 >
                   {showLoader ? "Submitting..." : "Submit Application"}
                 </PrimaryButton>
@@ -1380,6 +1396,118 @@ export default function FormApplication() {
           )}
 
 
+<Reveal>
+                  <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm mt-5">
+                    {/* Header */}
+                    <div className="border-b border-slate-100 bg-slate-50 px-5 py-4">
+                      <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+                        Application
+                      </p>
+                      <h1 className="mt-1 text-xl font-bold text-slate-900 md:text-2xl">
+                        Proposal for Research - 
+                        {
+                        ` ${form.researchAreaDisplayValue} `
+                        }
+                        By 
+                        {
+                          ` ${form.mainApplicantDisplayValue}`
+                        }
+                          
+                      </h1>
+                     
+                    </div>
+        
+                    {/* Overview + Team: 8 cols | 4 cols */}
+                    {(form.type !== "new" || form.team.length > 0) && (
+                      <div className="grid grid-cols-1 lg:grid-cols-12">
+                        {form.type !== "new" && (
+                          <div className="border-b border-slate-100 px-5 py-4 lg:col-span-8 lg:border-b-0 lg:border-r lg:py-5">
+                            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                              Overview
+                            </p>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                              {[
+                              
+                                {
+                                  label: "Grant Cycle",
+                                  value: form.grantCycleDisplayValue ?? "—",
+                                  iconName: "Page",
+                                },
+                                {
+                                  label: "Research Area",
+                                  value: form.researchAreaDisplayValue ?? "—",
+                                  iconName: "FolderSearch",
+                                },
+                                {
+                                  label: "Main Applicant Name",
+                                  value: form.mainApplicantDisplayValue ?? "—",
+                                  iconName: "Contact",
+                                },
+                                  {
+                                  label: "Lead Institute",
+                                  value:  "—",
+                                  iconName: "Contact",
+                                },
+                              ].map(({ label, value, iconName }) => (
+                                <div
+                                  key={label}
+                                  className="flex items-start gap-2.5 rounded-md border border-slate-100 bg-slate-50/50 px-3 py-2"
+                                >
+                                  <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-600">
+                                    <Icon
+                                      iconName={iconName}
+                                      styles={{ root: { fontSize: 14 } }}
+                                    />
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <span className="text-xs text-slate-500">
+                                      {label}
+                                    </span>
+                                    <span className="mt-0.5 block text-sm font-medium text-slate-800">
+                                      {value}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {form.team.length > 0 && (
+                          <div className="px-5 py-4 lg:col-span-4 lg:py-5">
+                            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                              Team members
+                            </p>
+                            <ul className="space-y-2">
+                              {form.team.map((member) => (
+                                <li
+                                  key={member.id}
+                                  className="flex items-center gap-3 rounded-md border border-slate-100 bg-slate-50/50 px-3 py-2"
+                                >
+                                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-600">
+                                    <Icon
+                                      iconName="Contact"
+                                      styles={{ root: { fontSize: 16 } }}
+                                    />
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="truncate text-sm font-medium text-slate-900">
+                                      {member.name || "—"}
+                                    </p>
+                                    <p className="truncate text-xs text-slate-500">
+                                      {teamMemberRoles.find(
+                                        (r) => String(r.key) === String(member.role),
+                                      )?.text ?? member.role ?? "—"}
+                                    </p>
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </Reveal>
 
           {/* General Information Section */}
           <div className="mt-8 rounded-xl border bg-white p-6">
@@ -1472,6 +1600,7 @@ export default function FormApplication() {
             budgetHeader={form.budgetHeaders ?? { id: "", name: "Budget", totalBudget: 0, action: "existing" }}
             budgetLineItem={form.budgetLineItems}
             budgetCategories={BudgetCategorys}
+            formType="Application"
             onAddBudgetLineItem={async (item) => {
               const budgetHeaderId = form.budgetHeaders?.id;
               if (budgetHeaderId) {
@@ -1637,6 +1766,7 @@ export default function FormApplication() {
                 <PrimaryButton                 
                   onClick={() => handleSubmitClick("Submitted")}
                   disabled={!canSubmit || formType === "view" || showLoader}
+                  styles={popupInputStyles.researchPrimaryButton}
                 >
                   {showLoader ? "Submitting..." : "Submit Application"}
                 </PrimaryButton>
@@ -1665,17 +1795,17 @@ export default function FormApplication() {
             className="fixed inset-0 z-50 bg-black/50"
             onClick={handleCancelSubmit}
           />
-          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-6 shadow-xl">
+          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-[90%] -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-6 shadow-xl">
             <div className="mb-4">
               <h2 className="text-xl font-bold text-gray-900">
                 Confirm Application Submission
               </h2>
             </div>
             <div className="mb-6">
-              <p className="text-gray-700">
+              <p className="text-gray-700 text-base">
                 Are you sure you want to submit this application?
               </p>
-              <p className="mt-2 text-sm text-red-600 font-semibold">
+              <p className="mt-2 text-red-600 font-semibold text-base">
                 ⚠️ Your application must be complete including all sections and attachments before submission. You will not be able to make changes after submission.
                 The Proposal will be reviewed and you will be notified of the outcome. Please ensure all information is accurate and all required documents are attached before confirming submission.
               </p>
