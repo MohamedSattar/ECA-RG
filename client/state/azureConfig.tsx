@@ -1,9 +1,7 @@
 const B2C_AUTHORITY =
-  import.meta.env.VITE_B2C_AUTHORITY ||
-  "https://ecab2cdev.b2clogin.com/tfp/20204571-3776-41c1-8358-b82ae0114e6e/b2c_1a_rg_dev_susi/v2.0/";
-const B2C_KNOWN_AUTHORITIES = (
-  import.meta.env.VITE_B2C_KNOWN_AUTHORITIES || "ecab2cdev.b2clogin.com"
-)
+  import.meta.env.VITE_B2C_AUTHORITY;
+const B2C_KNOWN_AUTHORITIES = 
+  import.meta.env.VITE_B2C_KNOWN_AUTHORITIES
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
@@ -13,8 +11,7 @@ const B2C_KNOWN_AUTHORITIES = (
 const getRedirectUri = () => {
   if (typeof window === "undefined") {
     return (
-      import.meta.env.VITE_PUBLIC_API_BASE_URL ||
-      "https://ecacrmdev.crm15.dynamics.com"
+      import.meta.env.VITE_PUBLIC_API_BASE_URL 
     );
   }
   return `${window.location.origin}/`;
@@ -32,7 +29,7 @@ export const msalConfig = {
       ? B2C_KNOWN_AUTHORITIES
       : ["ecab2cdev.b2clogin.com"],
     redirectUri: REGISTERED_REDIRECT_URI,
-    navigateToLoginRequestUrl: true,
+    //navigateToLoginRequestUrl: true,
   },
   cache: {
     cacheLocation: "sessionStorage", // enables SSO between tabs
@@ -55,14 +52,3 @@ export const signupRequest = {
   },
 };
 
-// B2C Policy Configuration
-export const policyConfig = {
-  names: {
-    signUpSignIn: "B2C_1A_RG_DEV_SUSI",
-  },
-  authorities: {
-    signUpSignIn: {
-      authority: B2C_AUTHORITY,
-    },
-  },
-};

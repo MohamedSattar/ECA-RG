@@ -231,7 +231,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       isLoading,
       isLoggingIn: isInteractionInProgress,
 
-      login: async (isSignup?: boolean) => {
+      login: async () => {
         try {
           // Prevent concurrent login attempts
           if (isInteractionInProgress) {
@@ -242,14 +242,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
           }
 
           setIsInteractionInProgress(true);
-          const requestType = isSignup ? "signup" : "login";
-          console.log(`[Auth] Starting SSO ${requestType}...`);
+        
 
-          const request = isSignup ? signupRequest : loginRequest;
           console.log("[Auth] Using redirect flow for authentication");
 
           // Use redirect for all environments
-          await instance.loginRedirect(request);
+          await instance.loginRedirect(loginRequest);
           // Note: Control won't return here as redirect navigates away
         } catch (error: any) {
           // Handle specific MSAL errors
