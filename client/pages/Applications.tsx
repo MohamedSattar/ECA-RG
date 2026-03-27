@@ -116,7 +116,7 @@ export default function Applications() {
   const onView = (item: any) => {
     const statusLabel = getStatusLabel(item);
     navigate(
-      `/application?item=${item[ApplicationKeys.APPLICATIONID]}&grantCycleId=${item[ApplicationKeys.GRANTCYCLE]}&researchAreaId=${item[ApplicationKeys.RESEARCHAREA]}&status=${encodeURIComponent(statusLabel)}&applicationNumber=${item[ApplicationKeys.APPLICATIONNUMBER]}&formType=view`,
+      `/application/${item[ApplicationKeys.APPLICATIONID]}`,
       {
         state: {
           applicationId: item[ApplicationKeys.APPLICATIONID],
@@ -133,7 +133,7 @@ export default function Applications() {
   const onEdit = (item: any) => {
     const statusLabel = getStatusLabel(item);
     navigate(
-      `/application?item=${item[ApplicationKeys.APPLICATIONID]}&grantCycleId=${item[ApplicationKeys.GRANTCYCLE]}&researchAreaId=${item[ApplicationKeys.RESEARCHAREA]}&status=${encodeURIComponent(statusLabel)}&applicationNumber=${item[ApplicationKeys.APPLICATIONNUMBER]}&formType=edit`,
+      `/application/${item[ApplicationKeys.APPLICATIONID]}`,
       {
         state: {
           applicationId: item[ApplicationKeys.APPLICATIONID],

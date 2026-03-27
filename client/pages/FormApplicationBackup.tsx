@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useLocation, useSearchParams, useParams } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import Reveal from "@/motion/Reveal";
 import { useAuth } from "@/state/auth";
 import { toast } from "@/ui/use-toast";
@@ -168,8 +168,13 @@ const processTeamMembers = async (
 const getApplicationNumber = async (
   formType: string,
   applicationId: string,
+  stateApplicationNumber: string | undefined,
   callApi: (options: any) => Promise<any>,
 ): Promise<string> => {
+  if (formType === "edit" && stateApplicationNumber) {
+    return stateApplicationNumber;
+  }
+
   const res = await callApi({
     url: `/_api/${TableName.APPLICATIONS}?$filter=${ApplicationKeys.APPLICATIONID} eq ${applicationId}&$select=${ApplicationKeys.APPLICATIONNUMBER}`,
     method: "GET",
@@ -339,7 +344,7 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
 }) => {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
-
+  const formType = searchParams.get("formType") || "new";
   return (
     <Reveal className="mt-8">
       <div className="mt-4 grid gap-6 md:grid-cols-2">
@@ -435,7 +440,7 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
               value={form.title}
               onChange={(e, newValue) => onTitleChange(newValue || "")}
               placeholder="Enter project title"
-              disabled={form.type === "view"}
+              disabled={formType === "view"}
               borderless
             />
           </div>
@@ -449,7 +454,7 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
               onChange={(e, newValue) => onAbstractChange(newValue || "")}
               multiline
               rows={5}
-              disabled={form.type === "view"}
+              disabled={formType === "view"}
               placeholder="Provide a concise abstract"
               borderless
             />
@@ -483,14 +488,14 @@ export default function FormApplication() {
   const { user } = useAuth();
   const { state } = useLocation();
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  const applicationId=id;
-  const [grantCycleId,setGrantCycleId] = useState<string>("");
-  const [researchAreaId,setResearchAreaId] = useState<string>("");
-  const [applicationNumber,setApplicationNumber] = useState<string>("");
-  const [formType,setFormType] =useState<string>("New");
-  const [status,setStatus] = useState<string>("");
+  const [searchParams] = useSearchParams();
 
+  const applicationId = searchParams.get("item");
+  const grantCycleId = searchParams.get("grantCycleId");
+  const researchAreaId = searchParams.get("researchAreaId");
+  const formType = searchParams.get("formType") || "new";
+  const applicationNumber = searchParams.get("applicationNumber");
+  let status = searchParams.get("status");
 
   const [form, setForm] = useState<FormState>(() => ({
     ...INITIAL_FORM_STATE,
@@ -550,6 +555,7 @@ export default function FormApplication() {
         action: "existing" as const,
       }),
     ),
+    type: formType === "view" ? "view" : "edit",
     applicationFiles: (() => {
       // Find the first PDF for Main Proposal
       const firstPdf = files.find(
@@ -633,23 +639,25 @@ export default function FormApplication() {
           throw new Error("No application found with the provided ID.");
           return;
         }
-        setGrantCycleId(app[ApplicationKeys.GRANTCYCLE]);
-        setResearchAreaId(app[ApplicationKeys.RESEARCHAREA]);
-        setApplicationNumber(app[ApplicationKeys.APPLICATIONNUMBER]);
-        const applicationStatus=getStatusLabel(app);
-        
-        setStatus(applicationStatus);
-        setFormType(applicationStatus.toLowerCase() == "draft" ||
-                  applicationStatus.toLowerCase() == "return for updates" ? "Edit" : "View")
+        if (
+          app?.prmtk_status != 1 &&
+          app?.prmtk_status != 3 &&
+          formType !== "view"
+        ) {
+          toast({
+            title: "Info",
+            description: "This application cannot be viewed.",
+          });
+          navigate(`/applications`);
+          return;
+        }
+
         // Load files (budget is loaded separately in loadBudgetDetails)
         setForm((prev) => ({
           ...prev,
           grantCycle: app[ApplicationKeys.GRANTCYCLE] || "",
           researchArea: app[ApplicationKeys.RESEARCHAREA] || "",
-          status:getStatusLabel(app)|| "",
-          type:applicationStatus.toLowerCase() == "draft" ||
-                  applicationStatus.toLowerCase() == "return for updates" ? "edit" : "view"
-          
+          status:getStatusLabel(app)|| ""
         }));
         const applicationNumber = app[ApplicationKeys.APPLICATIONNUMBER] || "";      
  
@@ -809,12 +817,57 @@ export default function FormApplication() {
     }
   };
 
+  // Check for existing application on mount (for new forms)
+  useEffect(() => {
+    const checkForExistingApplication = async () => {
+      // If no grantCycleId or researchAreaId, redirect to home
+      if (!grantCycleId || !researchAreaId) {
+        navigate("/");
+        return;
+      }
+
+      // Only check for existing application if formType is "new"
+      if (formType === "new" && user?.contact?.[ContactKeys.CONTACTID]) {
+        setShowLoader(true);
+        try {
+          const currentUserId = user.contact[ContactKeys.CONTACTID];
+          const filter = `${ApplicationKeys.MAINAPPLICANT} eq ${currentUserId} and ${ApplicationKeys.GRANTCYCLE} eq ${grantCycleId} and ${ApplicationKeys.RESEARCHAREA} eq ${researchAreaId}`;
+
+          const res = await callApi<{ value: any[] }>({
+            url: `/_api/${TableName.APPLICATIONS}?$select=*&$filter=${filter}`,
+            method: "GET",
+          });
+
+          const existingApp = res?.value?.[0];
+
+          if (existingApp) {
+            // Redirect to existing application edit page
+            const statusFormatted =
+              existingApp[ApplicationKeys.STATUS_FORMATTED] ||
+              existingApp[ApplicationKeys.STATUS] ||
+              "";
+            navigate(
+              `/application?item=${existingApp[ApplicationKeys.APPLICATIONID]}&grantCycleId=${existingApp[ApplicationKeys.GRANTCYCLE]}&researchAreaId=${existingApp[ApplicationKeys.RESEARCHAREA]}&status=${statusFormatted}&applicationNumber=${existingApp[ApplicationKeys.APPLICATIONNUMBER]}&formType=edit`,
+              { replace: true },
+            );
+          }
+        } catch (error) {
+          console.error("Failed to check for existing application:", error);
+        } finally {
+          setShowLoader(false);
+        }
+      }
+    };
+
+    checkForExistingApplication();
+  }, [grantCycleId, researchAreaId, formType, user, navigate, callApi]);
+
+  // Initialize on mount (loadBudgetDetails is called inside loadApplicationDetails when applicationId exists)
   useEffect(() => {
     const initialize = async () => {
       await loadTeamMemberRoles();
       if (applicationId) {
         await loadApplicationDetails(applicationId);
-        
       }
     };
     initialize();
@@ -1179,6 +1232,7 @@ export default function FormApplication() {
         const applicationNumbers = await getApplicationNumber(
           formType,
           applicationIdForm,
+          applicationNumber,
           callApi,
         );
         if (formType === "new") {

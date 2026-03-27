@@ -519,13 +519,13 @@ export default function Index() {
         // Navigate to view/edit the existing application
         toast.success("Redirecting to your application...");
         navigate(
-          `/application?grantCycleId=${grantCycleId}&researchAreaId=${researchAreaId}&formType=edit&item=${existingApplication.prmtk_applicationid}`,
+          `/application/${existingApplication.prmtk_applicationid}`,
         );
       } else {
         // Create a new draft application
         const applicationData = {
           [ApplicationKeys.APPLICATIONTITLE]: "Draft Application",
-          [ApplicationKeys.ABSTRACT]: "Draft",
+          [ApplicationKeys.ABSTRACT]: "",
           [ApplicationKeys.SUBMISSIONDATE]: new Date().toISOString(),
           [ApplicationKeys.MAINAPPLICANT_ID]: `/${TableName.CONTACTS}(${user.contact[ContactKeys.CONTACTID]})`,
           [ApplicationKeys.GRANTCYCLE_ID]: `/${TableName.GRANTCYCLES}(${grantCycleId})`,
@@ -557,7 +557,7 @@ export default function Index() {
 
         toast.success("Application created successfully!");
         navigate(
-          `/application?item=${applicationId}&grantCycleId=${grantCycleId}&researchAreaId=${researchAreaId}&formType=edit`,
+          `/application/${applicationId}`,
         );
       }
     } catch (error) {
