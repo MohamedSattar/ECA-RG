@@ -10,6 +10,8 @@ export const StatusReportFields = {
   REPORTTITLE: "prmtk_reporttitle",
   REPORTINGYEAR: "prmtk_reportingyear",
   REPORTINGMONTH: "prmtk_reportingmonth",
+  /** Global choice — logical name in org (ecacrmdev sample: `prmkt_reporttype`) */
+  REPORTTYPE: "prmkt_reporttype",
   REPORTINGDATE: "prmtk_reportingdate",
   BUDGETSPENT: "prmtk_budgetspent",
   BUDGETSPENT_BASE: "prmtk_budgetspent_base",

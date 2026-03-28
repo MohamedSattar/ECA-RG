@@ -6,7 +6,7 @@ import { createRoot } from "react-dom/client";
 import { Toaster as Sonner } from "@/ui/sonner";
 import { TooltipProvider } from "@/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { SiteLayout } from "@/layout/SiteLayout";
@@ -95,12 +95,16 @@ const App = () => (
                       }
                     />
                     <Route
-                      path="/researches"
+                      path="/research"
                       element={
                         <ProtectedRoute>
                           <Researches />
                         </ProtectedRoute>
                       }
+                    />
+                    <Route
+                      path="/researches"
+                      element={<Navigate to="/research" replace />}
                     />
                     <Route
                       path="/applications"

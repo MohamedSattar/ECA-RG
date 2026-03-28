@@ -254,7 +254,7 @@ const blob = new Blob([buffer], { type:  "application/octet-stream"});
         // Navigate to view/edit the existing application
         toast.success("Redirecting to your application...");
         navigate(
-          `/application?grantCycleId=${grantCycleId}&researchAreaId=${researchAreaId}&formType=edit&item=${existingApplication.prmtk_applicationid}`,
+          `/application?item=${existingApplication.prmtk_applicationid}`,
         );
       } else {
         // Create a new draft application
@@ -291,9 +291,7 @@ const blob = new Blob([buffer], { type:  "application/octet-stream"});
         }
 
         toast.success("Application created successfully!");
-        navigate(
-          `/application?item=${applicationId}&grantCycleId=${grantCycleId}&researchAreaId=${researchAreaId}&formType=edit`,
-        );
+        navigate(`/application?item=${applicationId}`);
       }
     } catch (error) {
       console.error("Error handling grant application:", error);

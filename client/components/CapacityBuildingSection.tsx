@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Reveal from "@/motion/Reveal";
 import { toast } from "@/ui/use-toast";
 import {
@@ -12,11 +12,14 @@ import { Label } from "@fluentui/react/lib/Label";
 import { TextField } from "@fluentui/react/lib/TextField";
 import { DatePicker } from "@fluentui/react/lib/DatePicker";
 import { IconButton } from "@fluentui/react/lib/Button";
+import { Icon } from "@fluentui/react/lib/Icon";
 import { Dropdown, IDropdownOption } from "@fluentui/react/lib/Dropdown";
 import {
   ResearchActivityStatusOptions,
   getResearchActivityStatusText,
 } from "@/constants";
+import { getFileKey } from "@/services/utility";
+import { getResearchActivityFolderPath } from "@/services/reportFileUpload";
 import { popupInputStyles } from "@/styles/popupInputStyles";
 
 export interface ResearchActivityItem {
@@ -30,6 +33,7 @@ export interface ResearchActivityItem {
   keyOutputsOrLessons?: string;
   action?: "new" | "existing";
   removed?: boolean;
+  files?: { file: File; action: "new" | "existing" | "remove" }[];
 }
 
 export interface AddResearchActivityForm {
@@ -40,6 +44,7 @@ export interface AddResearchActivityForm {
   status: number;
   objective: string;
   keyOutputsOrLessons: string;
+  files?: { file: File; action: "new" | "existing" | "remove" }[];
 }
 
 interface CapacityBuildingSectionProps {
@@ -47,7 +52,13 @@ interface CapacityBuildingSectionProps {
   onAdd: (form: AddResearchActivityForm) => void;
   onRemove: (id: string) => void;
   onEdit: (id: string, form: AddResearchActivityForm) => void;
-  form: { type?: "new" | "edit" | "view" };
+  onDeleteFile?: (fileName: string, folder: string) => Promise<void>;
+  onUploadFile?: (files: File[], folder: string) => Promise<void>;
+  onUpdateItemFiles?: (
+    itemId: string,
+    files: { file: File; action: "new" | "existing" | "remove" }[],
+  ) => void;
+  form: { type?: "new" | "edit" | "view"; researchNumber?: string };
 }
 
 const INITIAL_FORM: AddResearchActivityForm = {
@@ -58,6 +69,7 @@ const INITIAL_FORM: AddResearchActivityForm = {
   status: 1,
   objective: "",
   keyOutputsOrLessons: "",
+  files: [],
 };
 
 const STATUS_OPTIONS: IDropdownOption[] = ResearchActivityStatusOptions.map(
@@ -88,23 +100,167 @@ const stringToDate = (s: string): Date | undefined => {
   return isNaN(d.getTime()) ? undefined : d;
 };
 
+const formatFileSize = (bytes: number): string => {
+  if (bytes < 1024) return `${bytes} B`;
+  const units = ["KB", "MB", "GB"];
+  let i = -1;
+  let size = bytes;
+  do {
+    size = size / 1024;
+    i++;
+  } while (size >= 1024 && i < units.length - 1);
+  return `${size.toFixed(1)} ${units[i]}`;
+};
+
 export const CapacityBuildingSection: React.FC<CapacityBuildingSectionProps> = ({
   items,
   onAdd,
   onRemove,
   onEdit,
+  onDeleteFile,
+  onUploadFile,
+  onUpdateItemFiles,
   form,
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formState, setFormState] =
     useState<AddResearchActivityForm>(INITIAL_FORM);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isView = form.type === "view";
 
+  const getActivityFolder = (
+    activityId: string,
+    title: string,
+    date: string,
+  ) => {
+    const researchNumber = form.researchNumber;
+    if (!researchNumber || !activityId) return null;
+    return getResearchActivityFolderPath(
+      researchNumber,
+      title,
+      date,
+      activityId,
+    );
+  };
+
+  const handleFilesSelect = async (newFiles: File[]) => {
+    if (newFiles.length === 0) return;
+    if (editingId && onUploadFile) {
+      const activity = items.find((a) => a.id === editingId);
+      const folder = activity
+        ? getActivityFolder(
+            editingId,
+            activity.title,
+            activity.date,
+          )
+        : null;
+      if (activity && folder && form.researchNumber) {
+        setIsUploading(true);
+        try {
+          await onUploadFile(newFiles, folder);
+          const newFilesList = newFiles.map((f) => ({
+            file: f,
+            action: "existing" as const,
+          }));
+          const updatedFiles = [...(formState.files || []), ...newFilesList];
+          setFormState((prev) => ({ ...prev, files: updatedFiles }));
+          if (onUpdateItemFiles && editingId) {
+            const allFiles = [...(activity.files || []), ...newFilesList];
+            onUpdateItemFiles(editingId, allFiles);
+          }
+          toast({
+            title: "Success",
+            description: "Files uploaded successfully.",
+          });
+        } catch {
+          toast({
+            title: "Error",
+            description: "Failed to upload files.",
+            variant: "destructive",
+          });
+        } finally {
+          setIsUploading(false);
+        }
+        return;
+      }
+    }
+    const files = newFiles.map((f) => ({ file: f, action: "new" as const }));
+    setFormState((prev) => ({
+      ...prev,
+      files: [...(prev.files || []), ...files],
+    }));
+  };
+
+  const handleFileRemove = async (
+    fileKey: string,
+    fileItem: { file: File; action: "new" | "existing" | "remove" },
+  ) => {
+    if (
+      fileItem.action === "existing" &&
+      onDeleteFile &&
+      editingId
+    ) {
+      const activity = items.find((a) => a.id === editingId);
+      const folder = activity
+        ? getActivityFolder(editingId, activity.title, activity.date)
+        : null;
+      if (activity && folder && form.researchNumber) {
+        setIsUploading(true);
+        try {
+          await onDeleteFile(fileItem.file.name, folder);
+          if (onUpdateItemFiles && editingId) {
+            const updatedFiles = (activity.files || []).filter(
+              (f) => getFileKey(f.file) !== fileKey,
+            );
+            onUpdateItemFiles(editingId, updatedFiles);
+          }
+          setFormState((prev) => ({
+            ...prev,
+            files: (prev.files || []).filter(
+              (f) => getFileKey(f.file) !== fileKey,
+            ),
+          }));
+          toast({
+            title: "Success",
+            description: "File deleted successfully.",
+          });
+        } catch {
+          toast({
+            title: "Error",
+            description: "Failed to delete file.",
+            variant: "destructive",
+          });
+        } finally {
+          setIsUploading(false);
+        }
+        return;
+      }
+    }
+    setFormState((prev) => ({
+      ...prev,
+      files: (prev.files || []).filter(
+        (f) => getFileKey(f.file) !== fileKey,
+      ),
+    }));
+  };
+
+  const handleFileDownload = (file: File) => {
+    const url = URL.createObjectURL(file);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = file.name;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+  };
+
   const handleOpenAdd = () => {
     setEditingId(null);
-    setFormState(INITIAL_FORM);
+    setFormState({ ...INITIAL_FORM, files: [] });
     setDialogOpen(true);
   };
 
@@ -117,6 +273,7 @@ export const CapacityBuildingSection: React.FC<CapacityBuildingSectionProps> = (
       objective: item.objective ?? "",
       keyOutputsOrLessons: item.keyOutputsOrLessons ?? "",
       status: item.status ?? 1,
+      files: item.files ? [...item.files] : [],
     });
     setEditingId(item.id);
     setDialogOpen(true);
@@ -125,7 +282,7 @@ export const CapacityBuildingSection: React.FC<CapacityBuildingSectionProps> = (
   const handleDismiss = () => {
     setDialogOpen(false);
     setEditingId(null);
-    setFormState(INITIAL_FORM);
+    setFormState({ ...INITIAL_FORM, files: [] });
   };
 
   const handleSubmit = () => {
@@ -143,7 +300,7 @@ export const CapacityBuildingSection: React.FC<CapacityBuildingSectionProps> = (
     } else {
       onAdd(formState);
     }
-    setFormState(INITIAL_FORM);
+    setFormState({ ...INITIAL_FORM, files: [] });
     setDialogOpen(false);
     setEditingId(null);
   };
@@ -268,16 +425,115 @@ export const CapacityBuildingSection: React.FC<CapacityBuildingSectionProps> = (
               }
             />
           </div>
+
+          <div>
+            <Label>Attachments</Label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                const fl = e.target.files;
+                if (fl?.length) {
+                  void handleFilesSelect(Array.from(fl));
+                }
+                e.target.value = "";
+              }}
+            />
+            <div
+              className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-[#1D2054] transition-colors"
+              onClick={() => fileInputRef.current?.click()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  fileInputRef.current?.click();
+                }
+              }}
+              role="button"
+              tabIndex={0}
+            >
+              <Icon
+                iconName="CloudUpload"
+                className="text-4xl text-gray-400 mb-2"
+              />
+              <p className="text-sm text-gray-600">
+                Click to upload files or drag and drop
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                Multiple files allowed — saved under Researches / Capacity
+                Building
+              </p>
+            </div>
+            {formState.files &&
+              formState.files.filter((f) => f.action !== "remove").length >
+                0 && (
+                <div className="mt-4 space-y-2">
+                  {formState.files
+                    .filter((f) => f.action !== "remove")
+                    .map((fileItem) => {
+                      const key = getFileKey(fileItem.file);
+                      const isExisting = fileItem.action === "existing";
+                      return (
+                        <div
+                          key={key}
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Icon
+                              iconName="Page"
+                              className="text-[#c77946]"
+                            />
+                            <div>
+                              <p className="text-sm font-medium">
+                                {fileItem.file.name}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {formatFileSize(fileItem.file.size)}
+                                {isExisting && (
+                                  <span className="ml-2 text-blue-600">
+                                    (Uploaded)
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            {isExisting && (
+                              <IconButton
+                                iconProps={{ iconName: "Download" }}
+                                onClick={() =>
+                                  handleFileDownload(fileItem.file)
+                                }
+                                title="Download file"
+                                ariaLabel="Download file"
+                              />
+                            )}
+                            <IconButton
+                              iconProps={{ iconName: "Delete" }}
+                              onClick={() => handleFileRemove(key, fileItem)}
+                              title="Remove file"
+                              ariaLabel="Remove file"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+          </div>
         </div>
         <FluentDialogFooter>
           <PrimaryButton
             onClick={handleSubmit}
             text={editingId ? "Update" : "Add"}
+            disabled={isUploading}
             styles={popupInputStyles.researchPrimaryButton}
           />
           <DefaultButton
             onClick={handleDismiss}
             text="Cancel"
+            disabled={isUploading}
             styles={popupInputStyles.researchSecondaryButton}
           />
         </FluentDialogFooter>
@@ -294,6 +550,9 @@ export const CapacityBuildingSection: React.FC<CapacityBuildingSectionProps> = (
               </th>
               <th className="px-6 py-3 font-semibold text-white">Audience</th>
               <th className="px-6 py-3 font-semibold text-white">Status</th>
+              <th className="px-6 py-3 font-semibold text-white">
+                Attachments
+              </th>
               {!isView && (
                 <th className="px-6 py-3 font-semibold text-white text-right">
                   Actions
@@ -324,6 +583,34 @@ export const CapacityBuildingSection: React.FC<CapacityBuildingSectionProps> = (
                 <td className="px-6 py-3 text-[#475569]">
                   {getResearchActivityStatusText(item.status)}
                 </td>
+                <td className="px-6 py-3">
+                  {item.files && item.files.filter((f) => f.action !== "remove")
+                    .length > 0 ? (
+                    <div className="flex flex-col gap-1">
+                      {item.files
+                        .filter((f) => f.action !== "remove")
+                        .map((fileItem, fileIdx) => {
+                          const key = getFileKey(fileItem.file);
+                          return (
+                            <a
+                              key={key || fileIdx}
+                              href={URL.createObjectURL(fileItem.file)}
+                              download={fileItem.file.name}
+                              className="flex items-center gap-2 text-blue-600 hover:text-blue-800 hover:underline text-xs"
+                              title={`Download ${fileItem.file.name}`}
+                            >
+                              <Icon iconName="CloudDownload" />
+                              <span className="truncate max-w-[150px]">
+                                {fileItem.file.name}
+                              </span>
+                            </a>
+                          );
+                        })}
+                    </div>
+                  ) : (
+                    <span className="text-gray-400 text-xs">No files</span>
+                  )}
+                </td>
                 {!isView && (
                   <td className="px-6 py-3 text-right">
                     <div className="flex gap-2 justify-end">
@@ -349,7 +636,7 @@ export const CapacityBuildingSection: React.FC<CapacityBuildingSectionProps> = (
             {visibleItems.length === 0 && (
               <tr>
                 <td
-                  colSpan={isView ? 5 : 6}
+                  colSpan={isView ? 6 : 7}
                   className="px-6 py-8 text-center text-[#94a3b8]"
                 >
                   No capacity building or research activities.

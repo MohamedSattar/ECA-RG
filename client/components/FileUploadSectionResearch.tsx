@@ -6,6 +6,7 @@ import React from "react";
 import { HEADING_TEXT } from "@/styles/constants";
 import { popupInputStyles } from "@/styles/popupInputStyles";
 import { useToast } from "@/hooks/use-toast";
+import { SectionGuidelineHint } from "@/components/SectionGuidelineHint";
 
 interface FileUploadSectionResearchProps {
   files: { file: File; action: "new" | "existing" | "remove" }[];
@@ -66,7 +67,13 @@ export const FileUploadSectionResearch: React.FC<
   return (
     <div className="mt-8 rounded-xl border bg-white p-6">
       <div className="flex items-center justify-between min-h-[52px]">
-        <h2 className={HEADING_TEXT}>Extra Attachments</h2>
+        <div className="flex items-center gap-2">
+          <h2 className={HEADING_TEXT}>Extra Attachments</h2>
+          <SectionGuidelineHint
+            sectionName="Extra Attachments"
+            description="Attach supporting evidence files that validate progress, outputs, and dissemination activities across the reporting period."
+          />
+        </div>
         <IconButton
           iconProps={{
             iconName: showSection ? "ChevronUp" : "ChevronDown",

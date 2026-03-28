@@ -125,9 +125,40 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
     setIsLineDialogOpen(true);
   };
 
-  const totalLineItemAmount = budgetLineItem
-    .filter((l) => l.action !== "remove")
-    .reduce((sum, l) => sum + l.prmtk_amount, 0);
+  const activeBudgetLines = useMemo(
+    () => budgetLineItem.filter((l) => l.action !== "remove"),
+    [budgetLineItem],
+  );
+
+  const totalLineItemAmount = useMemo(
+    () => activeBudgetLines.reduce((sum, l) => sum + l.prmtk_amount, 0),
+    [activeBudgetLines],
+  );
+
+  const totalSpentSum = useMemo(
+    () =>
+      activeBudgetLines.reduce(
+        (sum, l) => sum + (l.totalSpent != null ? l.totalSpent : 0),
+        0,
+      ),
+    [activeBudgetLines],
+  );
+
+  const totalRemainingSum = useMemo(
+    () =>
+      activeBudgetLines.reduce(
+        (sum, l) => sum + (l.remainingBudget != null ? l.remainingBudget : 0),
+        0,
+      ),
+    [activeBudgetLines],
+  );
+
+  const footerExtraCols =
+    (edit && form.type !== "view" ? 1 : 0) +
+    (canEditSpend && form.type !== "view" ? 1 : 0);
+
+  const baseColumnCount = formType === "Application" ? 4 : 6;
+  const totalTableColumns = baseColumnCount + footerExtraCols;
 
   return (
     <div className="mt-8 rounded-xl border bg-white p-6">
@@ -382,7 +413,7 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                   {budgetLineItem.length === 0 && (
                     <tr>
                       <td
-                        colSpan={edit ? 7 : 6}
+                        colSpan={totalTableColumns}
                         className="px-6 py-8 text-center text-[#94a3b8]"
                       >
                         No budget line items added.
@@ -394,14 +425,29 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                   <tr>
                     <td
                       colSpan={3}
-                      className="px-6 py-3 font-semibold text-[#1D2054]"
+                      className="px-6 py-3 font-semibold text-[#1D2054] text-base"
                     >
-                      Total Amount
+                      Total
                     </td>
-                    <td  className="px-6 py-3 font-bold text-right text-[#1D2054] text-lg">
+                    <td className="px-6 py-3 font-bold text-right text-[#1D2054] text-lg">
                       {aedFormat(totalLineItemAmount)}
                     </td>
-                   
+                    {formType === "Research" ? (
+                      <>
+                        <td className="px-6 py-3 font-bold text-right text-[#1D2054] text-lg">
+                          {aedFormat(totalSpentSum)}
+                        </td>
+                        <td className="px-6 py-3 font-bold text-right text-[#1D2054] text-lg">
+                          {aedFormat(totalRemainingSum)}
+                        </td>
+                      </>
+                    ) : null}
+                    {edit && form.type !== "view" && (
+                      <td className="px-6 py-3" />
+                    )}
+                    {canEditSpend && form.type !== "view" && (
+                      <td className="px-6 py-3" />
+                    )}
                   </tr>
                 </tfoot>
               </table>

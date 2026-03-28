@@ -75,28 +75,32 @@ export default function ApplicationsNew() {
 
   const onView = (item:any) => {
     const title = (item[ApplicationKeys.APPLICATIONTITLE] as string) ?? "Application";
-    navigate("/application", {
-      state: {
-        applicationId: item[ApplicationKeys.APPLICATIONID],
-        grantCycleId: item[ApplicationKeys.GRANTCYCLE],
-        researchAreaId: item[ApplicationKeys.RESEARCHAREA],
-        formType:"view",
-        item:item
-      }
-    });
+    navigate(
+      `/application?item=${item[ApplicationKeys.APPLICATIONID]}`,
+      {
+        state: {
+          applicationId: item[ApplicationKeys.APPLICATIONID],
+          grantCycleId: item[ApplicationKeys.GRANTCYCLE],
+          researchAreaId: item[ApplicationKeys.RESEARCHAREA],
+          item: item,
+        },
+      },
+    );
   };
 
   const onEdit = (item: any) => {
     const title = (item[ApplicationKeys.APPLICATIONTITLE] as string) ?? "Application";
-    navigate("/application", {
-      state: {
-        applicationId: item[ApplicationKeys.APPLICATIONID],
-        grantCycleId: item[ApplicationKeys.GRANTCYCLE],
-        researchAreaId: item[ApplicationKeys.RESEARCHAREA],
-        formType:"edit",
-        item: item,
-      }
-    });
+    navigate(
+      `/application?item=${item[ApplicationKeys.APPLICATIONID]}`,
+      {
+        state: {
+          applicationId: item[ApplicationKeys.APPLICATIONID],
+          grantCycleId: item[ApplicationKeys.GRANTCYCLE],
+          researchAreaId: item[ApplicationKeys.RESEARCHAREA],
+          item: item,
+        },
+      },
+    );
 
   };
 

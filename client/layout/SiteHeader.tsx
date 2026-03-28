@@ -102,10 +102,10 @@ export function SiteHeader() {
                 {t("header.applications")}
               </Link>
               <Link
-                to="/researches"
+                to="/research"
                 className="text-white/80 hover:text-white transition-colors"
               >
-                {t("header.researches")}
+                {t("header.research")}
               </Link>
               {/* <Link to="/grantdetail" className="text-white/80 hover:text-white transition-colors">{t('header.grants')}</Link>
               <Link to="/#about" className="text-white/80 hover:text-white transition-colors">{t('header.about')}</Link> */}

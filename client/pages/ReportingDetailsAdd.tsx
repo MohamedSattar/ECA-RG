@@ -28,8 +28,10 @@ export default function ReportingDetailsAdd() {
   const [isUploading, setIsUploading] = useState(false);
 
   const buildBackUrl = () => {
-    const q = searchParams.toString();
-    return q ? `/applyresearch?${q}` : "/applyresearch";
+    const researchId = searchParams.get("researchId");
+    return researchId
+      ? `/applyresearch?researchId=${encodeURIComponent(researchId)}`
+      : "/applyresearch";
   };
 
   const handleSubmit = () => {
@@ -38,6 +40,8 @@ export default function ReportingDetailsAdd() {
 
     if (
       !reportTitle ||
+      reportForm.prmtk_reporttype == null ||
+      Number.isNaN(reportForm.prmtk_reporttype) ||
       !reportForm.prmtk_reportingyear ||
       !reportForm.prmtk_reportingmonth ||
       !reportForm.prmtk_budgetspent ||
@@ -76,6 +80,7 @@ export default function ReportingDetailsAdd() {
         Add Reporting Details
       </h1>
       <ReportingDetailsForm
+        form={form}
         reportForm={reportForm}
         setReportForm={setReportForm}
         onSubmit={handleSubmit}

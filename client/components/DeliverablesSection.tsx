@@ -20,6 +20,7 @@ import {
   getDeliverableTypeText,
 } from "@/constants/deliverables";
 import { popupInputStyles } from "@/styles/popupInputStyles";
+import { SectionGuidelineHint } from "@/components/SectionGuidelineHint";
 
 export interface Deliverable {
   id?: string;
@@ -324,7 +325,13 @@ export const DeliverablesSection: React.FC<DeliverablesSectionProps> = ({
   return (
     <div className="mt-8 rounded-xl border bg-white p-6">
       <div className="flex items-center justify-between min-h-[52px]">
-        <h2 className={HEADING_TEXT}>Final Deliverables</h2>
+        <div className="flex items-center gap-2">
+          <h2 className={HEADING_TEXT}>Final Deliverables</h2>
+          <SectionGuidelineHint
+            sectionName="Final Deliverables"
+            description="For final reporting, include required outputs in the grant contract, such as publication-ready drafts and audience-friendly summary products."
+          />
+        </div>
         <IconButton
           iconProps={{
             iconName: showSection ? "ChevronUp" : "ChevronDown",
@@ -469,7 +476,7 @@ export const DeliverablesSection: React.FC<DeliverablesSectionProps> = ({
                                 key={key}
                                 className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
                               >
-                                <div className="flex items-center gap-3">
+                                <div className="flex flex-col items-start gap-1">
                                   <Icon
                                     iconName="Page"
                                     className="text-[#c77946]"

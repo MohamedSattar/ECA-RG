@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { PrimaryButton, DefaultButton } from "@fluentui/react/lib/Button";
 import { Label } from "@fluentui/react/lib/Label";
 import { Dropdown, IDropdownOption } from "@fluentui/react/lib/Dropdown";
@@ -8,8 +8,19 @@ import { IconButton } from "@fluentui/react/lib/Button";
 import { Icon } from "@fluentui/react/lib/Icon";
 import { getFileKey } from "@/services/utility";
 import type { AddReportForm, ReportItem } from "@/components/ReportingSection";
+import {
+  renderHealthDropdownOption,
+  renderHealthDropdownTitle,
+} from "@/components/ReportingHealthIndicator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/tooltip";
 import { popupInputStyles } from "@/styles/popupInputStyles";
+import {
+  type ReportType,
+  choiceValueToReportType,
+  getReportTypeEligibility,
+} from "@/constants/reportType";
+
+export type { ReportType };
 
 const getTodayDate = (): string => {
   const today = new Date();
@@ -57,20 +68,70 @@ const MONTH_OPTIONS: IDropdownOption[] = [
 ];
 
 const HEALTH_INDICATOR_OPTIONS: IDropdownOption[] = [
-  { key: "1", text: "Healthy (Green)" },
-  { key: "2", text: "Challenging (Orange)" },
-  { key: "3", text: "Risky (Red)" },
-];
-
-export type ReportType = "Monthly" | "Interim" | "Final";
-
-const REPORT_TYPE_OPTIONS: IDropdownOption[] = [
-  { key: "Monthly", text: "Monthly" },
-  { key: "Interim", text: "Interim" },
-  { key: "Final", text: "Final" },
+  { key: "1", text: "Healthy" },
+  { key: "2", text: "Challenging" },
+  { key: "3", text: "Risky" },
 ];
 
 type LabelConfig = { label: string; description: React.ReactNode | null };
+
+function ReportTypeCard({
+  selected,
+  disabled,
+  title,
+  titleMuted = false,
+  onSelect,
+  children,
+  disabledHint,
+}: {
+  selected: boolean;
+  disabled: boolean;
+  title: string;
+  titleMuted?: boolean;
+  onSelect: () => void;
+  children: React.ReactNode;
+  disabledHint?: string;
+}) {
+  const titleCls = selected
+    ? "font-bold text-white"
+    : disabled
+      ? "font-bold text-slate-400"
+      : titleMuted
+        ? "font-bold text-[#93c5fd]"
+        : "font-bold text-[#1D2054]";
+
+  const shell =
+    selected && !disabled
+      ? "border-transparent bg-[#1D2054] shadow-md"
+      : disabled
+        ? "cursor-not-allowed border-slate-200 bg-slate-100/90 opacity-[0.65]"
+        : "border-[#bfdbfe] bg-slate-50 hover:border-[#1D2054]/40 hover:bg-white";
+
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={selected}
+      title={disabled ? disabledHint : undefined}
+      disabled={disabled}
+      onClick={() => {
+        if (!disabled) onSelect();
+      }}
+      className={`flex min-h-[128px] w-full flex-col rounded-2xl border p-4 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1D2054] focus-visible:ring-offset-2 ${shell}`}
+    >
+      <span className={`${titleCls} mb-2 block`}>{title}</span>
+      <div
+        className={
+          selected
+            ? "[&_p]:text-slate-200 [&_strong]:text-white"
+            : "[&_p]:text-slate-700 [&_strong]:text-slate-900"
+        }
+      >
+        {children}
+      </div>
+    </button>
+  );
+}
 
 const KEY_ACTIVITIES_LABELS: Record<ReportType, LabelConfig> = {
   Monthly: {
@@ -318,6 +379,7 @@ export interface ReportingDetailsFormProps {
   /** For edit mode: file handling */
   editingReportId?: string | null;
   reportItems?: ReportItem[];
+  /** Research form (needs `startDate` for Interim/Final eligibility) */
   form?: any;
   onUploadFile?: (files: File[], folder: string) => Promise<void>;
   onDeleteFile?: (fileName: string, folder: string) => Promise<void>;
@@ -343,7 +405,40 @@ export const ReportingDetailsForm: React.FC<ReportingDetailsFormProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const yearOptions = useMemo(() => generateYearOptions(), []);
-  const [reportType, setReportType] = useState<ReportType>("Monthly");
+  const researchStart =
+    form?.startDate instanceof Date
+      ? form.startDate
+      : form?.startDate
+        ? new Date(form.startDate)
+        : null;
+  const eligibility = useMemo(
+    () => getReportTypeEligibility(researchStart),
+    [researchStart],
+  );
+  const reportType = useMemo(
+    () => choiceValueToReportType(reportForm.prmtk_reporttype),
+    [reportForm.prmtk_reporttype],
+  );
+
+  useEffect(() => {
+    if (!isEdit && reportForm.prmtk_reporttype === undefined) {
+      setReportForm((prev) => ({ ...prev, prmtk_reporttype: 1 }));
+    }
+  }, [isEdit, reportForm.prmtk_reporttype, setReportForm]);
+
+  useEffect(() => {
+    const v = reportForm.prmtk_reporttype;
+    if (v === 2 && !eligibility.canSelectInterim) {
+      setReportForm((prev) => ({ ...prev, prmtk_reporttype: 1 }));
+    } else if (v === 3 && !eligibility.canSelectFinal) {
+      setReportForm((prev) => ({ ...prev, prmtk_reporttype: 1 }));
+    }
+  }, [
+    eligibility.canSelectInterim,
+    eligibility.canSelectFinal,
+    reportForm.prmtk_reporttype,
+    setReportForm,
+  ]);
 
   const handleFilesSelect = async (newFiles: File[]) => {
     if (newFiles.length === 0) return;
@@ -435,17 +530,81 @@ export const ReportingDetailsForm: React.FC<ReportingDetailsFormProps> = ({
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="grid gap-4">
-        <div>
-          <Label htmlFor="reportType">Report Type</Label>
-          <Dropdown
-            id="reportType"
-            placeholder="Select report type"
-            options={REPORT_TYPE_OPTIONS}
-            selectedKey={reportType}
-            onChange={(_, option) =>
-              option?.key && setReportType(option.key as ReportType)
-            }
-          />
+        <div className="sm:max-w-none max-w-2xl">
+          <Label className="mb-2 block">Report Type</Label>
+          <div
+            role="radiogroup"
+            aria-label="Report type"
+            className="grid grid-cols-1 gap-3 md:grid-cols-3"
+          >
+            <ReportTypeCard
+              selected={reportForm.prmtk_reporttype === 1}
+              disabled={false}
+              title="Monthly Report"
+              onSelect={() =>
+                setReportForm((prev) => ({ ...prev, prmtk_reporttype: 1 }))
+              }
+            >
+              <p
+                className={
+                  reportForm.prmtk_reporttype === 1
+                    ? "text-sm text-slate-200/90"
+                    : "text-sm text-slate-600"
+                }
+              >
+                The last day of each month
+              </p>
+              <p
+                className={
+                  reportForm.prmtk_reporttype === 1
+                    ? "mt-1 text-sm text-[#fdba74]"
+                    : "mt-1 text-sm text-amber-700/90"
+                }
+              >
+                (No later than the 1st day of each month)
+              </p>
+            </ReportTypeCard>
+            <ReportTypeCard
+              selected={reportForm.prmtk_reporttype === 2}
+              disabled={!eligibility.canSelectInterim}
+              title="Interim Report"
+              titleMuted={
+                reportForm.prmtk_reporttype !== 2 &&
+                eligibility.canSelectInterim
+              }
+              onSelect={() =>
+                setReportForm((prev) => ({ ...prev, prmtk_reporttype: 2 }))
+              }
+              disabledHint="Available from 9 months after the research start date."
+            >
+              <p className="text-sm">
+                <strong>Nine (9) months</strong> after project start date
+              </p>
+            </ReportTypeCard>
+            <ReportTypeCard
+              selected={reportForm.prmtk_reporttype === 3}
+              disabled={!eligibility.canSelectFinal}
+              title="Final Report"
+              titleMuted={
+                reportForm.prmtk_reporttype !== 3 && eligibility.canSelectFinal
+              }
+              onSelect={() =>
+                setReportForm((prev) => ({ ...prev, prmtk_reporttype: 3 }))
+              }
+              disabledHint="Available from 18 months after the research start date."
+            >
+              <p className="text-sm">
+                <strong>Eighteen (18) months</strong> after project start date
+              </p>
+            </ReportTypeCard>
+          </div>
+          {!researchStart && (
+            <p className="mt-2 text-xs text-amber-800">
+              Set the research <strong>Start Date</strong> on the main research
+              form to unlock Interim and Final report types (based on elapsed
+              time).
+            </p>
+          )}
         </div>
         <div>
           <Label htmlFor="reportTitle">
@@ -536,6 +695,8 @@ export const ReportingDetailsForm: React.FC<ReportingDetailsFormProps> = ({
                 prmtk_researchhealthindicator: (option?.key as string) || "",
               }))
             }
+            onRenderOption={renderHealthDropdownOption}
+            onRenderTitle={renderHealthDropdownTitle}
           />
         </div>
         <div>

@@ -132,32 +132,14 @@ export default function Researches() {
 
   const applicationResearches = useMemo(() => researches || [], [researches]);
 
-  const onView = (item: any) => {
-    navigate(
-      `/applyresearch?applicationId=${item[ResearchKeys.APPLICATIONREFERENCE]}&researchId=${item[ResearchKeys.RESEARCHID]}&formType=view`,
-      {
-        state: {
-          applicationId: item[ResearchKeys.APPLICATIONREFERENCE],
-          researchId: item[ResearchKeys.RESEARCHID],
-          formType: "view",
-          item: item,
-        },
+  const openResearch = (item: any) => {
+    const id = item[ResearchKeys.RESEARCHID];
+    navigate(`/applyresearch?researchId=${id}`, {
+      state: {
+        researchId: id,
+        item,
       },
-    );
-  };
-
-  const onEdit = (item: any) => {
-    navigate(
-      `/applyresearch?applicationId=${item[ResearchKeys.APPLICATIONREFERENCE]}&researchId=${item[ResearchKeys.RESEARCHID]}&formType=edit`,
-      {
-        state: {
-          applicationId: item[ResearchKeys.APPLICATIONREFERENCE],
-          researchId: item[ResearchKeys.RESEARCHID],
-          formType: "edit",
-          item: item,
-        },
-      },
-    );
+    });
   };
 
 
@@ -169,7 +151,7 @@ export default function Researches() {
           <div className="container py-4 md:py-4 grid gap-10 md:grid-cols-2 items-center">
             <div className="max-w-2xl">
               <h1 className="text-4xl md:text-6xl font-extrabold leading-tight tracking-tight text-white">
-                My Researches
+                My Research
               </h1>
             </div>
 
@@ -255,9 +237,9 @@ export default function Researches() {
                         <td className="px-6 py-3">
                           <div className="flex items-center gap-2">
                             <IconButton
-                              onClick={() => onEdit(item)}
-                              title="Edit Research"
-                              aria-label={`Edit ${item.title}`}
+                              onClick={() => openResearch(item)}
+                              title="Open research"
+                              aria-label={`Open ${item.title}`}
                               iconProps={{ iconName: "Edit" }}
                               styles={popupInputStyles.editButton}
                             />

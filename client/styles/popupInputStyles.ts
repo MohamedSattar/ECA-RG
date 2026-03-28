@@ -244,6 +244,37 @@ export const popupInputStyles = {
     iconPressed: { color: "#fff" },
     iconDisabled: { color: "#fff" },
   },
+  /** Research page destructive CTA – danger red, same height as primary */
+  researchDangerButton: {
+    root: {
+      border: "1px solid #b91c1c",
+      backgroundColor: "#dc2626",
+      minHeight: 50,
+      color: "#fff",
+      borderRadius: RADIUS,
+    },
+    rootHovered: {
+      border: "1px solid #991b1b",
+      backgroundColor: "#b91c1c",
+      minHeight: 50,
+      color: "#fff",
+    },
+    rootPressed: {
+      border: "1px solid #991b1b",
+      backgroundColor: "#991b1b",
+      minHeight: 50,
+      color: "#fff",
+    },
+    rootDisabled: {
+      border: "1px solid #cbd5e1",
+      backgroundColor: "#cbd5e1",
+      color: "#fff",
+    },
+    icon: { color: "#fff" },
+    iconHovered: { color: "#fff" },
+    iconPressed: { color: "#fff" },
+    iconDisabled: { color: "#fff" },
+  },
   /** Research page secondary / Cancel – outline, same height as primary */
   researchSecondaryButton: {
     root: {

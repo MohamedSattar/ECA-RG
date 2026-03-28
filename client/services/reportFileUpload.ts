@@ -351,6 +351,31 @@ export const getDisseminationActivityFolderPath = (
 };
 
 /**
+ * SharePoint folder for a capacity building / research activity:
+ * Researches/{researchNumber}/Capacity Building/{titleSlug}-{dateSlug}
+ * (activityId reserved for API parity with other helpers; path is title+date based)
+ */
+export const getResearchActivityFolderPath = (
+  researchNumber: string,
+  title: string,
+  date: string,
+  _activityId: string,
+): string => {
+  const safeTitle =
+    (title || "untitled")
+      .trim()
+      .replace(/[<>:"/\\|?*]/g, "-")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
+      .slice(0, 80) || "untitled";
+  const dateStr = date
+    ? new Date(date).toISOString().slice(0, 10).replace(/-/g, "")
+    : "";
+  const dateSlug = dateStr || "nodate";
+  return `${researchNumber}/Capacity Building/${safeTitle}-${dateSlug}`;
+};
+
+/**
  * Load files for a specific dissemination activity (Materials / Attachments)
  * Fetches files from SharePoint under Researches/{researchNumber}/Dissemination Activities/{typeSlug}-{dateSlug}
  */
@@ -389,6 +414,46 @@ export const loadDisseminationActivityFiles = async (
     return [];
   } catch (error) {
     console.error("Failed to load dissemination activity files:", error);
+    return [];
+  }
+};
+
+/** Load attachments for a capacity building / research activity */
+export const loadResearchActivityFiles = async (
+  researchNumber: string,
+  title: string,
+  date: string,
+  activityId: string,
+  triggerFlow: (url: string, payload: any) => Promise<any>,
+): Promise<{ file: File; action: "existing" }[]> => {
+  if (!researchNumber || !activityId) {
+    return [];
+  }
+
+  try {
+    const folderPath = getResearchActivityFolderPath(
+      researchNumber,
+      title,
+      date,
+      activityId,
+    );
+
+    const response = await triggerFlow(APIURL.FileGetEndpoint, {
+      Library: "Researches",
+      Folder: folderPath,
+    });
+
+    if (response?.success) {
+      const normalized = normalizeGetFilesResponse(response.data);
+      return normalized.map((f) => ({
+        file: getFile(f),
+        action: "existing" as const,
+      }));
+    }
+
+    return [];
+  } catch (error) {
+    console.error("Failed to load research activity files:", error);
     return [];
   }
 };

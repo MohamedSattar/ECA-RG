@@ -23,6 +23,7 @@ import {
   popupFormGridClass,
   popupFieldWrapperClass,
 } from "@/styles/popupInputStyles";
+import { SectionGuidelineHint } from "@/components/SectionGuidelineHint";
 
 export interface DisseminationActivity {
   id: string;
@@ -304,7 +305,13 @@ export const DisseminationActivitiesSection: React.FC<
     return (
       <div className="mt-8 rounded-xl border bg-white p-6">
         <div className="flex items-center justify-between min-h-[52px]">
-          <h2 className={HEADING_TEXT}>Dissemination Activities</h2>
+          <div className="flex items-center gap-2">
+            <h2 className={HEADING_TEXT}>Dissemination Activities</h2>
+            <SectionGuidelineHint
+              sectionName="Dissemination Activities"
+              description="Maintain a running list of dissemination activities and upload evidence materials such as presentations, posters, photos, or links."
+            />
+          </div>
           <IconButton
             iconProps={{
               iconName: showSection ? "ChevronUp" : "ChevronDown",
@@ -472,7 +479,7 @@ export const DisseminationActivitiesSection: React.FC<
                                   key={key}
                                   className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
                                 >
-                                  <div className="flex items-center gap-3">
+                                  <div className="flex flex-col items-start gap-1">
                                     <Icon
                                       iconName="Page"
                                       className="text-[#c77946]"
