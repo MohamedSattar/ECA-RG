@@ -38,9 +38,9 @@ VITE_FILE_GET_ENDPOINT=https://13c0704a1c5be57592d5177307df04.41.environment.api
 VITE_FILE_DELETE_ENDPOINT=https://13c0704a1c5be57592d5177307df04.41.environment.api.powerplatform.com/powerautomate/automations/direct/workflows/fde6f3e435ea45d5b48f11c7bd58a42a/triggers/manual/paths/invoke/DeleteFile?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Z4kjFzTW5owM0BSl8kLGHOGUxxIeStzDiA9rlZhbl30
 VITE_FILE_DOWNLOAD_ENDPOINT=https://13c0704a1c5be57592d5177307df04.41.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/6ab74d2c29044eabb44858d575d74a20/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Dogklo3JU1L44RfLsC59VLpxjuxEoAb3MpttHv-Y6YY
 
- 
 # DEVELOPMENT ONLY: Static fallback token for local testing (expires Feb 10, 2026)
 # This allows development/testing when client credentials flow is unavailable
 # NEVER use this token in production—it has a short lifetime and is committed to git
+AZURE_LOGIN_BASE_URL=https://login.microsoftonline.com
 VITE_B2C_AUTHORITY=https://ecab2ctest.b2clogin.com/tfp/63f53ffb-3a43-4cd8-a690-aa46c393c1d3/b2c_1a_rg_test_susi/v2.0/
 VITE_B2C_KNOWN_AUTHORITIES=B2C_1A_RG_TEST_SUSI

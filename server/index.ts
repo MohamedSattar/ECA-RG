@@ -25,7 +25,7 @@ const DATAVERSE_RESOURCE = process.env.DATAVERSE_RESOURCE;
 // DATAVERSE_BASE_URL: prefer explicit env var, otherwise derive from DATAVERSE_RESOURCE by stripping '/.default'
 const DATAVERSE_BASE_URL =
   process.env.DATAVERSE_BASE_URL ||
-  (DATAVERSE_RESOURCE ? DATAVERSE_RESOURCE.replace(/\/\.default\/?$/, "") : "https://ecacrmdev.crm15.dynamics.com");
+  (DATAVERSE_RESOURCE ? DATAVERSE_RESOURCE.replace(/\/\.default\/?$/, "") : "https://eca.crm15.dynamics.com");
 // If true, forward the client's Authorization header instead of using server token
 const FORCE_FORWARD_CLIENT_AUTH = process.env.FORWARD_CLIENT_AUTH === "true";
 
