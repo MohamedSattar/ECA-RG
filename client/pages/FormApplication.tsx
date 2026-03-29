@@ -849,15 +849,7 @@ export default function FormApplication() {
 
     run();
   }, [
-    applicationId,
-    grantCycleId,
-    researchAreaId,
-    isNewApplication,
-    user,
-    navigate,
-    callApi,
-    loadApplicationDetails,
-    loadTeamMemberRoles,
+    applicationId
   ]);
 
   useEffect(() => {
