@@ -15,7 +15,7 @@ AZURE_TENANT_ID=9bfb065d-cde3-4be3-8515-0b1c8fe6fc29
 AZURE_CLIENT_ID=02b145a5-cc87-408e-8333-71b77ce1d8c2
 # WARNING: keep client secret out of source control. Set this locally or in CI secrets.
 AZURE_CLIENT_SECRET=yGu8Q~Ks0XIGCABfHaeJtfMnSlI8yY_2ejRgMczc
-DATAVERSE_RESOURCE=https://ecacrmstaging.crm15.dynamics.com/.default
+DATAVERSE_RESOURCE=https://eca.crm15.dynamics.com/.default
 
 # If true, the server proxy will forward the client's Authorization header
 # instead of using the server-side client credentials token.
@@ -25,7 +25,7 @@ FORWARD_CLIENT_AUTH=true
 # SECURITY WARNING: Client secrets should NEVER be in source control.
 # These are used by the client fallback mechanism only—set these locally or via env vars.
 # DO NOT commit these values to git.
-VITE_B2C_CLIENT_ID=06f05863-2443-43e5-8307-f37e65e5c38c
+VITE_B2C_CLIENT_ID=19b1170e-f198-4105-a14b-888ee5375d8d
 VITE_B2C_TOKEN_URL=https://login.microsoftonline.com/9bfb065d-cde3-4be3-8515-0b1c8fe6fc29/oauth2/token
 VITE_B2C_SCOPES=openid offline_access
 # VITE_B2C_CLIENT_SECRET should be set as an environment variable, NOT in .env
@@ -42,5 +42,5 @@ VITE_FILE_DOWNLOAD_ENDPOINT=https://13c0704a1c5be57592d5177307df04.41.environmen
 # This allows development/testing when client credentials flow is unavailable
 # NEVER use this token in production—it has a short lifetime and is committed to git
 AZURE_LOGIN_BASE_URL=https://login.microsoftonline.com
-VITE_B2C_AUTHORITY=https://ecab2ctest.b2clogin.com/tfp/63f53ffb-3a43-4cd8-a690-aa46c393c1d3/b2c_1a_rg_test_susi/v2.0/
-VITE_B2C_KNOWN_AUTHORITIES=B2C_1A_RG_TEST_SUSI
+VITE_B2C_AUTHORITY=https://ecab2cprd.b2clogin.com/tfp/2937d7e7-683e-4287-a523-52d4ee626bc9/b2c_1a_rg_prod_susi/v2.0/
+VITE_B2C_KNOWN_AUTHORITIES=B2C_1A_RG_PROD_SUSI

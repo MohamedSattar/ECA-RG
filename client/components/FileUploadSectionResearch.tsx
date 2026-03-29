@@ -15,6 +15,7 @@ interface FileUploadSectionResearchProps {
   ) => void;
   onFileRemove: (fileKey: string) => void;
   form: any;
+  expandForGuide?: boolean;
 }
 
 function getFileKey(file: File): string {
@@ -23,9 +24,13 @@ function getFileKey(file: File): string {
 
 export const FileUploadSectionResearch: React.FC<
   FileUploadSectionResearchProps
-> = ({ files, onFilesAdd, onFileRemove, form }) => {
+> = ({ files, onFilesAdd, onFileRemove, form, expandForGuide = false }) => {
   const { toast } = useToast();
   const [showSection, setShowSection] = React.useState(false);
+
+  React.useEffect(() => {
+    if (expandForGuide) setShowSection(true);
+  }, [expandForGuide]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFilesSelect = (newFiles: File[]) => {

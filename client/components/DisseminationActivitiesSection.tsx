@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import Reveal from "@/motion/Reveal";
 import { toast } from "@/ui/use-toast";
 import {
@@ -57,6 +57,7 @@ interface DisseminationActivitiesSectionProps {
   ) => void;
   form: any;
   edit?: boolean;
+  expandForGuide?: boolean;
 }
 
 const INITIAL_ACTIVITY_FORM: AddDisseminationActivityForm = {
@@ -109,8 +110,13 @@ export const DisseminationActivitiesSection: React.FC<
   onUpdateItemFiles,
   form,
   edit = true,
+  expandForGuide = false,
 }) => {
     const [showSection, setShowSection] = useState(false);
+
+    useEffect(() => {
+      if (expandForGuide) setShowSection(true);
+    }, [expandForGuide]);
     const [activityForm, setActivityForm] =
       useState<AddDisseminationActivityForm>(INITIAL_ACTIVITY_FORM);
     const [isDialogOpen, setIsDialogOpen] = useState(false);

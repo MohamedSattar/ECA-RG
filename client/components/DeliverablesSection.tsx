@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import Reveal from "@/motion/Reveal";
 import { toast } from "@/ui/use-toast";
 import {
@@ -54,6 +54,7 @@ interface DeliverablesSectionProps {
   ) => void;
   form: any;
   edit?: boolean;
+  expandForGuide?: boolean;
 }
 
 const INITIAL_DELIVERABLE_FORM: AddDeliverableForm = {
@@ -92,8 +93,13 @@ export const DeliverablesSection: React.FC<DeliverablesSectionProps> = ({
   onUpdateItemFiles,
   form,
   edit = true,
+  expandForGuide = false,
 }) => {
   const [showSection, setShowSection] = useState(false);
+
+  useEffect(() => {
+    if (expandForGuide) setShowSection(true);
+  }, [expandForGuide]);
   const [deliverableForm, setDeliverableForm] = useState<AddDeliverableForm>(
     INITIAL_DELIVERABLE_FORM,
   );

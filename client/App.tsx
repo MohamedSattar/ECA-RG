@@ -21,6 +21,7 @@ import ApplicationsNew from "./pages/ApplicationsNew";
 import GrantDetail from "./pages/GrantDetail";
 import Profile from "./pages/Profile";
 
+
 // Lazy load page components
 const Login = lazy(() => import("./pages/Login"));
 const Researches = lazy(() => import("./pages/Researches"));
@@ -35,6 +36,7 @@ const ReportingDetailsEdit = lazy(
 );
 const FormApplication = lazy(() => import("./pages/FormApplication"));
 const Notifications = lazy(() => import("./pages/Notifications"));
+
 
 const queryClient = new QueryClient();
 
@@ -87,13 +89,13 @@ const App = () => (
                       }
                     />
                     <Route
-                      path="/application"
+                      path="/application/:id"
                       element={
                         <ProtectedRoute>
                           <FormApplication />
                         </ProtectedRoute>
                       }
-                    />
+                    />                 
                     <Route
                       path="/research"
                       element={

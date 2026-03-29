@@ -3885,22 +3885,26 @@ export default function FormResearch() {
 
   const location = useLocation();
   const isReportingSubRoute = location.pathname.includes("/reporting/");
-  const guideSectionRefs: Record<
-    GuideSectionKey,
-    React.RefObject<HTMLDivElement | null>
-  > = {
-    budget: budgetSectionRef,
-    reporting: reportingSectionRef,
-    dissemination: disseminationSectionRef,
-    workforce: workforceSectionRef,
-    manuscripts: manuscriptsSectionRef,
-    capacity: capacitySectionRef,
-    deliverables: deliverablesSectionRef,
-    attachments: attachmentsSectionRef,
-  };
+  const guideSectionRefs = useMemo(
+    () =>
+      ({
+        budget: budgetSectionRef,
+        reporting: reportingSectionRef,
+        dissemination: disseminationSectionRef,
+        workforce: workforceSectionRef,
+        manuscripts: manuscriptsSectionRef,
+        capacity: capacitySectionRef,
+        deliverables: deliverablesSectionRef,
+        attachments: attachmentsSectionRef,
+      }) as Record<GuideSectionKey, React.RefObject<HTMLDivElement | null>>,
+    [],
+  );
+
+  const [guideActiveSectionKey, setGuideActiveSectionKey] =
+    useState<GuideSectionKey | null>(null);
 
   const handleGuideStepChange = useCallback((sectionKey: GuideSectionKey) => {
-    // Auto-open collapsible sections so the guided step is always visible.
+    setGuideActiveSectionKey(sectionKey);
     if (sectionKey === "budget") setShowBudget(true);
     if (sectionKey === "workforce") setShowTeam(true);
     if (sectionKey === "manuscripts") setShowManuscripts(true);
@@ -4317,6 +4321,7 @@ export default function FormResearch() {
             onUploadFile={handleUploadFile}
             onUpdateItemFiles={handleUpdateReportFiles}
             form={form}
+            expandForGuide={guideActiveSectionKey === "reporting"}
           />
         </div>
 
@@ -4346,6 +4351,7 @@ export default function FormResearch() {
             onUploadFile={handleUploadFile}
             onUpdateItemFiles={handleUpdateDisseminationActivityFiles}
             form={form}
+            expandForGuide={guideActiveSectionKey === "dissemination"}
           />
         </div>
 
@@ -4471,6 +4477,7 @@ export default function FormResearch() {
             onUploadFile={handleUploadFile}
             onUpdateItemFiles={handleUpdateDeliverableFiles}
             form={form}
+            expandForGuide={guideActiveSectionKey === "deliverables"}
           />
         </div>
 
@@ -4481,6 +4488,7 @@ export default function FormResearch() {
             onFileRemove={handleFileRemove}
             form={form}
             files={form.files}
+            expandForGuide={guideActiveSectionKey === "attachments"}
           />
         </div>
 

@@ -116,7 +116,7 @@ export default function Applications() {
   const onView = (item: any) => {
     const statusLabel = getStatusLabel(item);
     navigate(
-      `/application?item=${item[ApplicationKeys.APPLICATIONID]}`,
+      `/application/${item[ApplicationKeys.APPLICATIONID]}`,
       {
         state: {
           applicationId: item[ApplicationKeys.APPLICATIONID],
@@ -132,7 +132,7 @@ export default function Applications() {
   const onEdit = (item: any) => {
     const statusLabel = getStatusLabel(item);
     navigate(
-      `/application?item=${item[ApplicationKeys.APPLICATIONID]}`,
+      `/application/${item[ApplicationKeys.APPLICATIONID]}`,
       {
         state: {
           applicationId: item[ApplicationKeys.APPLICATIONID],

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Reveal from "@/motion/Reveal";
 import { IconButton } from "@fluentui/react/lib/Button";
@@ -70,6 +70,8 @@ interface ReportingSectionProps {
   ) => void;
   form: any;
   edit?: boolean;
+  /** When true (e.g. guided tour step), expand the collapsible body. */
+  expandForGuide?: boolean;
 }
 
 export const INITIAL_REPORT_FORM: AddReportForm = {
@@ -112,9 +114,14 @@ export const ReportingSection: React.FC<ReportingSectionProps> = ({
   onUpdateItemFiles,
   form,
   edit = true,
+  expandForGuide = false,
 }) => {
   const [showSection, setShowSection] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (expandForGuide) setShowSection(true);
+  }, [expandForGuide]);
   const [searchParams] = useSearchParams();
 
   const buildReportingUrl = (path: string) => {

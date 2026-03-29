@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useLocation, useSearchParams, useParams } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import Reveal from "@/motion/Reveal";
 import { useAuth } from "@/state/auth";
 import { toast } from "@/ui/use-toast";
@@ -47,7 +47,6 @@ import { FileUploadSection } from "@/components/FileUploadSection";
 import WorkflowTimeline from "@/components/WorkFlowHistory";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/ui/dialog";
 import { popupInputStyles } from "@/styles/popupInputStyles";
-import { getApplicationFormTypeFromRecord } from "@/constants/applicationFormMode";
 
 interface TeamMember {
   id: string;
@@ -167,13 +166,13 @@ const processTeamMembers = async (
 
 // Helper function to get application number
 const getApplicationNumber = async (
-  hasExistingApplication: boolean,
+  formType: string,
   applicationId: string,
+  stateApplicationNumber: string | undefined,
   callApi: (options: any) => Promise<any>,
-  cachedNumber?: string | null,
 ): Promise<string> => {
-  if (hasExistingApplication && cachedNumber) {
-    return cachedNumber;
+  if (formType === "edit" && stateApplicationNumber) {
+    return stateApplicationNumber;
   }
 
   const res = await callApi({
@@ -322,7 +321,6 @@ const createBudgetHeader = async (
 
 interface GeneralInformationSectionProps {
   form: FormState;
-  readOnly: boolean;
   onTitleChange: (value: string) => void;
   onAbstractChange: (value: string) => void;
   onGrantCycleChange: (value: string | null) => void;
@@ -335,7 +333,6 @@ interface GeneralInformationSectionProps {
 
 const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
   form,
-  readOnly,
   onTitleChange,
   onAbstractChange,
   onGrantCycleChange,
@@ -346,6 +343,8 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
   userAdxUserId,
 }) => {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const formType = searchParams.get("formType") || "new";
   return (
     <Reveal className="mt-8">
       <div className="mt-4 grid gap-6 md:grid-cols-2">
@@ -361,7 +360,7 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
               searchField={GrantCycleKeys.CYCLENAME}
               tableName={TableName.GRANTCYCLES}
               maxSelection={1}
-              disabled={readOnly}
+              disabled={formType === "view"}
               label="Grant Cycle"
               cascadeField={GrantCycleKeys.GRANTCYCLEID}
               cascadeValue={grantCycleId}
@@ -393,7 +392,7 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
               cascadeValue={researchAreaId}
               isDefaultSelected={researchAreaId != null}
               readonly={true}
-              disabled={readOnly}
+              disabled={formType === "view"}
               onSelect={(values) => {
                 onResearchAreaChange(
                   values && values.length > 0
@@ -419,7 +418,7 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
               cascadeField={ContactFields.CONTACTID}
               cascadeValue={form.mainApplicant}
               isDefaultSelected={form.mainApplicant != null}
-              disabled={readOnly}
+              disabled={formType === "view"}
               onSelect={(values) => {
                 onMainApplicantChange(
                   values && values.length > 0
@@ -441,7 +440,7 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
               value={form.title}
               onChange={(e, newValue) => onTitleChange(newValue || "")}
               placeholder="Enter project title"
-              disabled={readOnly}
+              disabled={formType === "view"}
               borderless
             />
           </div>
@@ -455,7 +454,7 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
               onChange={(e, newValue) => onAbstractChange(newValue || "")}
               multiline
               rows={5}
-              disabled={readOnly}
+              disabled={formType === "view"}
               placeholder="Provide a concise abstract"
               borderless
             />
@@ -489,25 +488,19 @@ export default function FormApplication() {
   const { user } = useAuth();
   const { state } = useLocation();
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
 
-  const applicationId =
-    id && id !== "new" ? id : undefined;
-  const grantCycleId = searchParams.get("grantCycleId") ?? "";
-  const researchAreaId = searchParams.get("researchAreaId") ?? "";
-  /** No id or `new` → new application; edit/view come from loaded record. */
-  const isNewApplication = !applicationId;
-  const applicationNumberFromQuery = searchParams.get("applicationNumber");
-  const statusFromQuery = searchParams.get("status");
+  const applicationId = searchParams.get("item");
+  const grantCycleId = searchParams.get("grantCycleId");
+  const researchAreaId = searchParams.get("researchAreaId");
+  const formType = searchParams.get("formType") || "new";
+  const applicationNumber = searchParams.get("applicationNumber");
+  let status = searchParams.get("status");
 
   const [form, setForm] = useState<FormState>(() => ({
     ...INITIAL_FORM_STATE,
     submissionDate: formatDate(new Date()),
   }));
-  const displayApplicationNumber =
-    form.applicationNumber ?? applicationNumberFromQuery ?? "";
-  const displayStatus = form.status || statusFromQuery || "";
   // console.log(form);
 
   const [showGeneral, setShowGeneral] = useState(true);
@@ -562,8 +555,7 @@ export default function FormApplication() {
         action: "existing" as const,
       }),
     ),
-    type: getApplicationFormTypeFromRecord(app as Record<string, unknown>),
-    status: getStatusLabel(app),
+    type: formType === "view" ? "view" : "edit",
     applicationFiles: (() => {
       // Find the first PDF for Main Proposal
       const firstPdf = files.find(
@@ -645,10 +637,30 @@ export default function FormApplication() {
         const app = res?.value?.[0];
         if (!app) {
           throw new Error("No application found with the provided ID.");
+          return;
+        }
+        if (
+          app?.prmtk_status != 1 &&
+          app?.prmtk_status != 3 &&
+          formType !== "view"
+        ) {
+          toast({
+            title: "Info",
+            description: "This application cannot be viewed.",
+          });
+          navigate(`/applications`);
+          return;
         }
 
-        const applicationNumber = app[ApplicationKeys.APPLICATIONNUMBER] || "";
-
+        // Load files (budget is loaded separately in loadBudgetDetails)
+        setForm((prev) => ({
+          ...prev,
+          grantCycle: app[ApplicationKeys.GRANTCYCLE] || "",
+          researchArea: app[ApplicationKeys.RESEARCHAREA] || "",
+          status:getStatusLabel(app)|| ""
+        }));
+        const applicationNumber = app[ApplicationKeys.APPLICATIONNUMBER] || "";      
+ 
         const [files] = await Promise.all([
           loadApplicationFiles(applicationNumber),
         ]);
@@ -678,7 +690,7 @@ export default function FormApplication() {
         setShowLoader(false);
       }
     },
-    [callApi, triggerFlow, user],
+    [callApi, triggerFlow, formType, user],
   );
   const loadWorkFlowHistory = useCallback(
     async (applicationId: string) => {
@@ -757,7 +769,7 @@ export default function FormApplication() {
     applicationId: string,
     budgetHeaderIdFromApp?: string | null,
   ): Promise<void> => {
-    if (isNewApplication) return;
+    if (formType === "new") return;
     try {
       let budgetData: any = null;
       let budgetHeaderId: string | null = null;
@@ -805,22 +817,17 @@ export default function FormApplication() {
     }
   };
 
-  // Check for existing application on mount (for new forms); then load when id exists
+  // Check for existing application on mount (for new forms)
   useEffect(() => {
-    const run = async () => {
-      await loadTeamMemberRoles();
-
-      if (applicationId) {
-        await loadApplicationDetails(applicationId);
-        return;
-      }
-
+    const checkForExistingApplication = async () => {
+      // If no grantCycleId or researchAreaId, redirect to home
       if (!grantCycleId || !researchAreaId) {
         navigate("/");
         return;
       }
 
-      if (isNewApplication && user?.contact?.[ContactKeys.CONTACTID]) {
+      // Only check for existing application if formType is "new"
+      if (formType === "new" && user?.contact?.[ContactKeys.CONTACTID]) {
         setShowLoader(true);
         try {
           const currentUserId = user.contact[ContactKeys.CONTACTID];
@@ -834,8 +841,13 @@ export default function FormApplication() {
           const existingApp = res?.value?.[0];
 
           if (existingApp) {
+            // Redirect to existing application edit page
+            const statusFormatted =
+              existingApp[ApplicationKeys.STATUS_FORMATTED] ||
+              existingApp[ApplicationKeys.STATUS] ||
+              "";
             navigate(
-              `/application/${existingApp[ApplicationKeys.APPLICATIONID]}`,
+              `/application?item=${existingApp[ApplicationKeys.APPLICATIONID]}&grantCycleId=${existingApp[ApplicationKeys.GRANTCYCLE]}&researchAreaId=${existingApp[ApplicationKeys.RESEARCHAREA]}&status=${statusFormatted}&applicationNumber=${existingApp[ApplicationKeys.APPLICATIONNUMBER]}&formType=edit`,
               { replace: true },
             );
           }
@@ -847,18 +859,19 @@ export default function FormApplication() {
       }
     };
 
-    run();
-  }, [
-    applicationId,
-    grantCycleId,
-    researchAreaId,
-    isNewApplication,
-    user,
-    navigate,
-    callApi,
-    loadApplicationDetails,
-    loadTeamMemberRoles,
-  ]);
+    checkForExistingApplication();
+  }, [grantCycleId, researchAreaId, formType, user, navigate, callApi]);
+
+  // Initialize on mount (loadBudgetDetails is called inside loadApplicationDetails when applicationId exists)
+  useEffect(() => {
+    const initialize = async () => {
+      await loadTeamMemberRoles();
+      if (applicationId) {
+        await loadApplicationDetails(applicationId);
+      }
+    };
+    initialize();
+  }, [applicationId]);
 
   useEffect(() => {
     if (user?.contact?.[ContactKeys.FULLNAME]) {
@@ -905,7 +918,7 @@ export default function FormApplication() {
       educationLevel: member.educationLevel,
       action: "new",
     } as any;
-    if (!isNewApplication) {
+    if (formType !== "new") {
       setShowLoader(true);
       const memberData: Record<string, any> = {
         [ApplicationTeamMemberKeys.PARTICIPATIONNAME]: newMember.name,
@@ -931,7 +944,7 @@ export default function FormApplication() {
   }, []);
 
   const handleRemoveMember = useCallback(async (id: string) => {
-    if (!isNewApplication) {
+    if (formType !== "new") {
       const itemToRemove = form.budgetLineItems.find((li) => li.id === id);
       setShowLoader(true);
       const api = await callApi({
@@ -948,7 +961,7 @@ export default function FormApplication() {
 
   const handleEditMember = useCallback(
     async (id: string, member: AddMemberForm) => {
-      if (!isNewApplication) {
+      if (formType !== "new") {
         setShowLoader(true);
         const memberData: Record<string, any> = {
           [ApplicationTeamMemberKeys.PARTICIPATIONNAME]: member.name,
@@ -995,7 +1008,7 @@ export default function FormApplication() {
         ),
       }));
     },
-    [isNewApplication, callApi],
+    [formType],
   );
 
   // const handleFilesAdd = useCallback(
@@ -1058,7 +1071,7 @@ export default function FormApplication() {
 
   const loadApps = async () => {
     setShowLoader(true);
-    if (!isNewApplication) {
+    if (formType === "edit") {
       setShowLoader(false);
       return false;
     }
@@ -1158,8 +1171,8 @@ export default function FormApplication() {
         status?: number;
         headers?: Headers;
       }>({
-        url: `/_api/${TableName.APPLICATIONS}${!isNewApplication ? `(${applicationId})` : ""}`,
-        method: !isNewApplication ? "PATCH" : "POST",
+        url: `/_api/${TableName.APPLICATIONS}${formType === "edit" ? `(${applicationId})` : ""}`,
+        method: formType === "edit" ? "PATCH" : "POST",
         data: applicationData,
       });
 
@@ -1168,7 +1181,7 @@ export default function FormApplication() {
       }
 
       const applicationIdForm =
-        !isNewApplication
+        formType === "edit"
           ? applicationId
           : res?.headers?.get("OData-EntityId")?.match(/\(([^)]+)\)/)?.[1];
       if (!applicationIdForm) {
@@ -1217,12 +1230,12 @@ export default function FormApplication() {
 
         // Application number, team members, and file uploads regardless of budget
         const applicationNumbers = await getApplicationNumber(
-          !isNewApplication,
+          formType,
           applicationIdForm,
+          applicationNumber,
           callApi,
-          form.applicationNumber ?? applicationNumberFromQuery ?? undefined,
         );
-        if (isNewApplication) {
+        if (formType === "new") {
           await processTeamMembers(form.team, applicationIdForm, callApi);
         }
 
@@ -1247,7 +1260,7 @@ export default function FormApplication() {
       toast({
         title: "Success",
         description:
-          !isNewApplication
+          formType === "edit"
             ? "Application updated successfully."
             : "Application submitted successfully.",
       });
@@ -1319,15 +1332,15 @@ export default function FormApplication() {
               <h1 className="text-2xl md:text-6xl font-extrabold leading-tight tracking-tight text-white">
                 Application Status
                 <span className=" font-normal ml-2 text-[#F7D85C]">
-                  ({displayStatus ? displayStatus : "New"})
+                  ({status ? status : "New"})
                 </span>
               </h1>
-              {displayApplicationNumber && (
+              {applicationNumber && (
                 <div className="text-2xl text-[#F7D85C]">
-                  Application Number : {displayApplicationNumber}
+                  Application Number : {applicationNumber}
                 </div>
               )}
-              {form.type === "view" && (
+              {formType === "view" && (
                 <div className="text-sm text-white">
                   <span className="opacity-80">Submission Date:</span>
                   <span className="ml-2 font-semibold text-[#F7D85C]">
@@ -1351,10 +1364,10 @@ export default function FormApplication() {
       <section className="bg-white">
         <div className="container py-4">
           
-          {form.type !== "view" && (
+          {formType !== "view" && (
             <div className="flex justify-end gap-4">
               <button
-                onClick={() => handleSubmitClick("Draft")}
+                onClick={() => handleSubmitClick(status)}
                 className="px-4 py-1 border border-[#7BAAA3] text-[#7BAAA3] rounded text-sm hover:bg-[#7BAAA3]/10 transition"
               >
                 <Icon iconName="SingleBookmark" />
@@ -1370,13 +1383,15 @@ export default function FormApplication() {
                   History
                 </button>
               )}
-              <PrimaryButton
-                onClick={() => handleSubmitClick("Submitted")}
-                disabled={!canSubmit || showLoader}
-                styles={popupInputStyles.researchPrimaryButton}
-              >
-                {showLoader ? "Submitting..." : "Submit Application"}
-              </PrimaryButton>
+               {form.type !== "view" && (
+                <PrimaryButton                  
+                  onClick={() => handleSubmitClick("Submitted")}
+                  disabled={!canSubmit || formType === "view" || showLoader}
+                  styles={popupInputStyles.researchPrimaryButton}
+                >
+                  {showLoader ? "Submitting..." : "Submit Application"}
+                </PrimaryButton>
+              )}
             </div>
           )}
 
@@ -1510,7 +1525,6 @@ export default function FormApplication() {
               <GeneralInformationSection
                 key={`${user?.adxUserId}`}
                 form={form}
-                readOnly={form.type === "view"}
                 onTitleChange={(value) =>
                   setForm((prev) => ({ ...prev, title: value }))
                 }
@@ -1681,7 +1695,7 @@ export default function FormApplication() {
             onRemoveBudgetLineItem={async (id) => {
               const itemToRemove = form.budgetLineItems.find((li) => li.id === id);
               const isExistingItem = itemToRemove?.action === "existing";
-              if (!isNewApplication && isExistingItem && itemToRemove?.id) {
+              if (formType !== "new" && isExistingItem && itemToRemove?.id) {
                 setShowLoader(true);
                 try {
                   await callApi({
@@ -1722,7 +1736,7 @@ export default function FormApplication() {
             />
           </div>
 
-          {/* {!isNewApplication && ( */}
+          {/* {formType !== "new" && ( */}
           <FileUploadSection
             applicationFiles={form.applicationFiles}
             generalFiles={form.generalFiles}
@@ -1737,23 +1751,25 @@ export default function FormApplication() {
           <Reveal className="mt-8 flex gap-5 justify-end">           
 
               {form.type !== "view" && (
-                <>
                   <button
-                    onClick={() => handleSubmitClick("Draft")}
-                    disabled={showLoader}
+                    onClick={() => handleSubmitClick(status)}
+                    disabled={formType === "view"}
                     className="px-4 py-1 border border-[#7BAAA3] text-[#7BAAA3] rounded text-sm hover:bg-[#7BAAA3]/10 transition w-[9rem]"
                   >
                     <Icon iconName="SingleBookmark" />
                     SAVE DRAFT
                   </button>
-                  <PrimaryButton
-                    onClick={() => handleSubmitClick("Submitted")}
-                    disabled={!canSubmit || showLoader}
-                    styles={popupInputStyles.researchPrimaryButton}
-                  >
-                    {showLoader ? "Submitting..." : "Submit Application"}
-                  </PrimaryButton>
-                </>
+
+                  
+                )}
+               {form.type !== "view" && (
+                <PrimaryButton                 
+                  onClick={() => handleSubmitClick("Submitted")}
+                  disabled={!canSubmit || formType === "view" || showLoader}
+                  styles={popupInputStyles.researchPrimaryButton}
+                >
+                  {showLoader ? "Submitting..." : "Submit Application"}
+                </PrimaryButton>
               )}
            
           </Reveal>
@@ -1823,8 +1839,8 @@ export default function FormApplication() {
             </DialogHeader>
             <WorkflowTimeline
               workflowData={workflowHistory}
-              applicationNumber={displayApplicationNumber}
-              currentStatus={displayStatus}
+              applicationNumber={applicationNumber || ""}
+              currentStatus={status || ""}
               username={user?.contact?.[ContactFields.FULLNAME] || ""}
             />
           </DialogContent>

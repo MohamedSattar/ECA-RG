@@ -36,11 +36,19 @@ export default function SectionGuideTour<K extends string = string>({
   secondaryButtonStyles,
   primaryButtonStyles,
 }: SectionGuideTourProps<K>) {
+  const VIEW_PADDING = 12;
+
   const [showGuide, setShowGuide] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
-  const [popupPos, setPopupPos] = useState({ top: 90, left: 24 });
+  /** Fixed to the right edge of the viewport so the panel does not animate from left → right on load. */
+  const [popupPos, setPopupPos] = useState({ top: 90, right: VIEW_PADDING });
   const popupRef = useRef<HTMLDivElement | null>(null);
+  /** Avoid effect re-running every parent render when `sectionRefs` is a new object identity. */
+  const sectionRefsRef = useRef(sectionRefs);
+  sectionRefsRef.current = sectionRefs;
+
   const currentSection = useMemo(() => sections[stepIndex], [sections, stepIndex]);
+  const currentSectionKey = currentSection?.key;
 
   useEffect(() => {
     try {
@@ -52,42 +60,59 @@ export default function SectionGuideTour<K extends string = string>({
   }, [storageKey]);
 
   useEffect(() => {
-    if (!showGuide || !currentSection) return;
+    if (!showGuide || !currentSectionKey) return;
 
-    onStepChange?.(currentSection.key);
-
-    const targetSection = sectionRefs[currentSection.key]?.current;
-    if (!targetSection) return;
-
-    targetSection.scrollIntoView({ behavior: "smooth", block: "center" });
+    onStepChange?.(currentSectionKey);
 
     const updatePopupPosition = () => {
+      const targetSection =
+        sectionRefsRef.current[currentSectionKey]?.current;
+      if (!targetSection) return;
+
       const rect = targetSection.getBoundingClientRect();
-      const cardWidth = 380;
       const cardHeight = popupRef.current?.offsetHeight ?? 340;
-      const gap = 14;
-      const padding = 12;
-      const containerRect = containerRef.current?.getBoundingClientRect();
-      const minLeft = containerRect ? containerRect.left + padding : padding;
-      const maxLeft = containerRect
-        ? Math.max(minLeft, containerRect.right - cardWidth - padding)
-        : Math.max(padding, window.innerWidth - cardWidth - padding);
-      const preferredRight = rect.right + gap;
-      const nextLeft = Math.max(minLeft, Math.min(maxLeft, preferredRight));
+      const padding = VIEW_PADDING;
       const minTop = padding;
       const maxTop = Math.max(minTop, window.innerHeight - cardHeight - padding);
-      const nextTop = Math.max(minTop, Math.min(maxTop, rect.top + 8));
+      /** Center the tour panel vertically on the target section (not clamped to one edge of the viewport). */
+      let nextTop = rect.top + rect.height / 2 - cardHeight / 2;
+      nextTop = Math.max(minTop, Math.min(maxTop, nextTop));
 
-      setPopupPos({ top: nextTop, left: nextLeft });
+      setPopupPos({ top: nextTop, right: VIEW_PADDING });
     };
 
-    const timer = window.setTimeout(updatePopupPosition, 220);
+    /** Expand sections, scroll target into view, then place the popup beside that section. */
+    const afterLayout = () => {
+      const targetSection =
+        sectionRefsRef.current[currentSectionKey]?.current;
+      if (!targetSection) return;
+      targetSection.scrollIntoView({
+        behavior: "auto",
+        block: "center",
+        inline: "nearest",
+      });
+      /** Re-measure after scroll; second pass catches expanded section height. */
+      const runMeasure = () => {
+        window.requestAnimationFrame(() => {
+          updatePopupPosition();
+        });
+      };
+      runMeasure();
+      window.setTimeout(runMeasure, 220);
+    };
+
+    const scrollTimer = window.setTimeout(() => {
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(afterLayout);
+      });
+    }, 120);
+
     window.addEventListener("resize", updatePopupPosition);
     return () => {
-      window.clearTimeout(timer);
+      window.clearTimeout(scrollTimer);
       window.removeEventListener("resize", updatePopupPosition);
     };
-  }, [containerRef, currentSection, onStepChange, sectionRefs, showGuide]);
+  }, [currentSectionKey, onStepChange, showGuide, stepIndex]);
 
   const openGuide = useCallback(() => {
     setStepIndex(0);
@@ -208,8 +233,12 @@ export default function SectionGuideTour<K extends string = string>({
         <div className="fixed inset-0 z-[100] bg-slate-900/35 p-4">
           <div
             ref={popupRef}
-            className="fixed max-h-[72vh] w-[min(380px,calc(100vw-24px))] overflow-hidden rounded-xl border border-[#d9e3ff] bg-white shadow-2xl transition-[top,left] duration-300"
-            style={{ top: `${popupPos.top}px`, left: `${popupPos.left}px` }}
+            className="fixed max-h-[72vh] w-[min(380px,calc(100vw-24px))] overflow-hidden rounded-xl border border-[#d9e3ff] bg-white shadow-2xl"
+            style={{
+              top: `${popupPos.top}px`,
+              right: `${popupPos.right}px`,
+              left: "auto",
+            }}
           >
             <div className="border-b border-[#e7edff] bg-gradient-to-r from-[#f7faff] to-[#edf4ff] px-4 py-3">
               <div className="flex items-center justify-between gap-2">
