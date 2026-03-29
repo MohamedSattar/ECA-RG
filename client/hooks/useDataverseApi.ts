@@ -224,7 +224,11 @@ export function useDataverseApi() {
         ...(options.data ? { "Content-Type": "application/json" } : {}),
         ...(options.headers || {}),
       };
-
+      if(options.method =="GET"){
+        headers["OData-Version"] = "4.0",
+        headers["OData-MaxVersion"] = "4.0"
+        headers["Prefer"]="odata.include-annotations=*"
+      }
       // Add request verification token for CSRF protection, unless skipped
       if (!options.skipAuth && !options.skipVerificationToken) {
         // For PATCH requests (updates), always force a fresh token to avoid 401 errors

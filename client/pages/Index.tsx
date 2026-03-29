@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { ChevronDown, User } from "lucide-react";
 import Reveal from "@/motion/Reveal";
 import { useDataverseApi } from "@/hooks/useDataverseApi";
-import { normalizeImageUrl } from "@/lib/utils";
+import { formatDate, normalizeImageUrl } from "@/lib/utils";
 import {
   ApplicationFields,
   ApplicationKeys,
@@ -519,13 +519,13 @@ export default function Index() {
         // Navigate to view/edit the existing application
         toast.success("Redirecting to your application...");
         navigate(
-          `/application?grantCycleId=${grantCycleId}&researchAreaId=${researchAreaId}&formType=edit&item=${existingApplication.prmtk_applicationid}`,
+          `/application/${existingApplication.prmtk_applicationid}`,
         );
       } else {
         // Create a new draft application
         const applicationData = {
           [ApplicationKeys.APPLICATIONTITLE]: "Draft Application",
-          [ApplicationKeys.ABSTRACT]: "Draft",
+          [ApplicationKeys.ABSTRACT]: "",
           [ApplicationKeys.SUBMISSIONDATE]: new Date().toISOString(),
           [ApplicationKeys.MAINAPPLICANT_ID]: `/${TableName.CONTACTS}(${user.contact[ContactKeys.CONTACTID]})`,
           [ApplicationKeys.GRANTCYCLE_ID]: `/${TableName.GRANTCYCLES}(${grantCycleId})`,
@@ -557,7 +557,7 @@ export default function Index() {
 
         toast.success("Application created successfully!");
         navigate(
-          `/application?item=${applicationId}&grantCycleId=${grantCycleId}&researchAreaId=${researchAreaId}&formType=edit`,
+          `/application/${applicationId}`,
         );
       }
     } catch (error) {
@@ -697,7 +697,7 @@ export default function Index() {
                       Start Date
                     </div>
                     <div className="font-medium text-right text-light-brown">
-                      {grant[GrantCycleKeys.STARTDATE_FORMATTED]}
+                      {formatDate(grant[GrantCycleKeys.STARTDATE])}
                     </div>
                   </div>
                   <div className="grid grid-cols-[1fr_auto] items-center text-sm">
@@ -705,7 +705,7 @@ export default function Index() {
                       End Date
                     </div>
                     <div className="font-medium text-right text-light-brown">
-                      {grant[GrantCycleKeys.ENDDATE_FORMATTED]}
+                      {formatDate(grant[GrantCycleKeys.ENDDATE])}
                     </div>
                   </div>
                 </div>

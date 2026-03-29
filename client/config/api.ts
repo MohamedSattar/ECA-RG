@@ -9,8 +9,7 @@ export const API_CONFIG = {
    * Configured via VITE_PUBLIC_API_BASE_URL environment variable
    */
   BASE_URL:
-    import.meta.env.VITE_PUBLIC_API_BASE_URL ||
-    "https://ecacrmdev.crm15.dynamics.com",
+    import.meta.env.VITE_PUBLIC_API_BASE_URL,
   /**
    * API endpoints
    */

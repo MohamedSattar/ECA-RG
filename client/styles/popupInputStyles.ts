@@ -238,7 +238,7 @@ export const popupInputStyles = {
       minHeight: 50,
       color: "#fff",
     },
-    rootDisabled: { border: "1px solid #cbd5e1", backgroundColor: "#cbd5e1" },
+    rootDisabled: { border: "1px solid #cbd5e1", backgroundColor: "#cbd5e1" ,color: "#fff"},
     icon: { color: "#fff" },
     iconHovered: { color: "#fff" },
     iconPressed: { color: "#fff" },
