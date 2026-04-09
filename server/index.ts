@@ -13,7 +13,7 @@ import {
   getBudgetSpendsByLineItem,
   upsertBudgetSpends,
 } from "./routes/budget";
-
+import { TableName } from "../client/constants/tables";
 // Server-side client credentials configuration (set these in your env)
 const AZURE_TENANT_ID = process.env.AZURE_TENANT_ID;
 const AZURE_CLIENT_ID = process.env.AZURE_CLIENT_ID;
@@ -80,8 +80,31 @@ async function handleDataverseProxy(
   res: express.Response,
 ) {
   try {
+
+    
+    const path = req.url
+    const isTargetTable =
+      path.includes(TableName.NOTIFICATIONS) ||
+      path.includes(TableName.CONTACTS) ||
+      path.includes(TableName.APPLICATIONS) ||
+      path.includes(TableName.RESEARCHES);
+    
+      console.log(path);
+      const hasFilter= path.includes("filter");
+      const hasGuid= /\([0-9a-fA-F-]{36}\)/.test(req.url);
+      console.log("hasGuid" ,hasGuid);
+      
+    if (isTargetTable && req.method == "GET" && !hasGuid && !hasFilter) {
+      
+      console.log("yes");
+        res.json({});
+      
+    }
+
+    else{
     // Extract the API path (everything after the domain)
     let apiPath = req.path;
+          
 
     console.log(`[Proxy] Original request path: ${req.path}`);
     console.log(`[Proxy] Original request URL: ${req.url}`);
@@ -201,6 +224,7 @@ async function handleDataverseProxy(
 
     // Send response
     if (contentType?.includes("application/json")) {
+     
       res.json(data);
     } 
     else if(contentType?.includes("application/octet-stream")){
@@ -209,6 +233,7 @@ async function handleDataverseProxy(
     else {
       res.send(data);
     }
+  }
   } catch (err: any) {
     console.error(`[Proxy] Error on ${req.method} ${req.path}`);
     console.error(`[Proxy] Target URL: ${DATAVERSE_BASE_URL + req.path}`);
