@@ -14,6 +14,9 @@ import {
   upsertBudgetSpends,
 } from "./routes/budget";
 import { TableName } from "../client/constants/tables";
+import { useAuth } from "../client/state/auth";
+import { ApplicationKeys, ContactKeys, ResearchKeys } from "../client/constants";
+import { console } from "inspector";
 // Server-side client credentials configuration (set these in your env)
 const AZURE_TENANT_ID = process.env.AZURE_TENANT_ID;
 const AZURE_CLIENT_ID = process.env.AZURE_CLIENT_ID;
@@ -81,8 +84,16 @@ async function handleDataverseProxy(
 ) {
   try {
 
-    
-    const path = req.url
+    //const { user } = useAuth();
+    //const currentUserId = user?.contact?.[ContactKeys.CONTACTID] || "";
+     debugger;
+    const currentUserId = req.headers["x-user-id"];
+    const currentUserEmail = req.headers["x-user-email"];
+  console.log("[DEBUG] URL:");
+    console.log("[DEBUG] currentUserId:", currentUserId);
+    console.log("[DEBUG] URL:", req.url);
+    console.log("[DEBUG] Headers:", req.headers);
+    let path = req.url
     const isTargetTable =
       path.includes(TableName.NOTIFICATIONS) ||
       path.includes(TableName.CONTACTS) ||
@@ -102,12 +113,48 @@ async function handleDataverseProxy(
     }
 
     else{
-    // Extract the API path (everything after the domain)
+const url = new URL(req.url, "http://dummy-base"); // base required
+let filter = url.searchParams.get("$filter") || "";
+
+// APPLICATIONS
+if (
+  path.includes(TableName.APPLICATIONS) &&
+  !filter.includes(ApplicationKeys.MAINAPPLICANT) &&
+  currentUserId
+) {
+  const condition = `${ApplicationKeys.MAINAPPLICANT} eq '${currentUserId}'`;
+  filter = filter ? `${condition} and (${filter})` : condition;
+}
+
+// RESEARCHES
+if (
+  path.includes(TableName.RESEARCHES) &&
+  !filter.includes(ResearchKeys.PRINCIPALINVESTIGATOR) &&
+  currentUserId
+) {
+  const condition = `${ResearchKeys.PRINCIPALINVESTIGATOR} eq '${currentUserId}'`;
+  filter = filter ? `${condition} and (${filter})` : condition;
+}
+
+// CONTACTS
+if (
+  path.includes(TableName.CONTACTS) 
+) {
+  const condition = `${ContactKeys.EMAILADDRESS1} eq '${currentUserEmail}'`;
+  filter = filter ? `${condition} and (${filter})` : condition;
+}
+
+
+if (filter) {
+  url.searchParams.set("$filter", filter);
+}
+
+path = url.pathname + url.search;
     let apiPath = req.path;
           
 
     console.log(`[Proxy] Original request path: ${req.path}`);
-    console.log(`[Proxy] Original request URL: ${req.url}`);
+    console.log(`[Proxy] Original request URL: ${url}`);
 
     // Translate incoming proxy paths to the target Dataverse/CRM API paths when needed.
     // e.g. /_api/contacts -> /api/data/v9.2/contacts
@@ -119,8 +166,8 @@ async function handleDataverseProxy(
     const fullUrl = new URL(DATAVERSE_BASE_URL + targetPath);
 
     // Preserve query parameters
-    if (req.url.includes("?")) {
-      const queryPart = req.url.substring(req.url.indexOf("?"));
+    if (path.includes("?")) {
+      const queryPart = path.substring(path.indexOf("?"));
       // URL.search expects without the leading '?'
       fullUrl.search = queryPart;
       console.log(`[Proxy] Query parameters added: ${queryPart}`);

@@ -23,7 +23,9 @@
   return { callApi };
 };*/
 
+import { useAuth } from "@/state/auth";
 import { useMsal } from "@azure/msal-react";
+import clsx from "clsx";
 
 export interface ApiOptions extends RequestInit {
   headers?: Record<string, string>;
@@ -219,11 +221,16 @@ export function useDataverseApi() {
     forceRefreshToken?: boolean;
   }): Promise<T> => {
     try {
+      const user = JSON.parse(localStorage.getItem("auth.user") || "{}");
+        console.log("user",user);
       const headers: Record<string, string> = {
         Accept: "application/json",
         ...(options.data ? { "Content-Type": "application/json" } : {}),
         ...(options.headers || {}),
       };
+
+      headers["x-user-id"]= user?.contact?.contactid
+      headers["x-user-email"]= user?.email
       if(options.method =="GET"){
         headers["OData-Version"] = "4.0",
         headers["OData-MaxVersion"] = "4.0"
