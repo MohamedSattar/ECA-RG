@@ -41,8 +41,9 @@ export interface ApiOptions extends RequestInit {
 //   const token = input.getAttribute("value");
 //   return token;
 // };;
-// Fallback verification token for when server endpoint is unavailable or unreachable
-const FALLBACK_VERIFICATION_TOKEN = "H2mPseS4jqMjdACQIcTLuZYge-isZjkr_Pj37loAqcjZb6dp4bIZao9TZqN2uvXmMVwTGvkFsTtq5tnfPGfoCj2U15FDO8T8ESjcSTfguKw1";
+// Development-only fallback when the portal token endpoint is unreachable (never used in production builds).
+const DEV_FALLBACK_VERIFICATION_TOKEN =
+  "H2mPseS4jqMjdACQIcTLuZYge-isZjkr_Pj37loAqcjZb6dp4bIZao9TZqN2uvXmMVwTGvkFsTtq5tnfPGfoCj2U15FDO8T8ESjcSTfguKw1";
 
 const fetchRequestVerificationToken = async (forceRefresh: boolean = false) => {
   try {
@@ -51,50 +52,44 @@ const fetchRequestVerificationToken = async (forceRefresh: boolean = false) => {
       forceRefresh ? "(force refresh)" : "(cached allowed)",
     );
 
-    // Use server-side endpoint to fetch token
     const response = await fetch(`/api/verification-token`, {
       credentials: "include",
       cache: forceRefresh ? "no-cache" : "default",
     });
 
-    console.log(`[Token] Response status: ${response.status} ${response.statusText}`);
-    console.log(`[Token] Response headers:`, {
-      contentType: response.headers.get("content-type"),
-    });
-
     if (!response.ok) {
-      console.warn(`[Token] Server returned error ${response.status}, using fallback token`);
-      return FALLBACK_VERIFICATION_TOKEN;
+      if (import.meta.env.PROD) {
+        throw new Error(`Verification token endpoint error ${response.status}`);
+      }
+      console.warn(`[Token] Server returned error ${response.status}, using dev fallback`);
+      return DEV_FALLBACK_VERIFICATION_TOKEN;
     }
 
-    // Check content type before parsing
     const contentType = response.headers.get("content-type");
     if (!contentType?.includes("application/json")) {
-      console.warn(
-        `[Token] Expected JSON but got ${contentType}, using fallback token`
-      );
-      return FALLBACK_VERIFICATION_TOKEN;
+      if (import.meta.env.PROD) {
+        throw new Error(`Unexpected verification token content type: ${contentType}`);
+      }
+      return DEV_FALLBACK_VERIFICATION_TOKEN;
     }
 
-    const data = await response.json() as { token: string | null; available: boolean };
+    const data = await response.json() as { token: string | null; available?: boolean };
 
     if (!data.token) {
-      console.warn(
-        "[Token] Server returned null token, using fallback token",
-        data
-      );
-      return FALLBACK_VERIFICATION_TOKEN;
+      if (import.meta.env.PROD) {
+        throw new Error("Verification token unavailable");
+      }
+      console.warn("[Token] Server returned null token, using dev fallback", data);
+      return DEV_FALLBACK_VERIFICATION_TOKEN;
     }
 
-    console.log(
-      "[Token] ✓ Successfully fetched verification token from server:",
-      data.token?.substring(0, 20) + "...",
-    );
     return data.token;
   } catch (err) {
-    console.warn("[Token] Error fetching from server, using fallback token:", err);
-    // Return fallback token on any error to ensure API calls can proceed
-    return FALLBACK_VERIFICATION_TOKEN;
+    if (import.meta.env.PROD) {
+      throw err;
+    }
+    console.warn("[Token] Error fetching from server, using dev fallback:", err);
+    return DEV_FALLBACK_VERIFICATION_TOKEN;
   }
 };
 
@@ -114,92 +109,26 @@ export function useDataverseApi() {
 
   const getBearerToken = async () => {
     try {
-      // PRIMARY APPROACH (DEFAULT): Use OAuth2 Client Credentials flow to obtain a bearer token.
-      // Prefer calling Dataverse resource scope if configured via `DATAVERSE_RESOURCE`.
-      console.log("[Bearer] Defaulting to client-credentials flow for bearer token acquisition");
-      const clientId = import.meta.env.VITE_B2C_CLIENT_ID;
-      const clientSecret = import.meta.env.VITE_B2C_CLIENT_SECRET;
-      const tokenUrl = import.meta.env.VITE_B2C_TOKEN_URL;
-      // Use DATAVERSE_RESOURCE (tenant resource/.default) when present, otherwise fall back to configured B2C scopes
-      const scopes = import.meta.env.DATAVERSE_RESOURCE || import.meta.env.VITE_B2C_SCOPES || "openid offline_access";
-
-      console.log("[Bearer] Client credentials env check - ID:", !!clientId, "Secret:", !!clientSecret, "URL:", !!tokenUrl, "Scope:", scopes);
-
-      if (clientId && clientSecret && tokenUrl) {
-        try {
-          console.log("[Bearer] Requesting token from:", tokenUrl);
-          const params = new URLSearchParams();
-          params.append("client_id", clientId);
-          params.append("client_secret", clientSecret);
-          params.append("grant_type", "client_credentials");
-          params.append("scope", scopes);
-
-          const tokenResp = await fetch(tokenUrl, {
-            method: "POST",
-            body: params,
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          });
-
-          console.log("[Bearer] Token endpoint response:", tokenResp.status, tokenResp.statusText);
-
-          if (tokenResp.ok) {
-            const tokenBody = await tokenResp.json();
-            console.log("[Bearer] Token response keys:", Object.keys(tokenBody));
-
-            const token = tokenBody.access_token || tokenBody.id_token;
-            if (token) {
-              const expiresIn = Number(tokenBody.expires_in) || 3600;
-              console.log("[Bearer] SUCCESS: Obtained token from B2C (expires in", expiresIn, "s)");
-              console.log("[Bearer] FULL TOKEN:", token);
-              return token;
-            }
-          } else {
-            const errText = await tokenResp.text();
-            console.error("[Bearer] Token endpoint error:", tokenResp.status, errText);
-          }
-        } catch (ccErr) {
-          console.error("[Bearer] Client credentials flow failed:", ccErr);
-        }
-      } else {
-        console.warn("[Bearer] Client credentials incomplete - skipping client credentials approach");
-      }
-
-      // FALLBACK: Try MSAL if client credentials failed
-      console.log("[Bearer] Falling back to MSAL token acquisition");
-
       if (!accounts || accounts.length === 0) {
-        console.warn("[Bearer] No MSAL accounts available");
         return null;
       }
 
-      console.log("[Bearer] Attempting to acquire token silently (MSAL)");
       try {
         const response = await instance.acquireTokenSilent({
           scopes: ["openid", "profile", "offline_access"],
           account: accounts[0],
           forceRefresh: false,
         });
-
-        const token = response.idToken;
-        if (response.expiresOn) {
-          // not caching; just logging expiry info
-          console.log("[Bearer] MSAL token expires on:", response.expiresOn);
-        }
-        console.log("[Bearer] acquireTokenSilent succeeded. Token:", token.substring(0, 50) + "...");
-        console.log("[Bearer] FULL DEBUG TOKEN:", token);
-        return token;
+        return response.idToken;
       } catch (silentErr) {
-        console.warn("[Bearer] acquireTokenSilent failed:", silentErr);
-        
-        // LAST RESORT: Use static fallback token (development only)
-        const fallbackToken = import.meta.env.VITE_B2C_FALLBACK_TOKEN;
-        if (fallbackToken) {
-          console.warn("[Bearer] LAST RESORT: Using static fallback token for development");
-          console.log("[Bearer] LAST RESORT TOKEN:", fallbackToken.substring(0, 50) + "...");
-          return fallbackToken;
+        if (import.meta.env.DEV) {
+          const fallbackToken = import.meta.env.VITE_B2C_FALLBACK_TOKEN;
+          if (fallbackToken) {
+            console.warn("[Bearer] acquireTokenSilent failed; using dev fallback token");
+            return fallbackToken;
+          }
         }
-        
-        console.error("[Bearer] All token acquisition methods exhausted—returning null");
+        console.warn("[Bearer] acquireTokenSilent failed:", silentErr);
         return null;
       }
     } catch (err) {
@@ -269,13 +198,14 @@ export function useDataverseApi() {
         }
       }
 
-      // Attach server session token for /_api requests so the proxy can
-      // enforce per-user data filters server-side.
-      if (options.url.startsWith("/_api")) {
-        const sessionToken = localStorage.getItem("auth.sessionToken");
-        if (sessionToken) {
-          headers["X-Session-Token"] = sessionToken;
-        }
+      const sessionToken = localStorage.getItem("auth.sessionToken");
+      const url = options.url;
+      const needsSessionHeader =
+        url.startsWith("/_api") ||
+        url.startsWith("/api/budget") ||
+        url.startsWith("/api/dataverse-image");
+      if (needsSessionHeader && sessionToken) {
+        headers["X-Session-Token"] = sessionToken;
       }
 
       // Call through Power Pages API

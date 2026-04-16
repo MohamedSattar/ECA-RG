@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import Reveal from "@/motion/Reveal";
 import { useDataverseApi } from "@/hooks/useDataverseApi";
 import {
@@ -67,20 +67,35 @@ export default function Researches() {
       console.log("Fetched researches:", list);
       setResearches(list);
 
-      // Build lookup maps for Application Reference, Research Area and Principal Investigator
-      const [appsRes, areasRes, contactsRes] = await Promise.all([
-        callApi<{ value: any[] }>({
-          url: `/_api/${TableName.APPLICATIONS}?$select=${ApplicationKeys.APPLICATIONID},${ApplicationKeys.APPLICATIONTITLE}&$top=500`,
-          method: "GET",
-        }),
-        callApi<{ value: any[] }>({
-          url: `/_api/${TableName.RESEARCHAREAS}?$select=${ResearchAreaKeys.RESEARCHAREAID},${ResearchAreaKeys.AREANAME}&$top=500`,
-          method: "GET",
-        }),
-        callApi<{ value: any[] }>({
-          url: `/_api/${TableName.CONTACTS}?$select=${ContactKeys.CONTACTID},${ContactKeys.FULLNAME}&$top=500`,
-          method: "GET",
-        }),
+      const appIds = new Set<string>();
+      const areaIds = new Set<string>();
+      for (const row of list) {
+        const appRef = row[ResearchKeys.APPLICATIONREFERENCE] as string | undefined;
+        const area = row[ResearchKeys.RESEARCHAREA] as string | undefined;
+        if (appRef) appIds.add(appRef);
+        if (area) areaIds.add(area);
+      }
+
+      const appFilter = Array.from(appIds)
+        .map((id) => `${ApplicationKeys.APPLICATIONID} eq ${id}`)
+        .join(" or ");
+      const areaFilter = Array.from(areaIds)
+        .map((id) => `${ResearchAreaKeys.RESEARCHAREAID} eq ${id}`)
+        .join(" or ");
+
+      const [appsRes, areasRes] = await Promise.all([
+        appIds.size === 0
+          ? Promise.resolve({ value: [] as any[] })
+          : callApi<{ value: any[] }>({
+              url: `/_api/${TableName.APPLICATIONS}?$select=${ApplicationKeys.APPLICATIONID},${ApplicationKeys.APPLICATIONTITLE}&$filter=(${appFilter})`,
+              method: "GET",
+            }),
+        areaIds.size === 0
+          ? Promise.resolve({ value: [] as any[] })
+          : callApi<{ value: any[] }>({
+              url: `/_api/${TableName.RESEARCHAREAS}?$select=${ResearchAreaKeys.RESEARCHAREAID},${ResearchAreaKeys.AREANAME}&$filter=(${areaFilter})`,
+              method: "GET",
+            }),
       ]);
 
       const appMap: Record<string, string> = {};
@@ -107,12 +122,11 @@ export default function Researches() {
       setResearchAreaMap(areaMap);
 
       const principalMap: Record<string, string> = {};
-      for (const contact of contactsRes?.value ?? []) {
-        const id = contact[ContactKeys.CONTACTID] as string | undefined;
-        if (id) {
-          principalMap[id] =
-            (contact[ContactKeys.FULLNAME] as string | undefined) ?? "";
-        }
+      if (currentUserId) {
+        principalMap[currentUserId] =
+          (user?.contact?.[ContactKeys.FULLNAME] as string | undefined) ||
+          user?.name ||
+          "";
       }
       setPiMap(principalMap);
     } catch (err) {
@@ -122,7 +136,7 @@ export default function Researches() {
     } finally {
       setLoading(false);
     }
-  }, [callApi, currentUserApplicationURL]);
+  }, [callApi, currentUserApplicationURL, currentUserId, user?.name, user?.contact]);
 
   useEffect(() => {
     if (!currentUserId) return;

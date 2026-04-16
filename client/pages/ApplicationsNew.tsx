@@ -53,6 +53,12 @@ export default function ApplicationsNew() {
     setLoading(true);
     setError(null);
 
+    if (!currentUserId) {
+      setApps([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await callApi<{value:any}>({ url: currentUserApplicationURL, method: "GET" });
       const list = res?.value ?? [];
@@ -69,7 +75,7 @@ export default function ApplicationsNew() {
 
   useEffect(() => {
     loadApps();
-  }, []);
+  }, [currentUserId]);
 
   const applications = useMemo(() => apps || [], [apps]);
 
