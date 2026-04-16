@@ -6,7 +6,7 @@ import { createRoot } from "react-dom/client";
 import { Toaster as Sonner } from "@/ui/sonner";
 import { TooltipProvider } from "@/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { SiteLayout } from "@/layout/SiteLayout";
@@ -21,14 +21,22 @@ import ApplicationsNew from "./pages/ApplicationsNew";
 import GrantDetail from "./pages/GrantDetail";
 import Profile from "./pages/Profile";
 
+
 // Lazy load page components
 const Login = lazy(() => import("./pages/Login"));
 const Researches = lazy(() => import("./pages/Researches"));
 const Applications = lazy(() => import("./pages/Applications"));
 const Submissions = lazy(() => import("./pages/Submissions"));
 const FormResearch = lazy(() => import("./pages/FormResearch"));
+const ReportingDetailsAdd = lazy(
+  () => import("./pages/ReportingDetailsAdd"),
+);
+const ReportingDetailsEdit = lazy(
+  () => import("./pages/ReportingDetailsEdit"),
+);
 const FormApplication = lazy(() => import("./pages/FormApplication"));
 const Notifications = lazy(() => import("./pages/Notifications"));
+
 
 const queryClient = new QueryClient();
 
@@ -81,20 +89,24 @@ const App = () => (
                       }
                     />
                     <Route
-                      path="/applyapplication"
+                      path="/application/:id"
                       element={
                         <ProtectedRoute>
                           <FormApplication />
                         </ProtectedRoute>
                       }
-                    />
+                    />                 
                     <Route
-                      path="/researches"
+                      path="/research"
                       element={
                         <ProtectedRoute>
                           <Researches />
                         </ProtectedRoute>
                       }
+                    />
+                    <Route
+                      path="/researches"
+                      element={<Navigate to="/research" replace />}
                     />
                     <Route
                       path="/applications"
@@ -119,7 +131,16 @@ const App = () => (
                           <FormResearch />
                         </ProtectedRoute>
                       }
-                    />
+                    >
+                      <Route
+                        path="reporting/add"
+                        element={<ReportingDetailsAdd />}
+                      />
+                      <Route
+                        path="reporting/edit/:reportId"
+                        element={<ReportingDetailsEdit />}
+                      />
+                    </Route>
                     <Route
                       path="/applicationsnew"
                       element={

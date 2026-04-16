@@ -3,7 +3,7 @@
     "title": "منح البحوث ECA",
     "home": "الرئيسية",
     "applications": "الطلبات",
-    "researches": "الأبحاث",
+    "research": "البحث",
     "grants": "المنح",
     "about": "عن البرنامج",
     "login": "تسجيل الدخول",
@@ -24,8 +24,8 @@
     "date": "التاريخ"
   },
   "researches": {
-    "title": "الأبحاث",
-    "myResearches": "أبحاثي",
+    "title": "البحث",
+    "myResearches": "بحثي",
     "newResearch": "بحث جديد"
   },
   "profile": {

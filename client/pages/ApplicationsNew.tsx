@@ -7,6 +7,7 @@ import { ApplicationKeys, ContactKeys, TableName } from "@/constants/index";
 import { useAuth } from "@/state/auth";
 import { OverlayLoader } from "@/components/Loader";
 import { IconButton } from "@fluentui/react";
+import { popupInputStyles } from "@/styles/popupInputStyles";
 
 
 function StatusBadge({ value }: { value?: string | null }) {
@@ -74,28 +75,32 @@ export default function ApplicationsNew() {
 
   const onView = (item:any) => {
     const title = (item[ApplicationKeys.APPLICATIONTITLE] as string) ?? "Application";
-    navigate("/applyapplication", {
-      state: {
-        applicationId: item[ApplicationKeys.APPLICATIONID],
-        grantCycleId: item[ApplicationKeys.GRANTCYCLE],
-        researchAreaId: item[ApplicationKeys.RESEARCHAREA],
-        formType:"view",
-        item:item
-      }
-    });
+    navigate(
+      `/application?item=${item[ApplicationKeys.APPLICATIONID]}`,
+      {
+        state: {
+          applicationId: item[ApplicationKeys.APPLICATIONID],
+          grantCycleId: item[ApplicationKeys.GRANTCYCLE],
+          researchAreaId: item[ApplicationKeys.RESEARCHAREA],
+          item: item,
+        },
+      },
+    );
   };
 
   const onEdit = (item: any) => {
     const title = (item[ApplicationKeys.APPLICATIONTITLE] as string) ?? "Application";
-    navigate("/applyapplication", {
-      state: {
-        applicationId: item[ApplicationKeys.APPLICATIONID],
-        grantCycleId: item[ApplicationKeys.GRANTCYCLE],
-        researchAreaId: item[ApplicationKeys.RESEARCHAREA],
-        formType:"edit",
-        item: item,
-      }
-    });
+    navigate(
+      `/application?item=${item[ApplicationKeys.APPLICATIONID]}`,
+      {
+        state: {
+          applicationId: item[ApplicationKeys.APPLICATIONID],
+          grantCycleId: item[ApplicationKeys.GRANTCYCLE],
+          researchAreaId: item[ApplicationKeys.RESEARCHAREA],
+          item: item,
+        },
+      },
+    );
 
   };
 
@@ -111,7 +116,7 @@ export default function ApplicationsNew() {
             </div>
 
             <Link
-              to="/applyapplication"
+              to="/application"
               className="inline-flex shrink-0 items-center rounded-md bg-[#e78f6a] px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-[#de835c]"
             >
               Apply for a Grant
@@ -181,10 +186,11 @@ export default function ApplicationsNew() {
                               />                                
 
                               <IconButton
-                                iconProps={{iconName:"Edit"}}
+                                iconProps={{ iconName: "Edit" }}
                                 title="Edit Application"
-                                onClick={() => onEdit(app)}                          
+                                onClick={() => onEdit(app)}
                                 aria-label={`Edit ${title}`}
+                                styles={popupInputStyles.editButton}
                               />
                             </div>
                           </td>

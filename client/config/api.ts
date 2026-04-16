@@ -9,9 +9,7 @@ export const API_CONFIG = {
    * Configured via VITE_PUBLIC_API_BASE_URL environment variable
    */
   BASE_URL:
-    import.meta.env.VITE_PUBLIC_API_BASE_URL ||
-    "https://research-grants-spa.powerappsportals.com",
-
+    import.meta.env.VITE_PUBLIC_API_BASE_URL,
   /**
    * API endpoints
    */
@@ -43,37 +41,37 @@ export const API_CONFIG = {
   normalizeImageUrl(url: string | null | undefined): string | null {
     if (!url) return null;
 
-    let cleanUrl = url;
+    let cleanUrl = url.replace(/&amp;/g, "&");
 
-    // Decode HTML entities (e.g., &amp; -> &)
-    cleanUrl = cleanUrl.replace(/&amp;/g, "&");
-
-    console.log("[normalizeImageUrl] Input URL:", cleanUrl);
-
-    // Remove leading slash if URL contains an absolute URL (e.g., /https://...)
     if (cleanUrl.startsWith("/http://") || cleanUrl.startsWith("/https://")) {
       cleanUrl = cleanUrl.substring(1);
     }
 
-    // If it's already an absolute URL from our portal, return as-is
-    if (cleanUrl.startsWith("https://") || cleanUrl.startsWith("http://")) {
-      console.log("[normalizeImageUrl] Already absolute URL, returning as-is");
-      return cleanUrl;
-    }
+    const normalizedUrl = cleanUrl.startsWith("https://") || cleanUrl.startsWith("http://")
+      ? cleanUrl
+      : cleanUrl.startsWith("/")
+        ? `${this.BASE_URL}${cleanUrl}`
+        : `${this.BASE_URL}/${cleanUrl}`;
 
-    // If URL is relative path (starts with /), prepend the base portal URL
-    if (cleanUrl.startsWith("/")) {
-      const fullUrl = `${this.BASE_URL}${cleanUrl}`;
-      console.log(
-        "[normalizeImageUrl] Relative path converted to full URL:",
-        fullUrl,
-      );
-      return fullUrl;
-    }
+    try {
+      const baseUrl = new URL(this.BASE_URL);
+      const parsedUrl = new URL(normalizedUrl);
+      const isDataverseImageDownload =
+        parsedUrl.origin === baseUrl.origin &&
+        parsedUrl.pathname.toLowerCase() === "/image/download.aspx";
 
-    // Fallback: prepend base URL
-    console.log("[normalizeImageUrl] No pattern matched, prepending base URL");
-    return `${this.BASE_URL}/${cleanUrl}`;
+      if (isDataverseImageDownload) {
+        if (!parsedUrl.searchParams.has("full")) {
+          parsedUrl.searchParams.set("full", "true");
+        }
+
+        return `/api/dataverse-image?full=true&url=${encodeURIComponent(parsedUrl.toString())}`;
+      }
+
+      return parsedUrl.toString();
+    } catch {
+      return normalizedUrl;
+    }
   },
 };
 

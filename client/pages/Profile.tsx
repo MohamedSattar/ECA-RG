@@ -62,9 +62,15 @@ export default function FormApplication() {
 
     try {
       // Fetch application data
-      const res = await callApi<{ value: any[] }>({
-        url: `/_api/${TableName.CONTACTS}?$filter=${ContactKeys.EMAILADDRESS1} eq '${user.email}'`,
+      // Call the local proxy so the server can attach the server-side token and avoid CORS issues.
+      const prefer = 'odata.include-annotations="OData.Community.Display.V1.FormattedValue"';
+      let res = await callApi<{ value: any[]; status?: number }>({
+        url: `/_api/${TableName.CONTACTS}?$select=*&$filter=${ContactKeys.EMAILADDRESS1} eq '${user.email}'&$expand=parentcustomerid_account($select=name)`,
         method: "GET",
+        headers: { 
+          "Cache-Control": "no-cache",
+          "Prefer": prefer 
+        }
       });
 
       const app = res?.value?.[0];
@@ -82,9 +88,8 @@ export default function FormApplication() {
         preferredMethodOfContact:
           app[ContactKeys.PREFERREDCONTACTMETHODCODE] || 0,
         contactId: app[ContactKeys.CONTACTID] || "",
-        Institute: app[ContactKeys.institute] || "",
+        Institute: app?.parentcustomerid_account?.name || "",
       }));
-      setShowLoader(false);
     } catch (error) {
       console.error("Failed to load application details:", error);
       // setDialogMessage(
@@ -120,11 +125,11 @@ export default function FormApplication() {
         mobilePhone: form.mobilePhone,
       });
 
-      // Format the API URL - Contact ID should be wrapped in single quotes and parentheses
-      const apiUrl = `/_api/${TableName.CONTACTS}('${form.contactId}')`;
+      // Format the API URL - Contact ID in parentheses without quotes
+      const apiUrl = `/_api/${TableName.CONTACTS}(${form.contactId})`;
       console.log("[Profile] API URL:", apiUrl);
 
-      const res = await callApi({
+      let res = await callApi({
         url: apiUrl,
         method: "PATCH",
         data: {

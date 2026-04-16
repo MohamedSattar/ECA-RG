@@ -4,7 +4,9 @@ import { IconButton } from "@fluentui/react/lib/Button";
 import { Icon } from "@fluentui/react/lib/Icon";
 import React from "react";
 import { HEADING_TEXT } from "@/styles/constants";
+import { popupInputStyles } from "@/styles/popupInputStyles";
 import { useToast } from "@/hooks/use-toast";
+import { SectionGuidelineHint } from "@/components/SectionGuidelineHint";
 
 interface FileUploadSectionResearchProps {
   files: { file: File; action: "new" | "existing" | "remove" }[];
@@ -13,6 +15,7 @@ interface FileUploadSectionResearchProps {
   ) => void;
   onFileRemove: (fileKey: string) => void;
   form: any;
+  expandForGuide?: boolean;
 }
 
 function getFileKey(file: File): string {
@@ -21,9 +24,13 @@ function getFileKey(file: File): string {
 
 export const FileUploadSectionResearch: React.FC<
   FileUploadSectionResearchProps
-> = ({ files, onFilesAdd, onFileRemove, form }) => {
+> = ({ files, onFilesAdd, onFileRemove, form, expandForGuide = false }) => {
   const { toast } = useToast();
-  const [showSection, setShowSection] = React.useState(true);
+  const [showSection, setShowSection] = React.useState(false);
+
+  React.useEffect(() => {
+    if (expandForGuide) setShowSection(true);
+  }, [expandForGuide]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFilesSelect = (newFiles: File[]) => {
@@ -64,14 +71,20 @@ export const FileUploadSectionResearch: React.FC<
 
   return (
     <div className="mt-8 rounded-xl border bg-white p-6">
-      <div className="flex items-center justify-between">
-        <h2 className={HEADING_TEXT}>Files</h2>
+      <div className="flex items-center justify-between min-h-[52px]">
+        <div className="flex items-center gap-2">
+          <h2 className={HEADING_TEXT}>Extra Attachments</h2>
+          <SectionGuidelineHint
+            sectionName="Extra Attachments"
+            description="Attach supporting evidence files that validate progress, outputs, and dissemination activities across the reporting period."
+          />
+        </div>
         <IconButton
           iconProps={{
             iconName: showSection ? "ChevronUp" : "ChevronDown",
           }}
           onClick={() => setShowSection((prev) => !prev)}
-          ariaLabel="Toggle files section"
+          ariaLabel="Toggle extra attachments"
         />
       </div>
       {showSection && (
@@ -180,13 +193,14 @@ export const FileUploadSectionResearch: React.FC<
                     />
                     {form.type !== "view" && (
                       <IconButton
-                        className="text-red-600"
                         iconProps={{ iconName: "Delete" }}
                         onClick={(e) => {
                           e.stopPropagation();
                           onFileRemove(key);
                         }}
                         title="Remove file"
+                        ariaLabel="Remove file"
+                        styles={popupInputStyles.deleteButton}
                       />
                     )}
                   </div>

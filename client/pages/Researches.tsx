@@ -1,10 +1,17 @@
 import { Link, useNavigate } from "react-router-dom";
 import Reveal from "@/motion/Reveal";
 import { useDataverseApi } from "@/hooks/useDataverseApi";
-import { ContactKeys, ResearchKeys, TableName } from "@/constants/index";
+import {
+  ApplicationKeys,
+  ContactKeys,
+  ResearchAreaKeys,
+  ResearchKeys,
+  TableName,
+} from "@/constants/index";
 import { useAuth } from "@/state/auth";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { IconButton } from "@fluentui/react/lib/Button";
+import { popupInputStyles } from "@/styles/popupInputStyles";
 
 function StatusBadge({ value }: { value?: string | null }) {
   const cls =
@@ -33,25 +40,81 @@ export default function Researches() {
   const [researches, setResearches] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [applicationMap, setApplicationMap] = useState<Record<string, string>>(
+    {},
+  );
+  const [researchAreaMap, setResearchAreaMap] = useState<
+    Record<string, string>
+  >({});
+  const [piMap, setPiMap] = useState<Record<string, string>>({});
 
   const currentUserId = user?.contact?.[ContactKeys.CONTACTID] || "";
 
-  const select = `*,${ResearchKeys.PRINCIPALINVESTIGATOR}`;
+  const select = `${ResearchKeys.RESEARCHID},${ResearchKeys.RESEARCHTITLE},${ResearchKeys.RESEARCHAREA},${ResearchKeys.APPLICATIONREFERENCE},${ResearchKeys.PRINCIPALINVESTIGATOR},${ResearchKeys.RESEARCHSTATUS},${ResearchKeys.STATUSCODE}`;
   const filter = `${ResearchKeys.PRINCIPALINVESTIGATOR} eq ${currentUserId}`;
   const currentUserApplicationURL = `/_api/${TableName.RESEARCHES}?$select=${select}&$filter=${filter}`;
 
-  const loadResearches = async () => {
+  const loadResearches = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const res = await callApi<{ value: any }>({
+      const res = await callApi<{ value: any[] }>({
         url: currentUserApplicationURL,
         method: "GET",
       });
       const list = res?.value ?? [];
-      console.log("Fetched applications:", list);
+      console.log("Fetched researches:", list);
       setResearches(list);
+
+      // Build lookup maps for Application Reference, Research Area and Principal Investigator
+      const [appsRes, areasRes, contactsRes] = await Promise.all([
+        callApi<{ value: any[] }>({
+          url: `/_api/${TableName.APPLICATIONS}?$select=${ApplicationKeys.APPLICATIONID},${ApplicationKeys.APPLICATIONTITLE}&$top=500`,
+          method: "GET",
+        }),
+        callApi<{ value: any[] }>({
+          url: `/_api/${TableName.RESEARCHAREAS}?$select=${ResearchAreaKeys.RESEARCHAREAID},${ResearchAreaKeys.AREANAME}&$top=500`,
+          method: "GET",
+        }),
+        callApi<{ value: any[] }>({
+          url: `/_api/${TableName.CONTACTS}?$select=${ContactKeys.CONTACTID},${ContactKeys.FULLNAME}&$top=500`,
+          method: "GET",
+        }),
+      ]);
+
+      const appMap: Record<string, string> = {};
+      for (const app of appsRes?.value ?? []) {
+        const id = app[ApplicationKeys.APPLICATIONID] as string | undefined;
+        if (id) {
+          appMap[id] =
+            (app[ApplicationKeys.APPLICATIONTITLE] as string | undefined) ??
+            "";
+        }
+      }
+      setApplicationMap(appMap);
+
+      const areaMap: Record<string, string> = {};
+      for (const area of areasRes?.value ?? []) {
+        const id = area[ResearchAreaKeys.RESEARCHAREAID] as
+          | string
+          | undefined;
+        if (id) {
+          areaMap[id] =
+            (area[ResearchAreaKeys.AREANAME] as string | undefined) ?? "";
+        }
+      }
+      setResearchAreaMap(areaMap);
+
+      const principalMap: Record<string, string> = {};
+      for (const contact of contactsRes?.value ?? []) {
+        const id = contact[ContactKeys.CONTACTID] as string | undefined;
+        if (id) {
+          principalMap[id] =
+            (contact[ContactKeys.FULLNAME] as string | undefined) ?? "";
+        }
+      }
+      setPiMap(principalMap);
     } catch (err) {
       console.error("Failed to load applications:", err);
       setError("Unable to load applications. Please try again later.");
@@ -59,40 +122,24 @@ export default function Researches() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [callApi, currentUserApplicationURL]);
 
   useEffect(() => {
+    if (!currentUserId) return;
     loadResearches();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only run when contact ID is available
+  }, [currentUserId]);
 
   const applicationResearches = useMemo(() => researches || [], [researches]);
 
-  const onView = (item: any) => {
-    navigate(
-      `/applyresearch?applicationId=${item[ResearchKeys.APPLICATIONREFERENCE]}&researchId=${item[ResearchKeys.RESEARCHID]}&formType=view`,
-      {
-        state: {
-          applicationId: item[ResearchKeys.APPLICATIONREFERENCE],
-          researchId: item[ResearchKeys.RESEARCHID],
-          formType: "view",
-          item: item,
-        },
+  const openResearch = (item: any) => {
+    const id = item[ResearchKeys.RESEARCHID];
+    navigate(`/applyresearch?researchId=${id}`, {
+      state: {
+        researchId: id,
+        item,
       },
-    );
-  };
-
-  const onEdit = (item: any) => {
-    navigate(
-      `/applyresearch?applicationId=${item[ResearchKeys.APPLICATIONREFERENCE]}&researchId=${item[ResearchKeys.RESEARCHID]}&formType=edit`,
-      {
-        state: {
-          applicationId: item[ResearchKeys.APPLICATIONREFERENCE],
-          researchId: item[ResearchKeys.RESEARCHID],
-          formType: "edit",
-          item: item,
-        },
-      },
-    );
+    });
   };
 
 
@@ -104,7 +151,7 @@ export default function Researches() {
           <div className="container py-4 md:py-4 grid gap-10 md:grid-cols-2 items-center">
             <div className="max-w-2xl">
               <h1 className="text-4xl md:text-6xl font-extrabold leading-tight tracking-tight text-white">
-                My Research Status
+                My Research
               </h1>
             </div>
 
@@ -158,38 +205,43 @@ export default function Researches() {
                         } hover:shadow-sm transition-shadow`}
                       >
                         <td className="px-6 py-3 font-medium text-[#1e293b]">
-                          {item[ResearchKeys.RESEARCHTITLE]}
+                          {item[ResearchKeys.RESEARCHTITLE] || "—"}
                         </td>
                         <td className="px-6 py-3 font-medium text-[#1e293b]">
-                          {item[ResearchKeys.APPLICATIONREFERENCE_FORMATTED]}
+                          {applicationMap[
+                            item[ResearchKeys.APPLICATIONREFERENCE] as string
+                          ] || "—"}
                         </td>
                         <td className="px-6 py-3 font-medium text-[#1e293b]">
-                          {item[ResearchKeys.RESEARCHAREA_FORMATTED]}
+                          {researchAreaMap[
+                            item[ResearchKeys.RESEARCHAREA] as string
+                          ] || "—"}
                         </td>
                         <td className="px-6 py-3 font-medium text-[#1e293b]">
-                          {item[ResearchKeys.PRINCIPALINVESTIGATOR_FORMATTED]}
+                          {piMap[
+                            item[ResearchKeys.PRINCIPALINVESTIGATOR] as string
+                          ] || "—"}
                         </td>
                         <td className="px-6 py-3">
-                          {item[ResearchKeys.RESEARCHSTATUS_FORMATTED] &&
-                            item[ResearchKeys.RESEARCHSTATUS_FORMATTED] !=
-                              null && (
-                              <StatusBadge
-                                value={
-                                  item[ResearchKeys.RESEARCHSTATUS_FORMATTED]
-                                }
-                              />
-                            )}
+                          <StatusBadge
+                            value={
+                              (item[ResearchKeys.STATUSCODE] as number) === 1
+                                ? "Active"
+                                : (item[ResearchKeys.STATUSCODE] as number) ===
+                                  0
+                                  ? "Inactive"
+                                  : undefined
+                            }
+                          />
                         </td>
                         <td className="px-6 py-3">
                           <div className="flex items-center gap-2">
                             <IconButton
-                              onClick={() => onEdit(item)}
-                              title="Edit Research"
-                              aria-label={`Edit ${item.title}`}
+                              onClick={() => openResearch(item)}
+                              title="Open research"
+                              aria-label={`Open ${item.title}`}
                               iconProps={{ iconName: "Edit" }}
-                              styles={{
-                                root: { color: "#1D2054" },
-                              }}
+                              styles={popupInputStyles.editButton}
                             />
                           </div>
                         </td>

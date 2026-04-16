@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams, useParams } from "react-router-dom";
 import Reveal from "@/motion/Reveal";
 import { useAuth } from "@/state/auth";
 import { toast } from "@/ui/use-toast";
@@ -16,7 +16,7 @@ import {
 import { Label } from "@fluentui/react/lib/Label";
 import { Dropdown, IDropdownOption } from "@fluentui/react/lib/Dropdown";
 import { BudgetCategorys } from "@/constants/options";
-import { ContactFields, GrantCycleFields } from "@/constants";
+import { APPLICATION_STATUS_LABELS, ContactFields, GrantCycleFields, ResearchKeys } from "@/constants";
 import {
   ApplicationKeys,
   ApplicationTeamMemberKeys,
@@ -46,6 +46,8 @@ import { HEADING_TEXT } from "@/styles/constants";
 import { FileUploadSection } from "@/components/FileUploadSection";
 import WorkflowTimeline from "@/components/WorkFlowHistory";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/ui/dialog";
+import { popupInputStyles } from "@/styles/popupInputStyles";
+import { getApplicationFormTypeFromRecord } from "@/constants/applicationFormMode";
 
 interface TeamMember {
   id: string;
@@ -65,10 +67,14 @@ interface FormState {
   grantCycle: string | null;
   researchArea: string | null;
   mainApplicant: string;
+  grantCycleDisplayValue: string | null;
+  researchAreaDisplayValue: string | null;
+  mainApplicantDisplayValue: string;
   applicationFiles: { file: File; action: "new" | "existing" | "remove" }[];
   generalFiles: { file: File; action: "new" | "existing" | "remove" }[];
   team: TeamMember[];
   type: "new" | "edit" | "view";
+  status:string;
   applicationNumber?: string;
 }
 
@@ -86,11 +92,15 @@ const INITIAL_FORM_STATE: FormState = {
   grantCycle: null,
   researchArea: null,
   mainApplicant: "",
+  grantCycleDisplayValue:"",
+  researchAreaDisplayValue: "",
+  mainApplicantDisplayValue: "",
   applicationFiles: [],
   generalFiles: [],
   team: [],
   budgetHeaders: null,
   budgetLineItems: [],
+  status:"",
   type: "new",
 };
 
@@ -157,13 +167,13 @@ const processTeamMembers = async (
 
 // Helper function to get application number
 const getApplicationNumber = async (
-  formType: string,
+  hasExistingApplication: boolean,
   applicationId: string,
-  stateApplicationNumber: string | undefined,
   callApi: (options: any) => Promise<any>,
+  cachedNumber?: string | null,
 ): Promise<string> => {
-  if (formType === "edit" && stateApplicationNumber) {
-    return stateApplicationNumber;
+  if (hasExistingApplication && cachedNumber) {
+    return cachedNumber;
   }
 
   const res = await callApi({
@@ -238,73 +248,86 @@ const processFileUploads = async (
   await Promise.all([...applicationUploadPromises, ...generalUploadPromises]);
 };
 
-// Helper function to process budget data
+// All budget operations use /api/budget/* (same as listing and delete)
 const processBudgetData = async (
   budgetHeader: BudgetHeader | null,
   budgetLineItems: BudgetLineItem[],
   callApi: (options: any) => Promise<any>,
 ): Promise<void> => {
-  if (!budgetHeader) {
-    console.log("No budget header to process");
-    return;
-  }
+  if (!budgetHeader) return;
 
-  let budgetHeaderId = budgetHeader.id;
-  // console.log(budgetLineItems, "budgetLineItems in processBudgetData");
-  // console.log(budgetHeaderId, "budgetHeaderId in processBudgetData");
-  // Process budget line items in parallel
+  const budgetHeaderId = budgetHeader.id;
+
   const lineItemPromises = budgetLineItems
     .filter((item) => item.action !== "remove")
     .map(async (item) => {
-      const method = item.action === "existing" ? "PATCH" : "POST";
-      const url =
-        item.action === "existing"
-          ? `/_api/${TableName.BUDGETLINEITEMS}(${item.id})`
-          : `/_api/${TableName.BUDGETLINEITEMS}`;
-      // console.log(lineItemPromises, "lineItemPromises");
-      const data: Record<string, any> = {
-        [BudgetLineItemFields.LINEITEMNAME]: item.prmtk_lineitemname,
-        [BudgetLineItemFields.DESCRIPTION]: item.prmtk_description,
-        [BudgetLineItemFields.AMOUNT]: item.prmtk_amount,
-        [BudgetLineItemFields.CATEGORY]: item.prmtk_category,
-      };
-
-      // Only add binding for new items
-      if (item.action === "new") {
-        // console.log("new item", item);
-        data[BudgetLineItemFields.BUDGETHEADER_ID] =
-          `/${TableName.BUDGETHEADERS}(${budgetHeaderId})`;
+      const res =
+        item.action === "existing" && item.id
+          ? await callApi({
+              url: `/api/budget/line-items/${item.id}`,
+              method: "PATCH",
+              data: {
+                prmtk_lineitemname: item.prmtk_lineitemname,
+                prmtk_description: item.prmtk_description,
+                prmtk_amount: item.prmtk_amount,
+                prmtk_category: item.prmtk_category,
+              },
+            })
+          : await callApi({
+              url: "/api/budget/line-items",
+              method: "POST",
+              data: {
+                budgetHeaderId,
+                prmtk_lineitemname: item.prmtk_lineitemname,
+                prmtk_description: item.prmtk_description,
+                prmtk_amount: item.prmtk_amount,
+                prmtk_category: item.prmtk_category,
+              },
+            });
+      if (res?.status >= 400) {
+        const msg = (res?.error?.message ?? res?.error?.details ?? res?.message) || "Budget request failed";
+        throw new Error(String(msg));
       }
-      const response = await callApi({ url, method, data });
-      // console.log("response new item", response);
-      // If it's a POST request, log or return the created item details
-      if (method === "POST") {
-        // console.log("Created budget line item:", response);
-        return response; // Return the created item details if needed
-      }
-
-      return response;
+      return res;
     });
 
-  // Handle removals
   const removeLineItemPromises = budgetLineItems
     .filter((item) => item.action === "remove" && item.id)
-    .map(async (item) =>
-      callApi({
-        url: `/_api/${TableName.BUDGETLINEITEMS}(${item.id})`,
-        method: "DELETE",
-      }),
-    );
+    .map(async (item) => {
+      const res = await callApi({ url: `/api/budget/line-items/${item.id}`, method: "DELETE" });
+      if (res?.status >= 400) throw new Error("Budget delete failed");
+      return res;
+    });
 
   await Promise.all([...lineItemPromises, ...removeLineItemPromises]);
 };
 
+/** Create a budget header for an application (POST /api/budget/headers). */
+const createBudgetHeader = async (
+  applicationId: string,
+  callApi: (options: any) => Promise<any>,
+): Promise<string> => {
+  const res = (await callApi({
+    url: "/api/budget/headers",
+    method: "POST",
+    data: { applicationId, budgetName: "Application Budget", totalBudget: 0 },
+  })) as { headers?: Headers };
+  const entityId = res?.headers?.get?.("OData-EntityId");
+  const match = entityId?.match(/\(([^)]+)\)/);
+  if (!match?.[1]) {
+    throw new Error("Failed to get budget header id from response.");
+  }
+  return match[1];
+};
+
 interface GeneralInformationSectionProps {
   form: FormState;
+  readOnly: boolean;
   onTitleChange: (value: string) => void;
   onAbstractChange: (value: string) => void;
   onGrantCycleChange: (value: string | null) => void;
   onResearchAreaChange: (value: string | null) => void;
+  onMainApplicantChange: (value: string | null) => void;
   grantCycleId?: string | null;
   researchAreaId?: string | null;
   userAdxUserId?: string;
@@ -312,20 +335,21 @@ interface GeneralInformationSectionProps {
 
 const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
   form,
+  readOnly,
   onTitleChange,
   onAbstractChange,
   onGrantCycleChange,
   onResearchAreaChange,
+  onMainApplicantChange,
   grantCycleId,
   researchAreaId,
   userAdxUserId,
 }) => {
   const { user } = useAuth();
-  const [searchParams] = useSearchParams();
-  const formType = searchParams.get("formType") || "new";
   return (
     <Reveal className="mt-8">
       <div className="mt-4 grid gap-6 md:grid-cols-2">
+        {/*
         <div>
           <Label>Grant Cycle</Label>
           <div className="mt-1">
@@ -337,10 +361,11 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
               searchField={GrantCycleKeys.CYCLENAME}
               tableName={TableName.GRANTCYCLES}
               maxSelection={1}
-              disabled={formType === "view"}
+              disabled={readOnly}
               label="Grant Cycle"
               cascadeField={GrantCycleKeys.GRANTCYCLEID}
               cascadeValue={grantCycleId}
+              readonly={true}
               isDefaultSelected={grantCycleId != null}
               onSelect={(values) => {
                 onGrantCycleChange(
@@ -367,7 +392,8 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
               cascadeField={ResearchAreaKeys.RESEARCHAREAID}
               cascadeValue={researchAreaId}
               isDefaultSelected={researchAreaId != null}
-              disabled={formType === "view"}
+              readonly={true}
+              disabled={readOnly}
               onSelect={(values) => {
                 onResearchAreaChange(
                   values && values.length > 0
@@ -378,6 +404,33 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
             />
           </div>
         </div>
+          <div>
+          <Label>Main Applicant Name</Label>
+          <div className="mt-1">
+            <LookupPicker
+              key={`research-Applicant-${form.mainApplicant || "none"}`}
+              displayField={ContactFields.FULLNAME}
+              keyField={ContactFields.CONTACTID}
+              secondaryField={ContactFields.EMAILADDRESS1}
+              searchField={ContactFields.EMAILADDRESS1}
+              tableName={TableName.CONTACTS}
+              maxSelection={1}
+              label="Main Applicant Name"
+              cascadeField={ContactFields.CONTACTID}
+              cascadeValue={form.mainApplicant}
+              isDefaultSelected={form.mainApplicant != null}
+              disabled={readOnly}
+              onSelect={(values) => {
+                onMainApplicantChange(
+                  values && values.length > 0
+                    ? values[0][ContactFields.CONTACTID]
+                    : null,
+                );
+              }}
+            />
+          </div>
+        </div>
+*/}
         <div className="md:col-span-2">
           <Label htmlFor="title">
             Title <span className="text-red-500">*</span>
@@ -388,7 +441,7 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
               value={form.title}
               onChange={(e, newValue) => onTitleChange(newValue || "")}
               placeholder="Enter project title"
-              disabled={formType === "view"}
+              disabled={readOnly}
               borderless
             />
           </div>
@@ -402,7 +455,7 @@ const GeneralInformationSection: React.FC<GeneralInformationSectionProps> = ({
               onChange={(e, newValue) => onAbstractChange(newValue || "")}
               multiline
               rows={5}
-              disabled={formType === "view"}
+              disabled={readOnly}
               placeholder="Provide a concise abstract"
               borderless
             />
@@ -436,19 +489,25 @@ export default function FormApplication() {
   const { user } = useAuth();
   const { state } = useLocation();
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
 
-  const applicationId = searchParams.get("item");
-  const grantCycleId = searchParams.get("grantCycleId");
-  const researchAreaId = searchParams.get("researchAreaId");
-  const formType = searchParams.get("formType") || "new";
-  const applicationNumber = searchParams.get("applicationNumber");
-  const status = searchParams.get("status");
+  const applicationId =
+    id && id !== "new" ? id : undefined;
+  const grantCycleId = searchParams.get("grantCycleId") ?? "";
+  const researchAreaId = searchParams.get("researchAreaId") ?? "";
+  /** No id or `new` → new application; edit/view come from loaded record. */
+  const isNewApplication = !applicationId;
+  const applicationNumberFromQuery = searchParams.get("applicationNumber");
+  const statusFromQuery = searchParams.get("status");
 
   const [form, setForm] = useState<FormState>(() => ({
     ...INITIAL_FORM_STATE,
     submissionDate: formatDate(new Date()),
   }));
+  const displayApplicationNumber =
+    form.applicationNumber ?? applicationNumberFromQuery ?? "";
+  const displayStatus = form.status || statusFromQuery || "";
   // console.log(form);
 
   const [showGeneral, setShowGeneral] = useState(true);
@@ -466,7 +525,18 @@ export default function FormApplication() {
   const [showWorkflowDialog, setShowWorkflowDialog] = useState(false);
   const { callApi } = useDataverseApi();
   const { triggerFlow } = useFlowApi();
-
+  const getStatusLabel = (app: any): string => {
+    const statusCode = app[ApplicationKeys.STATUS];
+    const num =
+      statusCode !== undefined && statusCode !== null
+        ? Number(statusCode)
+        : null;
+    if (num !== null && APPLICATION_STATUS_LABELS[num as keyof typeof APPLICATION_STATUS_LABELS]) {
+      return APPLICATION_STATUS_LABELS[num as keyof typeof APPLICATION_STATUS_LABELS];
+    }
+    return (app[ApplicationKeys.STATUS_FORMATTED] as string) ?? "Unknown";
+  };
+  
   const mapApplicationToForm = (
     app: any,
     files: any[],
@@ -476,6 +546,9 @@ export default function FormApplication() {
     grantCycle: app[ApplicationKeys.GRANTCYCLE] || null,
     researchArea: app[ApplicationKeys.RESEARCHAREA] || null,
     mainApplicant: app[ApplicationKeys.MAINAPPLICANT] || "",
+    grantCycleDisplayValue: app?.prmtk_GrantCycle?.prmtk_cyclename,
+    researchAreaDisplayValue:app?.prmtk_ResearchArea?.prmtk_areaname,
+    mainApplicantDisplayValue: app?.prmtk_MainApplicant?.fullname,
     submissionDate:
       app[ApplicationKeys.SUBMISSIONDATE_FORMATTED] || formatDate(new Date()),
     team: (app[ExpandRelations.APPLICATION_TEAM_MEMBER] || []).map(
@@ -489,7 +562,8 @@ export default function FormApplication() {
         action: "existing" as const,
       }),
     ),
-    type: formType === "view" ? "view" : "edit",
+    type: getApplicationFormTypeFromRecord(app as Record<string, unknown>),
+    status: getStatusLabel(app),
     applicationFiles: (() => {
       // Find the first PDF for Main Proposal
       const firstPdf = files.find(
@@ -543,6 +617,7 @@ export default function FormApplication() {
       return [];
     }
   };
+     
 
   const loadApplicationDetails = useCallback(
     async (applicationId: string) => {
@@ -563,47 +638,30 @@ export default function FormApplication() {
 
         // Fetch application data with user filter
         const res = await callApi<{ value: any[] }>({
-          url: `/_api/${TableName.APPLICATIONS}?$filter=${ApplicationKeys.APPLICATIONID} eq ${applicationId} and ${ApplicationKeys.MAINAPPLICANT} eq ${currentUserContactId}&$select=*&$expand=${ExpandRelations.APPLICATION_TEAM_MEMBER}`,
+          url: `/_api/${TableName.APPLICATIONS}?$filter=${ApplicationKeys.APPLICATIONID} eq ${applicationId} and ${ApplicationKeys.MAINAPPLICANT} eq ${currentUserContactId}&$select=*&$expand=${ExpandRelations.APPLICATION_TEAM_MEMBER},prmtk_MainApplicant($select=fullname),prmtk_ResearchArea($select=prmtk_areaname),prmtk_GrantCycle($select=prmtk_cyclename)`,
           method: "GET",
         });
 
         const app = res?.value?.[0];
         if (!app) {
           throw new Error("No application found with the provided ID.");
-          return;
-        }
-        if (
-          app?.prmtk_status != 1 &&
-          app?.prmtk_status != 3 &&
-          formType !== "view"
-        ) {
-          toast({
-            title: "Info",
-            description: "This application cannot be viewed.",
-          });
-          navigate(`/applications`);
-          return;
         }
 
-        // Load files in parallel with budget details
-        setForm((prev) => ({
-          ...prev,
-          grantCycle: app[ApplicationKeys.GRANTCYCLE] || "",
-          researchArea: app[ApplicationKeys.RESEARCHAREA] || "",
-          budgetHeaders: app[ApplicationKeys.BUDGETHEADERS] || null,
-        }));
         const applicationNumber = app[ApplicationKeys.APPLICATIONNUMBER] || "";
+
         const [files] = await Promise.all([
           loadApplicationFiles(applicationNumber),
         ]);
-        // console.log(files);
-        // console.log(budget);
 
-        // Update form state with mapped data
+        // Update form state with mapped data (do not set budget here; loadBudgetDetails binds it)
         setForm((prev) => ({
           ...prev,
           ...mapApplicationToForm(app, files),
         }));
+
+        // Bind budget details for this application (use app's budget header lookup when present)
+        const budgetHeaderIdFromApp = app[ApplicationKeys.BUDGETHEADER] ?? app._prmtk_budgetheader_value;
+        await loadBudgetDetails(applicationId, budgetHeaderIdFromApp);
       } catch (error) {
         console.error("Failed to load application details:", error);
         // setDialogMessage(
@@ -620,7 +678,7 @@ export default function FormApplication() {
         setShowLoader(false);
       }
     },
-    [callApi, triggerFlow, formType, user],
+    [callApi, triggerFlow, user],
   );
   const loadWorkFlowHistory = useCallback(
     async (applicationId: string) => {
@@ -679,6 +737,7 @@ export default function FormApplication() {
       prmtk_amount: parseFloat(item[BudgetLineItemFields.AMOUNT] || "0"),
       prmtk_category: item[BudgetLineItemFields.CATEGORY] || "",
       action: "existing" as const,
+      justification:item["prmtk_justification"] || ""
     }));
   };
 
@@ -694,33 +753,47 @@ export default function FormApplication() {
     };
   };
 
-  const loadBudgetDetails = async (applicationId: string): Promise<void> => {
-    if (formType === "new") {
-      return;
-    }
+  const loadBudgetDetails = async (
+    applicationId: string,
+    budgetHeaderIdFromApp?: string | null,
+  ): Promise<void> => {
+    if (isNewApplication) return;
     try {
-      const res = await callApi<{ value: any[] }>({
-        url: `/_api/${TableName.BUDGETHEADERS}?$filter=${BudgetHeaderFields.APPLICATION} eq ${applicationId}`,
-        method: "GET",
-      });
-      const budgetData = res.value?.[0];
+      let budgetData: any = null;
+      let budgetHeaderId: string | null = null;
 
-      if (!budgetData) {
-        return;
+      if (budgetHeaderIdFromApp) {
+        const headerRes = await callApi<any>({
+          url: `/api/budget/headers/${budgetHeaderIdFromApp}`,
+          method: "GET",
+        });
+        budgetData = headerRes && headerRes[BudgetHeaderFields.BUDGETHEADERID] != null
+          ? headerRes
+          : headerRes?.value?.[0];
+        budgetHeaderId = budgetHeaderIdFromApp;
       }
 
-      const res2 = await callApi<{ value: any[] }>({
-        url: `/_api/${TableName.BUDGETLINEITEMS}?$filter=${BudgetLineItemFields.BUDGETHEADER} eq ${budgetData[BudgetHeaderFields.BUDGETHEADERID]}`,
+      if (!budgetData) {
+        const res = await callApi<any>({
+          url: `/api/budget/headers?applicationId=${applicationId}`,
+          method: "GET",
+        });
+        const raw = res?.value ?? (Array.isArray(res) ? res : res?.d?.results ?? res?.results);
+        budgetData = Array.isArray(raw) ? raw[0] : raw;
+        budgetHeaderId = budgetData?.[BudgetHeaderFields.BUDGETHEADERID] ?? null;
+      }
+
+      if (!budgetData || !budgetHeaderId) return;
+
+      const res2 = await callApi<any>({
+        url: `/api/budget/line-items?budgetHeaderId=${budgetHeaderId}`,
         method: "GET",
       });
-      const filteredArray = res2.value || [];
+      const rawLineItems = res2?.value ?? (Array.isArray(res2) ? res2 : res2?.d?.results ?? res2?.results);
+      const filteredArray = Array.isArray(rawLineItems) ? rawLineItems : [];
 
-      const lineItems = budgetData[ExpandRelations.BUDGET_LINE_ITEMS] || [];
       const budgetHeader = mapBudgetHeader(budgetData);
       const budgetLineItems = mapBudgetLineItems(filteredArray);
-      // console.log(budgetHeader);
-      // console.log(budgetLineItems);
-      // console.log(lineItems);
 
       setForm((prev) => ({
         ...prev,
@@ -729,21 +802,25 @@ export default function FormApplication() {
       }));
     } catch (error) {
       console.error("Failed to load budget details:", error);
-      // Don't throw error - budget is optional
     }
   };
 
-  // Check for existing application on mount (for new forms)
+  // Check for existing application on mount (for new forms); then load when id exists
   useEffect(() => {
-    const checkForExistingApplication = async () => {
-      // If no grantCycleId or researchAreaId, redirect to home
+    const run = async () => {
+      await loadTeamMemberRoles();
+
+      if (applicationId) {
+        await loadApplicationDetails(applicationId);
+        return;
+      }
+
       if (!grantCycleId || !researchAreaId) {
         navigate("/");
         return;
       }
 
-      // Only check for existing application if formType is "new"
-      if (formType === "new" && user?.contact?.[ContactKeys.CONTACTID]) {
+      if (isNewApplication && user?.contact?.[ContactKeys.CONTACTID]) {
         setShowLoader(true);
         try {
           const currentUserId = user.contact[ContactKeys.CONTACTID];
@@ -757,13 +834,8 @@ export default function FormApplication() {
           const existingApp = res?.value?.[0];
 
           if (existingApp) {
-            // Redirect to existing application edit page
-            const statusFormatted =
-              existingApp[ApplicationKeys.STATUS_FORMATTED] ||
-              existingApp[ApplicationKeys.STATUS] ||
-              "";
             navigate(
-              `/applyapplication?item=${existingApp[ApplicationKeys.APPLICATIONID]}&grantCycleId=${existingApp[ApplicationKeys.GRANTCYCLE]}&researchAreaId=${existingApp[ApplicationKeys.RESEARCHAREA]}&status=${statusFormatted}&applicationNumber=${existingApp[ApplicationKeys.APPLICATIONNUMBER]}&formType=edit`,
+              `/application/${existingApp[ApplicationKeys.APPLICATIONID]}`,
               { replace: true },
             );
           }
@@ -775,21 +847,10 @@ export default function FormApplication() {
       }
     };
 
-    checkForExistingApplication();
-  }, [grantCycleId, researchAreaId, formType, user, navigate, callApi]);
-
-  // Initialize on mount
-  useEffect(() => {
-    const initialize = async () => {
-      await loadTeamMemberRoles();
-      // Load application if editing or viewing
-      if (applicationId) {
-        await loadApplicationDetails(applicationId);
-      }
-    };
-    initialize();
-    loadBudgetDetails(applicationId);
-  }, [applicationId]);
+    run();
+  }, [
+    applicationId
+  ]);
 
   useEffect(() => {
     if (user?.contact?.[ContactKeys.FULLNAME]) {
@@ -836,7 +897,7 @@ export default function FormApplication() {
       educationLevel: member.educationLevel,
       action: "new",
     } as any;
-    if (formType !== "new") {
+    if (!isNewApplication) {
       setShowLoader(true);
       const memberData: Record<string, any> = {
         [ApplicationTeamMemberKeys.PARTICIPATIONNAME]: newMember.name,
@@ -862,7 +923,7 @@ export default function FormApplication() {
   }, []);
 
   const handleRemoveMember = useCallback(async (id: string) => {
-    if (formType !== "new") {
+    if (!isNewApplication) {
       const itemToRemove = form.budgetLineItems.find((li) => li.id === id);
       setShowLoader(true);
       const api = await callApi({
@@ -879,7 +940,7 @@ export default function FormApplication() {
 
   const handleEditMember = useCallback(
     async (id: string, member: AddMemberForm) => {
-      if (formType !== "new") {
+      if (!isNewApplication) {
         setShowLoader(true);
         const memberData: Record<string, any> = {
           [ApplicationTeamMemberKeys.PARTICIPATIONNAME]: member.name,
@@ -926,7 +987,7 @@ export default function FormApplication() {
         ),
       }));
     },
-    [formType],
+    [isNewApplication, callApi],
   );
 
   // const handleFilesAdd = useCallback(
@@ -989,7 +1050,7 @@ export default function FormApplication() {
 
   const loadApps = async () => {
     setShowLoader(true);
-    if (formType === "edit") {
+    if (!isNewApplication) {
       setShowLoader(false);
       return false;
     }
@@ -1089,8 +1150,8 @@ export default function FormApplication() {
         status?: number;
         headers?: Headers;
       }>({
-        url: `/_api/${TableName.APPLICATIONS}${formType === "edit" ? `(${applicationId})` : ""}`,
-        method: formType === "edit" ? "PATCH" : "POST",
+        url: `/_api/${TableName.APPLICATIONS}${!isNewApplication ? `(${applicationId})` : ""}`,
+        method: !isNewApplication ? "PATCH" : "POST",
         data: applicationData,
       });
 
@@ -1099,7 +1160,7 @@ export default function FormApplication() {
       }
 
       const applicationIdForm =
-        formType === "edit"
+        !isNewApplication
           ? applicationId
           : res?.headers?.get("OData-EntityId")?.match(/\(([^)]+)\)/)?.[1];
       if (!applicationIdForm) {
@@ -1121,60 +1182,54 @@ export default function FormApplication() {
       // console.log(resApps, "resApps");
 
       if (matchingApp) {
-        // Load and set budget data for the matching application
         const budgetHeaderId = matchingApp._prmtk_budgetheader_value;
-        // console.log(budgetHeaderId, "budgetHeaderId");
+
+        // Resolve budget header: use existing or create when we have line items (all via /api/budget/*)
+        let headerForProcess: BudgetHeader | null = null;
         if (budgetHeaderId) {
-          // Fetch budget header
-          const budgetHeaderRes = await callApi<{ value: any[] }>({
-            url: `/_api/${TableName.BUDGETHEADERS}(${budgetHeaderId})`,
+          const budgetHeaderRes = await callApi<any>({
+            url: `/api/budget/headers/${budgetHeaderId}`,
             method: "GET",
           });
-
-          // Fetch budget line items
-          const budgetLineItemsRes = await callApi<{ value: any[] }>({
-            url: `/_api/${TableName.BUDGETLINEITEMS}?$filter=_prmtk_budgetheader_value eq ${budgetHeaderId}`,
-            method: "GET",
-          });
-
-          const budgetData = budgetHeaderRes;
-          const filteredArray = budgetLineItemsRes?.value || [];
-
-          const budgetHeader = mapBudgetHeader(budgetData);
-          const budgetLineItems = mapBudgetLineItems(filteredArray);
-          // console.log(budgetHeader, "budgetHeader ");
-          // console.log(budgetLineItems, "budgetLineItems");
-          if (formType !== "new") {
-            setForm((prev) => ({
-              ...prev,
-              budgetHeaders: budgetHeader,
-              budgetLineItems: budgetLineItems,
-            }));
+          const budgetData = budgetHeaderRes && budgetHeaderRes[BudgetHeaderFields.BUDGETHEADERID] != null
+            ? budgetHeaderRes
+            : budgetHeaderRes?.value?.[0];
+          if (budgetData) {
+            headerForProcess = mapBudgetHeader(budgetData);
           }
-
-          // Get application number for file uploads
-          const applicationNumbers = await getApplicationNumber(
-            formType,
-            applicationIdForm,
-            applicationNumber,
-            callApi,
-          );
-          if (formType === "new") {
-            await processTeamMembers(form.team, applicationIdForm, callApi);
-          }
-          const budgetHeaders = mapBudgetHeader(budgetData);
-          // Process all related data in parallel
-          await Promise.all([
-            processBudgetData(budgetHeaders, form.budgetLineItems, callApi),
-            processFileUploads(
-              form.applicationFiles,
-              form.generalFiles,
-              applicationNumbers,
-              triggerFlow,
-              user,
-            ),
-          ]);
+        } else if (form.budgetLineItems.length > 0) {
+          const newHeaderId = await createBudgetHeader(applicationIdForm, callApi);
+          headerForProcess = {
+            id: newHeaderId,
+            name: "Application Budget",
+            totalBudget: 0,
+            action: "existing",
+          };
         }
+
+        // Application number, team members, and file uploads regardless of budget
+        const applicationNumbers = await getApplicationNumber(
+          !isNewApplication,
+          applicationIdForm,
+          callApi,
+          form.applicationNumber ?? applicationNumberFromQuery ?? undefined,
+        );
+        if (isNewApplication) {
+          await processTeamMembers(form.team, applicationIdForm, callApi);
+        }
+
+        // Persist budget line items (add / edit / delete) when we have a header
+        if (headerForProcess) {
+          await processBudgetData(headerForProcess, form.budgetLineItems, callApi);
+        }
+
+        await processFileUploads(
+          form.applicationFiles,
+          form.generalFiles,
+          applicationNumbers,
+          triggerFlow,
+          user,
+        );
       }
 
       // if (form.budgetLineItems.length > 0) {
@@ -1184,7 +1239,7 @@ export default function FormApplication() {
       toast({
         title: "Success",
         description:
-          formType === "edit"
+          !isNewApplication
             ? "Application updated successfully."
             : "Application submitted successfully.",
       });
@@ -1249,21 +1304,22 @@ export default function FormApplication() {
   return (
     <>
       <section className="relative overflow-hidden bg-[#1D2054]">
+         
         <Reveal>
           <div className="container py-4 md:py-4 grid gap-10 md:grid-cols-2 items-center">
             <div className="max-w-2xl flex flex-col gap-4">
               <h1 className="text-2xl md:text-6xl font-extrabold leading-tight tracking-tight text-white">
-                My Grant Status
+                Application Status
                 <span className=" font-normal ml-2 text-[#F7D85C]">
-                  ({status ? status : "New"})
+                  ({displayStatus ? displayStatus : "New"})
                 </span>
               </h1>
-              {applicationNumber && (
+              {displayApplicationNumber && (
                 <div className="text-2xl text-[#F7D85C]">
-                  Grant : {applicationNumber}
+                  Application Number : {displayApplicationNumber}
                 </div>
               )}
-              {formType !== "new" && (
+              {form.type === "view" && (
                 <div className="text-sm text-white">
                   <span className="opacity-80">Submission Date:</span>
                   <span className="ml-2 font-semibold text-[#F7D85C]">
@@ -1286,39 +1342,149 @@ export default function FormApplication() {
       </section>
       <section className="bg-white">
         <div className="container py-4">
-          {formType !== "view" && (
+          
+          {form.type !== "view" && (
             <div className="flex justify-end gap-4">
               <button
-                onClick={() => handleSubmitClick(status)}
-                className="flex items-center gap-2 px-4 py-1 border border-[#7BAAA3] text-[#7BAAA3] rounded text-sm hover:bg-[#7BAAA3]/10 transition"
+                onClick={() => handleSubmitClick("Draft")}
+                className="px-4 py-1 border border-[#7BAAA3] text-[#7BAAA3] rounded text-sm hover:bg-[#7BAAA3]/10 transition"
               >
                 <Icon iconName="SingleBookmark" />
                 SAVE DRAFT
               </button>
 
-              {status !== "Draft" && (
+              {form.status != "Draft" && (
                 <button
                   onClick={() => loadWorkFlowHistory(applicationId as string)}
-                  className="flex items-center gap-2 px-4 py-1 border border-[#7BAAA3] text-[#7BAAA3] rounded text-sm hover:bg-[#7BAAA3]/10 transition"
+                  className="gap-2 px-4 py-1 border border-[#7BAAA3] text-[#7BAAA3] rounded text-sm hover:bg-[#7BAAA3]/10 transition"
                 >
                   <Icon iconName="MailReminder" />
                   History
                 </button>
               )}
+              <PrimaryButton
+                onClick={() => handleSubmitClick("Submitted")}
+                disabled={!canSubmit || showLoader}
+                styles={popupInputStyles.researchPrimaryButton}
+              >
+                {showLoader ? "Submitting..." : "Submit Application"}
+              </PrimaryButton>
             </div>
           )}
 
-          {formType === "view" && status !== "Draft" && (
-            <div className="flex justify-end gap-4">
-              <button
-                onClick={() => loadWorkFlowHistory(applicationId as string)}
-                className="flex items-center gap-2 px-4 py-1 border border-[#7BAAA3] text-[#7BAAA3] rounded text-sm hover:bg-[#7BAAA3]/10 transition"
-              >
-                <Icon iconName="MailReminder" />
-                History
-              </button>
-            </div>
-          )}
+
+<Reveal>
+                  <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm mt-5">
+                    {/* Header */}
+                    <div className="border-b border-slate-100 bg-slate-50 px-5 py-4">
+                      <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+                        Application
+                      </p>
+                      <h1 className="mt-1 text-xl font-bold text-slate-900 md:text-2xl">
+                        Proposal for Research - 
+                        {
+                        ` ${form.researchAreaDisplayValue} `
+                        }
+                        By 
+                        {
+                          ` ${form.mainApplicantDisplayValue}`
+                        }
+                          
+                      </h1>
+                     
+                    </div>
+        
+                    {/* Overview + Team: 8 cols | 4 cols */}
+                    {(form.type !== "new" || form.team.length > 0) && (
+                      <div className="grid grid-cols-1 lg:grid-cols-12">
+                        {form.type !== "new" && (
+                          <div className="border-b border-slate-100 px-5 py-4 lg:col-span-8 lg:border-b-0 lg:border-r lg:py-5">
+                            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                              Overview
+                            </p>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                              {[
+                              
+                                {
+                                  label: "Grant Cycle",
+                                  value: form.grantCycleDisplayValue ?? "—",
+                                  iconName: "Page",
+                                },
+                                {
+                                  label: "Research Area",
+                                  value: form.researchAreaDisplayValue ?? "—",
+                                  iconName: "FolderSearch",
+                                },
+                                {
+                                  label: "Main Applicant Name",
+                                  value: form.mainApplicantDisplayValue ?? "—",
+                                  iconName: "Contact",
+                                },
+                                  {
+                                  label: "Lead Institute",
+                                  value:  "—",
+                                  iconName: "Contact",
+                                },
+                              ].map(({ label, value, iconName }) => (
+                                <div
+                                  key={label}
+                                  className="flex items-start gap-2.5 rounded-md border border-slate-100 bg-slate-50/50 px-3 py-2"
+                                >
+                                  <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-600">
+                                    <Icon
+                                      iconName={iconName}
+                                      styles={{ root: { fontSize: 14 } }}
+                                    />
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <span className="text-xs text-slate-500">
+                                      {label}
+                                    </span>
+                                    <span className="mt-0.5 block text-sm font-medium text-slate-800">
+                                      {value}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {form.team.length > 0 && (
+                          <div className="px-5 py-4 lg:col-span-4 lg:py-5">
+                            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                              Team members
+                            </p>
+                            <ul className="space-y-2">
+                              {form.team.map((member) => (
+                                <li
+                                  key={member.id}
+                                  className="flex items-center gap-3 rounded-md border border-slate-100 bg-slate-50/50 px-3 py-2"
+                                >
+                                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-600">
+                                    <Icon
+                                      iconName="Contact"
+                                      styles={{ root: { fontSize: 16 } }}
+                                    />
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="truncate text-sm font-medium text-slate-900">
+                                      {member.name || "—"}
+                                    </p>
+                                    <p className="truncate text-xs text-slate-500">
+                                      {teamMemberRoles.find(
+                                        (r) => String(r.key) === String(member.role),
+                                      )?.text ?? member.role ?? "—"}
+                                    </p>
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </Reveal>
 
           {/* General Information Section */}
           <div className="mt-8 rounded-xl border bg-white p-6">
@@ -1336,6 +1502,7 @@ export default function FormApplication() {
               <GeneralInformationSection
                 key={`${user?.adxUserId}`}
                 form={form}
+                readOnly={form.type === "view"}
                 onTitleChange={(value) =>
                   setForm((prev) => ({ ...prev, title: value }))
                 }
@@ -1347,6 +1514,9 @@ export default function FormApplication() {
                 }
                 onResearchAreaChange={(value) =>
                   setForm((prev) => ({ ...prev, researchArea: value }))
+                }
+                onMainApplicantChange={(value) =>
+                  setForm((prev) => ({ ...prev, mainApplicant: value }))
                 }
                 grantCycleId={grantCycleId}
                 researchAreaId={researchAreaId}
@@ -1404,58 +1574,119 @@ export default function FormApplication() {
             />
           )} */}
           <BudgetSection
-            key={`${form.budgetLineItems}`}
-            budgetHeader={form.budgetHeaders}
+            key={`budget-${form.budgetLineItems?.length ?? 0}-${form.budgetHeaders?.id ?? "none"}`}
+            budgetHeader={form.budgetHeaders ?? { id: "", name: "Budget", totalBudget: 0, action: "existing" }}
             budgetLineItem={form.budgetLineItems}
             budgetCategories={BudgetCategorys}
-            onAddBudgetLineItem={(item) => {
-              const newLineItem: BudgetLineItem = {
-                id: crypto.randomUUID(), // Ensure a unique ID is generated
+            formType="Application"
+            onAddBudgetLineItem={async (item) => {
+              const budgetHeaderId = form.budgetHeaders?.id;
+              if (budgetHeaderId) {
+                setShowLoader(true);
+                try {
+                  const res = (await callApi({
+                    url: "/api/budget/line-items",
+                    method: "POST",
+                    data: {
+                      budgetHeaderId,
+                      prmtk_lineitemname: item.name,
+                      prmtk_description: item.description,
+                      prmtk_amount: parseFloat(item.amount),
+                      prmtk_category: item.category,
+                      prmtk_justification:item.justification
+                    },
+                  })) as { headers?: Headers; status?: number };
+                  if (res?.status >= 400) {
+                    toast({ title: "Error", description: "Failed to add budget line item.", variant: "destructive" });
+                    return;
+                  }
+                  const entityId = res?.headers?.get?.("OData-EntityId");
+                  const match = entityId?.match(/\(([^)]+)\)/);
+                  const newId = match?.[1] ?? crypto.randomUUID();
+                  const newLineItem: BudgetLineItem = {
+                    id: newId,
+                    prmtk_lineitemname: item.name,
+                    prmtk_category: item.category,
+                    prmtk_description: item.description,
+                    prmtk_amount: parseFloat(item.amount),
+                    justification:item.justification,
+                    action: "existing",
+                    
+                    
+                  };
+                  setForm((prev) => ({
+                    ...prev,
+                    budgetLineItems: [...prev.budgetLineItems, newLineItem],
+                  }));
+                } finally {
+                  setShowLoader(false);
+                }
+              } else {
+                const newLineItem: BudgetLineItem = {
+                  id: crypto.randomUUID(),
+                  prmtk_lineitemname: item.name,
+                  prmtk_category: item.category,
+                  prmtk_description: item.description,
+                  prmtk_amount: parseFloat(item.amount),
+                  justification:item.justification,
+                  action: "new"
+                  
+                };
+                setForm((prev) => ({
+                  ...prev,
+                  budgetLineItems: [...prev.budgetLineItems, newLineItem],
+                }));
+              }
+            }}
+            onEditBudgetLineItem={async (id, item) => {
+              const existing = form.budgetLineItems.find((li) => li.id === id);
+              const payload = {
                 prmtk_lineitemname: item.name,
-                prmtk_category: item.category,
                 prmtk_description: item.description,
                 prmtk_amount: parseFloat(item.amount),
-                action: "new",
+                prmtk_category: item.category,
+                prmtk_justification:item.justification
               };
-              setForm((prev) => ({
-                ...prev,
-                budgetLineItems: [...prev.budgetLineItems, newLineItem],
-              }));
-            }}
-            onEditBudgetLineItem={(id, item) => {
+              if (existing?.action === "existing" && id) {
+                setShowLoader(true);
+                try {
+                  const res = await callApi({
+                    url: `/api/budget/line-items/${id}`,
+                    method: "PATCH",
+                    data: payload,
+                  });
+                  if ((res as any)?.status >= 400) {
+                    toast({ title: "Error", description: "Failed to update budget line item.", variant: "destructive" });
+                    return;
+                  }
+                } finally {
+                  setShowLoader(false);
+                }
+              }
               setForm((prev) => ({
                 ...prev,
                 budgetLineItems: prev.budgetLineItems.map((li) =>
-                  li.id === id
-                    ? {
-                        ...li,
-                        prmtk_lineitemname: item.name,
-                        prmtk_category: item.category,
-                        prmtk_description: item.description,
-                        prmtk_amount: parseFloat(item.amount),
-                        action: "existing" as const,
-                      }
-                    : li,
+                  li.id === id ? { ...li, ...payload, action: "existing" as const } : li,
                 ),
               }));
             }}
             onRemoveBudgetLineItem={async (id) => {
-              if (formType !== "new") {
-                const itemToRemove = form.budgetLineItems.find(
-                  (li) => li.id === id,
-                );
+              const itemToRemove = form.budgetLineItems.find((li) => li.id === id);
+              const isExistingItem = itemToRemove?.action === "existing";
+              if (!isNewApplication && isExistingItem && itemToRemove?.id) {
                 setShowLoader(true);
-                const api = await callApi({
-                  url: `/_api/${TableName.BUDGETLINEITEMS}(${itemToRemove?.id})`,
-                  method: "DELETE",
-                });
-                setShowLoader(false);
+                try {
+                  await callApi({
+                    url: `/api/budget/line-items/${itemToRemove.id}`,
+                    method: "DELETE",
+                  });
+                } finally {
+                  setShowLoader(false);
+                }
               }
               setForm((prev) => ({
                 ...prev,
-                budgetLineItems: prev.budgetLineItems.filter(
-                  (li) => li.id !== id,
-                ),
+                budgetLineItems: prev.budgetLineItems.filter((li) => li.id !== id),
               }));
             }}
             form={form}
@@ -1483,7 +1714,7 @@ export default function FormApplication() {
             />
           </div>
 
-          {/* {formType !== "new" && ( */}
+          {/* {!isNewApplication && ( */}
           <FileUploadSection
             applicationFiles={form.applicationFiles}
             generalFiles={form.generalFiles}
@@ -1495,31 +1726,28 @@ export default function FormApplication() {
           />
           {/* )} */}
 
-          <Reveal className="mt-8 flex justify-center ">
-            <div className="flex items-center gap-5">
-              {form.type !== "view" && (
-                <PrimaryButton
-                  styles={{ root: { width: "100%" } }}
-                  onClick={() => handleSubmitClick("Submitted")}
-                  disabled={!canSubmit || formType === "view" || showLoader}
-                >
-                  {showLoader ? "Submitting..." : "Submit Application"}
-                </PrimaryButton>
-              )}
+          <Reveal className="mt-8 flex gap-5 justify-end">           
 
-              <div className="flex justify-end gap-4">
-                {form.type !== "view" && (
+              {form.type !== "view" && (
+                <>
                   <button
-                    onClick={() => handleSubmitClick(status)}
-                    disabled={formType === "view"}
-                    className="flex items-center gap-2 px-4 py-1 border border-[#7BAAA3] text-[#7BAAA3] rounded text-sm hover:bg-[#7BAAA3]/10 transition w-[9rem]"
+                    onClick={() => handleSubmitClick("Draft")}
+                    disabled={showLoader}
+                    className="px-4 py-1 border border-[#7BAAA3] text-[#7BAAA3] rounded text-sm hover:bg-[#7BAAA3]/10 transition w-[9rem]"
                   >
                     <Icon iconName="SingleBookmark" />
                     SAVE DRAFT
                   </button>
-                )}
-              </div>
-            </div>
+                  <PrimaryButton
+                    onClick={() => handleSubmitClick("Submitted")}
+                    disabled={!canSubmit || showLoader}
+                    styles={popupInputStyles.researchPrimaryButton}
+                  >
+                    {showLoader ? "Submitting..." : "Submit Application"}
+                  </PrimaryButton>
+                </>
+              )}
+           
           </Reveal>
         </div>
         <SuccessDialog
@@ -1543,18 +1771,19 @@ export default function FormApplication() {
             className="fixed inset-0 z-50 bg-black/50"
             onClick={handleCancelSubmit}
           />
-          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-6 shadow-xl">
+          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-[90%] -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-6 shadow-xl">
             <div className="mb-4">
               <h2 className="text-xl font-bold text-gray-900">
-                Confirm Submission
+                Confirm Application Submission
               </h2>
             </div>
             <div className="mb-6">
-              <p className="text-gray-700">
+              <p className="text-gray-700 text-base">
                 Are you sure you want to submit this application?
               </p>
-              <p className="mt-2 text-sm text-red-600 font-semibold">
-                ⚠️ Once submitted, you will not be able to edit the information.
+              <p className="mt-2 text-red-600 font-semibold text-base">
+                ⚠️ Your application must be complete including all sections and attachments before submission. You will not be able to make changes after submission.
+                The Proposal will be reviewed and you will be notified of the outcome. Please ensure all information is accurate and all required documents are attached before confirming submission.
               </p>
             </div>
             <div className="flex justify-end gap-3">
@@ -1586,8 +1815,8 @@ export default function FormApplication() {
             </DialogHeader>
             <WorkflowTimeline
               workflowData={workflowHistory}
-              applicationNumber={applicationNumber || ""}
-              currentStatus={status || ""}
+              applicationNumber={displayApplicationNumber}
+              currentStatus={displayStatus}
               username={user?.contact?.[ContactFields.FULLNAME] || ""}
             />
           </DialogContent>

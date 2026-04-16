@@ -177,13 +177,53 @@ export const processMultipleReportFileUploads = async (
 };
 
 /**
- * Helper to convert base64 file data to File object
+ * Normalized file item shape expected by getFile
  */
-const getFile = (sfile: any): File => {
-  const fileName = sfile.fileName;
-  const contentType = sfile.contentType;
-  const base64 = sfile.base64;
+interface NormalizedFileItem {
+  fileName: string;
+  contentType: string;
+  base64: string;
+}
 
+/**
+ * Extract file array from Power Automate GetFiles response and normalize each item.
+ * Handles response shapes: { data: [...] }, { outputs: { body: [...] } }, or raw array.
+ * Maps common property names: Name/FileName, ContentType/contentType, Base64/contentBytes/base64.
+ */
+export function normalizeGetFilesResponse(body: unknown): NormalizedFileItem[] {
+  if (body == null) return [];
+  let arr: unknown[] = [];
+  if (Array.isArray(body)) {
+    arr = body;
+  } else if (typeof body === "object" && "data" in body && Array.isArray((body as { data: unknown[] }).data)) {
+    arr = (body as { data: unknown[] }).data;
+  } else if (
+    typeof body === "object" &&
+    "outputs" in body &&
+    typeof (body as { outputs?: { body?: unknown } }).outputs === "object" &&
+    Array.isArray((body as { outputs: { body?: unknown } }).outputs?.body)
+  ) {
+    arr = (body as { outputs: { body: unknown[] } }).outputs.body;
+  } else {
+    return [];
+  }
+  return arr.map((item: any) => {
+    const fileName =
+      item?.fileName ?? item?.FileName ?? item?.Name ?? item?.name ?? "";
+    const contentType =
+      item?.contentType ?? item?.ContentType ?? item?.type ?? "application/octet-stream";
+    const base64 =
+      item?.base64 ?? item?.Base64 ?? item?.contentBytes ?? item?.Content ?? "";
+    return { fileName, contentType, base64 };
+  }).filter((n) => n.fileName && n.base64);
+}
+
+/**
+ * Helper to convert base64 file data to File object.
+ * Expects normalized shape { fileName, contentType, base64 }.
+ */
+const getFile = (sfile: NormalizedFileItem): File => {
+  const { fileName, contentType, base64 } = sfile;
   const byteCharacters = atob(base64);
   const byteNumbers = new Array(byteCharacters.length);
 
@@ -192,9 +232,7 @@ const getFile = (sfile: any): File => {
   }
 
   const byteArray = new Uint8Array(byteNumbers);
-  const file = new File([byteArray], fileName, { type: contentType });
-
-  return file;
+  return new File([byteArray], fileName, { type: contentType });
 };
 
 /**
@@ -223,8 +261,9 @@ export const loadDeliverableFiles = async (
       Folder: folderPath,
     });
 
-    if (response?.success && response?.data) {
-      return response.data.map((f: any) => ({
+    if (response?.success) {
+      const normalized = normalizeGetFilesResponse(response.data);
+      return normalized.map((f) => ({
         file: getFile(f),
         action: "existing" as const,
       }));
@@ -263,8 +302,9 @@ export const loadDisseminationFiles = async (
       Folder: folderPath,
     });
 
-    if (response?.success && response?.data) {
-      return response.data.map((f: any) => ({
+    if (response?.success) {
+      const normalized = normalizeGetFilesResponse(response.data);
+      return normalized.map((f) => ({
         file: getFile(f),
         action: "existing" as const,
       }));
@@ -273,6 +313,147 @@ export const loadDisseminationFiles = async (
     return [];
   } catch (error) {
     console.error("Failed to load dissemination files:", error);
+    return [];
+  }
+};
+
+/** Type labels for dissemination activity folder naming (must match DisseminationActivitiesSection options) */
+const DISSEMINATION_ACTIVITY_TYPE_LABELS: Record<number, string> = {
+  1: "International",
+  2: "Local",
+  3: "Regional",
+  4: "Conference-or-Symposium",
+  5: "Webinar",
+  6: "Forum",
+  7: "Newsletter",
+  8: "Workshop",
+  9: "Local-Stakeholder-Academic-Presentation",
+  10: "Other",
+};
+
+/**
+ * Build folder path for a dissemination activity: Type + Date (no activityId in path).
+ * Used for SharePoint under Researches/{researchNumber}/Dissemination Activities/{typeSlug}-{dateSlug}
+ */
+export const getDisseminationActivityFolderPath = (
+  researchNumber: string,
+  type: number,
+  date: string,
+  activityId: string,
+): string => {
+  const typeLabel = DISSEMINATION_ACTIVITY_TYPE_LABELS[type] ?? "Other";
+  const typeSlug = typeLabel.replace(/[^a-zA-Z0-9-]/g, "");
+  const dateStr = date
+    ? new Date(date).toISOString().slice(0, 10).replace(/-/g, "")
+    : "";
+  const dateSlug = dateStr || "nodate";
+  return `${researchNumber}/Dissemination Activities/${typeSlug}-${dateSlug}`;
+};
+
+/**
+ * SharePoint folder for a capacity building / research activity:
+ * Researches/{researchNumber}/Capacity Building/{titleSlug}-{dateSlug}
+ * (activityId reserved for API parity with other helpers; path is title+date based)
+ */
+export const getResearchActivityFolderPath = (
+  researchNumber: string,
+  title: string,
+  date: string,
+  _activityId: string,
+): string => {
+  const safeTitle =
+    (title || "untitled")
+      .trim()
+      .replace(/[<>:"/\\|?*]/g, "-")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
+      .slice(0, 80) || "untitled";
+  const dateStr = date
+    ? new Date(date).toISOString().slice(0, 10).replace(/-/g, "")
+    : "";
+  const dateSlug = dateStr || "nodate";
+  return `${researchNumber}/Capacity Building/${safeTitle}-${dateSlug}`;
+};
+
+/**
+ * Load files for a specific dissemination activity (Materials / Attachments)
+ * Fetches files from SharePoint under Researches/{researchNumber}/Dissemination Activities/{typeSlug}-{dateSlug}
+ */
+export const loadDisseminationActivityFiles = async (
+  researchNumber: string,
+  type: number,
+  date: string,
+  activityId: string,
+  triggerFlow: (url: string, payload: any) => Promise<any>,
+): Promise<{ file: File; action: "existing" }[]> => {
+  if (!researchNumber || !activityId) {
+    return [];
+  }
+
+  try {
+    const folderPath = getDisseminationActivityFolderPath(
+      researchNumber,
+      type,
+      date,
+      activityId,
+    );
+
+    const response = await triggerFlow(APIURL.FileGetEndpoint, {
+      Library: "Researches",
+      Folder: folderPath,
+    });
+
+    if (response?.success) {
+      const normalized = normalizeGetFilesResponse(response.data);
+      return normalized.map((f) => ({
+        file: getFile(f),
+        action: "existing" as const,
+      }));
+    }
+
+    return [];
+  } catch (error) {
+    console.error("Failed to load dissemination activity files:", error);
+    return [];
+  }
+};
+
+/** Load attachments for a capacity building / research activity */
+export const loadResearchActivityFiles = async (
+  researchNumber: string,
+  title: string,
+  date: string,
+  activityId: string,
+  triggerFlow: (url: string, payload: any) => Promise<any>,
+): Promise<{ file: File; action: "existing" }[]> => {
+  if (!researchNumber || !activityId) {
+    return [];
+  }
+
+  try {
+    const folderPath = getResearchActivityFolderPath(
+      researchNumber,
+      title,
+      date,
+      activityId,
+    );
+
+    const response = await triggerFlow(APIURL.FileGetEndpoint, {
+      Library: "Researches",
+      Folder: folderPath,
+    });
+
+    if (response?.success) {
+      const normalized = normalizeGetFilesResponse(response.data);
+      return normalized.map((f) => ({
+        file: getFile(f),
+        action: "existing" as const,
+      }));
+    }
+
+    return [];
+  } catch (error) {
+    console.error("Failed to load research activity files:", error);
     return [];
   }
 };
@@ -302,8 +483,9 @@ export const loadReportFiles = async (
       Folder: folderPath,
     });
 
-    if (response?.success && response?.data) {
-      return response.data.map((f: any) => ({
+    if (response?.success) {
+      const normalized = normalizeGetFilesResponse(response.data);
+      return normalized.map((f) => ({
         file: getFile(f),
         action: "existing" as const,
       }));

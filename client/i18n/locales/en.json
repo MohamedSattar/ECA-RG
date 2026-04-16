@@ -3,7 +3,7 @@
     "title": "ECA Research Grants",
     "home": "Home",
     "applications": "Applications",
-    "researches": "Researches",
+    "research": "Research",
     "grants": "Grants",
     "about": "About",
     "login": "Log in",
@@ -24,8 +24,8 @@
     "date": "Date"
   },
   "researches": {
-    "title": "Researches",
-    "myResearches": "My Researches",
+    "title": "Research",
+    "myResearches": "My Research",
     "newResearch": "New Research"
   },
   "profile": {

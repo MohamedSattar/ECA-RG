@@ -37,8 +37,11 @@ export default function GrantDetail() {
 
   const select = `${ApplicationKeys.APPLICATIONID},${ApplicationKeys.APPLICATIONTITLE},${ApplicationKeys.SUBMISSIONDATE_FORMATTED},
   ${ApplicationKeys.RESEARCHAREA_FORMATTED},${ApplicationKeys.GRANTCYCLE_FORMATTED},${ApplicationKeys.STATUS_FORMATTED}`;
-  const filter = `${ApplicationKeys.MAINAPPLICANT} eq ${currentUserId}`;
-  const currentUserApplicationURL = `/_api/${TableName.APPLICATIONS}?$select=*&$filter=${filter}`;
+  // Filter requires GUIDs to be quoted in OData
+  const filter = currentUserId ? `${ApplicationKeys.MAINAPPLICANT} eq '${currentUserId}'` : "";
+  const currentUserApplicationURL = filter
+    ? `/_api/${TableName.APPLICATIONS}?$select=*&$filter=${filter}`
+    : `/_api/${TableName.APPLICATIONS}?$select=*`;
 
   const loadResearchArea = async () => {
     if (!id) {
@@ -57,6 +60,50 @@ export default function GrantDetail() {
       setError("Unable to load research area details. Please try again later.");
     }
   };
+
+  function formatDate(date: Date): string {
+  if(!date)
+    return ""
+ return new Date(date).toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
+const getYMD=(start:string, end:string) =>{
+  let startDate = new Date(start);
+  let endDate = new Date(end);
+
+  let years = endDate.getFullYear() - startDate.getFullYear();
+  let months = endDate.getMonth() - startDate.getMonth();
+  let days = endDate.getDate() - startDate.getDate();
+
+  // Adjust days
+  if (days < 0) {
+    months--;
+    const prevMonth = new Date(
+      endDate.getFullYear(),
+      endDate.getMonth(),
+      0
+    ).getDate();
+    days += prevMonth;
+  }
+
+  // Adjust months
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+  let returnValue=""
+  if(years>0)
+    returnValue+=`${years} year(s) `
+  if(months>0)
+    returnValue+=`${months} month(s) `
+  if(days>0)
+    returnValue+=`${days} day(s) `
+  return returnValue
+}
 
   const loadGrantCycles = async () => {
     if (!id) return;
@@ -121,21 +168,53 @@ export default function GrantDetail() {
   const applications = useMemo(() => apps || [], [apps]);
 
   // Function to download template file
-  const downloadTemplate = async (fieldName: string, fileName: string) => {
-    if (!grantTemplate) {
-      toast.error("Grant template not loaded");
-      return;
+const downloadTemplate = async (fieldName: string, fileName: string) => {
+  if (!grantTemplate) {
+    toast.error("Grant template not loaded");
+    return;
+  }
+
+  try {
+    const grantTemplateId = grantTemplate.prmtk_granttemplateid;
+
+    const url = `/_api/prmtk_granttemplates(${grantTemplateId})/${fieldName}/$value`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Accept": "application/octet-stream",
+        "If-None-Match": ""        
+      },
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      throw new Error("Download failed");
     }
 
-    try {
-      const grantTemplateId = grantTemplate.prmtk_granttemplateid;
-      const downloadUrl = `/_api/prmtk_granttemplates(${grantTemplateId})/${fieldName}/$value`;
-      return window.open(downloadUrl, "_blank");
-    } catch (err) {
-      console.error("Failed to download template:", err);
-      toast.error("Failed to download file. Please try again.");
-    }
-  };
+    //const blob = await response.blob();
+    const buffer = await response.arrayBuffer();
+
+// ✅ Force correct PDF type
+const blob = new Blob([buffer], { type:  "application/octet-stream"});
+
+    const downloadUrl = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = downloadUrl;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.appendChild(a);
+
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(downloadUrl);
+
+  } catch (err) {
+    console.error("Failed to download template:", err);
+    toast.error("Failed to download file. Please try again.");
+  }
+};
 
   const handleApplyForGrant = async () => {
     if (!user?.contact?.[ContactKeys.CONTACTID]) {
@@ -175,13 +254,13 @@ export default function GrantDetail() {
         // Navigate to view/edit the existing application
         toast.success("Redirecting to your application...");
         navigate(
-          `/applyapplication?grantCycleId=${grantCycleId}&researchAreaId=${researchAreaId}&formType=view&item=${existingApplication.prmtk_applicationid}`,
+          `/application/${existingApplication.prmtk_applicationid}`,
         );
       } else {
         // Create a new draft application
         const applicationData = {
           [ApplicationKeys.APPLICATIONTITLE]: "Draft Application",
-          [ApplicationKeys.ABSTRACT]: "Draft",
+          [ApplicationKeys.ABSTRACT]: "",
           [ApplicationKeys.SUBMISSIONDATE]: new Date().toISOString(),
           [ApplicationKeys.MAINAPPLICANT_ID]: `/${TableName.CONTACTS}(${user.contact[ContactKeys.CONTACTID]})`,
           [ApplicationKeys.GRANTCYCLE_ID]: `/${TableName.GRANTCYCLES}(${grantCycleId})`,
@@ -212,9 +291,7 @@ export default function GrantDetail() {
         }
 
         toast.success("Application created successfully!");
-        navigate(
-          `/applyapplication?item=${applicationId}&grantCycleId=${grantCycleId}&researchAreaId=${researchAreaId}&formType=view`,
-        );
+        navigate(`/application/${applicationId}`);
       }
     } catch (error) {
       console.error("Error handling grant application:", error);
@@ -319,9 +396,9 @@ export default function GrantDetail() {
                 </span>
                 <span className="text-sm font-medium">
                   Deadline:{" "}
-                  {researchArea?.prmtk_GrantCycle?.[
-                    GrantCycleKeys.ENDDATE_FORMATTED
-                  ] || "March 15, 2025"}
+                  {formatDate(researchArea?.prmtk_GrantCycle?.[
+                    GrantCycleKeys.ENDDATE
+                  ] )}
                 </span>
                 {/* Apply Button */}
               </div>
@@ -397,58 +474,7 @@ export default function GrantDetail() {
                     </section>
 
                     {/* Research Focus Areas */}
-                    <div className="container h-[1px] bg-lightorange mt-8"></div>
-                    <section className="mt-8">
-                      <h2 className="text-2xl font-semibold mb-4 text-[#391400]">
-                        Research Focus Areas
-                      </h2>
-                      <ul className="text-gray-700 list-disc pl-5 space-y-2">
-                        <li>
-                          Cognitive and socio-emotional development in children
-                          aged 0–8 years
-                        </li>
-                        <li>
-                          Impact of early childhood interventions on learning
-                          outcomes
-                        </li>
-                        <li>
-                          Quality indicators in early childhood education
-                          settings
-                        </li>
-                        <li>Family engagement and parental support programs</li>
-                        <li>
-                          Assessment and measurement tools for early learning
-                        </li>
-                        <li>
-                          Cultural and contextual factors affecting child
-                          development
-                        </li>
-                      </ul>
-                    </section>
-
-                    {/* What We're Looking For */}
-                    <div className="container h-[1px] bg-lightorange mt-8"></div>
-                    <section className="mt-8">
-                      <h2 className="text-2xl font-semibold mb-4 text-[#391400]">
-                        What We're Looking For
-                      </h2>
-                      <ul className="text-gray-700 list-disc pl-5 space-y-2">
-                        <li>
-                          Address critical gaps in early childhood research
-                          within the Abu Dhabi context
-                        </li>
-                        <li>
-                          Employ rigorous research methodologies (qualitative,
-                          quantitative, or mixed)
-                        </li>
-                        <li>
-                          Demonstrate potential for practical application and
-                          policy impact
-                        </li>
-                        <li>Include clear dissemination plans</li>
-                        <li>Show feasibility within timeline and budget</li>
-                      </ul>
-                    </section>
+                  
 
                     {/* Important Note */}
                     <div className="bg-red-50 border borderLeftthink bg-light p-4 rounded-lg text-sm text-[#391400] mt-8">
@@ -481,9 +507,6 @@ export default function GrantDetail() {
 
                 {activeTab === "application" && (
                   <section>
-                    <h2 className="text-2xl font-semibold mb-4 text-[#391400]">
-                      Application Process
-                    </h2>
                     {grantTemplate?.prmtk_applicationprocess ? (
                       <div
                         className="text-gray-700 leading-7"
@@ -553,36 +576,33 @@ export default function GrantDetail() {
                 <h3 className="text-lg font-semibold mb-3">Key Information</h3>
 
                 <div className="bg-[#92CBE8] p-6 rounded-xl space-y-3">
-                  <InfoRow
-                    label="Grant Amount:"
-                    value={
-                      researchArea?.[
-                        "prmtk_allocatedbudget@OData.Community.Display.V1.FormattedValue"
-                      ] || "AED 50,000 - 200,000"
-                    }
-                  />
+                  
                   <InfoRow
                     label="Duration:"
                     value={
-                      researchArea?.prmtk_GrantCycle?.[
-                        "prmtk_cycleduration@OData.Community.Display.V1.FormattedValue"
-                      ] || "12–24 months"
+                      researchArea?.prmtk_GrantCycle?.[GrantCycleKeys.STARTDATE] &&
+                      researchArea?.prmtk_GrantCycle?.[GrantCycleKeys.ENDDATE]
+                      ?
+                      getYMD(researchArea?.prmtk_GrantCycle?.[GrantCycleKeys.STARTDATE],researchArea?.prmtk_GrantCycle?.[GrantCycleKeys.ENDDATE])
+                    :""
                     }
                   />
                   <InfoRow
                     label="Application Opens:"
                     value={
                       researchArea?.prmtk_GrantCycle?.[
-                        GrantCycleKeys.STARTDATE_FORMATTED
-                      ] || "Jan 15, 2025"
+                        GrantCycleKeys.STARTDATE]?formatDate(researchArea?.prmtk_GrantCycle?.[
+                        GrantCycleKeys.STARTDATE
+                      ]):""
                     }
                   />
                   <InfoRow
                     label="Application Deadline:"
                     value={
                       researchArea?.prmtk_GrantCycle?.[
-                        GrantCycleKeys.ENDDATE_FORMATTED
-                      ] || "Mar 15, 2025"
+                        GrantCycleKeys.ENDDATE ] ? formatDate(researchArea?.prmtk_GrantCycle?.[
+                        GrantCycleKeys.ENDDATE 
+                      ]) :""
                     }
                   />
                   {/* <InfoRow
@@ -622,23 +642,10 @@ export default function GrantDetail() {
                     }
                   />
                 )}
-                {grantTemplate?.prmtk_budgettemplate && (
-                  <ResourceButton
-                    label="Budget Template"
-                    iconName="Budget"
-                    onClick={() =>
-                      downloadTemplate(
-                        "prmtk_budgettemplate",
-                        grantTemplate.prmtk_budgettemplate_name ||
-                          "Budget_Template.xlsx",
-                      )
-                    }
-                  />
-                )}
                 {grantTemplate?.prmtk_applicanthandbook && (
                   <ResourceButton
-                    label="Application Handbook"
-                    iconName="Ethics"
+                    label="User Manual"
+                    iconName="Application"
                     onClick={() =>
                       downloadTemplate(
                         "prmtk_applicanthandbook",
@@ -648,14 +655,27 @@ export default function GrantDetail() {
                     }
                   />
                 )}
-                {grantTemplate?.prmtk_statusreporttemplate && (
+                {grantTemplate?.prmkt_mainproposaltemplate && (
                   <ResourceButton
-                    label="Reporting Templates"
+                    label="Main Proposal Template"
+                    iconName="Ethics"
+                    onClick={() =>
+                      downloadTemplate(
+                        "prmkt_mainproposaltemplate",
+                        grantTemplate.prmkt_mainproposaltemplate_name ||
+                          "Application_Template.pdf",
+                      )
+                    }
+                  />
+                )}
+                {grantTemplate?.prmtk_granteecapacitybuildingworkshopbrieftemplate && (
+                  <ResourceButton
+                    label="Capacity Building Workshop Brief Template"
                     iconName="Report"
                     onClick={() =>
                       downloadTemplate(
-                        "prmtk_statusreporttemplate",
-                        grantTemplate.prmtk_statusreporttemplate_name ||
+                        "prmtk_granteecapacitybuildingworkshopbrieftemplate",
+                        grantTemplate.prmtk_granteecapacitybuildingworkshopbrieftemplate_name ||
                           "Reporting_Template.pdf",
                       )
                     }
@@ -669,10 +689,12 @@ export default function GrantDetail() {
               {/* Contact Box */}
               <div className="bg-white-100 border-8 border-yellow-300 p-4 rounded-xl">
                 <h3 className="font-semibold mb-5">Need Help?</h3>
-                <p className="font-medium mb-3">Research Grants Team</p>
-                <p className="text-sm mb-1">📧 researchgrants@eca.gov.ae</p>
-                <p className="text-sm mb-1">📞 +971 2 XXX XXXX</p>
-                <p className="text-sm mb-1">🕒 Sun–Thu: 8:00 AM – 4:00 PM</p>
+                 <p className="mt-1 text-sm text-slate-500">
+                <p className="font-medium mb-3">    If you have other question regarding research, grants or other opportunities at ECA please contact  ECA Research Team</p>
+              </p>
+                <p className="text-sm mb-1">📧 <a href="mailto:Research@eca.gov.ae" className="text-blue-500 hover:underline">
+                  Research@eca.gov.ae
+                </a></p>
               </div>
             </div>
           </div>

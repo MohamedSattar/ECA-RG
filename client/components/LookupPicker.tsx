@@ -20,6 +20,7 @@ interface LookupPickerProps {
     cascadeField?: string;
     cascadeValue?: string;
     isDefaultSelected?: boolean;
+    readonly?:boolean;
     disabled?: boolean;
     onSelect: (selectedValues: LookupValue[]) => void;
     expandFields?: string
@@ -36,6 +37,7 @@ export const LookupPicker: React.FC<LookupPickerProps> = ({
     cascadeField,
     cascadeValue,
     isDefaultSelected=false,
+    readonly=false,
     disabled,
     expandFields,
     onSelect,
@@ -102,12 +104,12 @@ export const LookupPicker: React.FC<LookupPickerProps> = ({
       if (
         cascadeField &&
         cascadeValue &&
-        isDefaultSelected &&
+        readonly &&
         records.length === 0
       ) {
         toast({
           title: "Warning",
-          description: "Default selection enabled. Cannot remove selection.",
+          description: "Readonly enabled. Cannot remove selection.",
         });
         return;
       }
@@ -169,7 +171,7 @@ export const LookupPicker: React.FC<LookupPickerProps> = ({
                 placeholder: `Look for ${label}...`,
                 disabled: selected.length >= maxSelection || disabled,
             }}
-            disabled={disabled || selected.length >= maxSelection}
+            disabled={disabled}
             itemLimit={maxSelection}
             onItemSelected={onItemSelected}
         />
