@@ -56,7 +56,27 @@ function expressPlugin(): Plugin {
     name: "express-plugin",
     apply: "serve",
     configureServer(server) {
-      const expressApp = createServer();
+      // Re-create the Express app on every relevant server file change so that
+      // access-control logic and route changes are always live in dev.
+      let expressApp = createServer();
+
+      server.watcher.on("change", (filePath) => {
+        if (filePath.includes(`${path.sep}server${path.sep}`)) {
+          console.log(`[Vite] Server file changed — reloading Express app`);
+          // Invalidate the module cache entry so createServer() re-evaluates
+          Object.keys(require.cache ?? {}).forEach((key) => {
+            if (key.includes(`${path.sep}server${path.sep}`)) {
+              delete (require.cache as any)[key];
+            }
+          });
+          try {
+            expressApp = createServer();
+            console.log("[Vite] Express app reloaded successfully");
+          } catch (err) {
+            console.error("[Vite] Failed to reload Express app:", err);
+          }
+        }
+      });
 
       // Add middleware to handle proxy routes FIRST (before Vite's fallback)
       server.middlewares.use((req, res, next) => {
