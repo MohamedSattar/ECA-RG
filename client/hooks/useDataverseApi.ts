@@ -258,6 +258,15 @@ export function useDataverseApi() {
         }
       }
 
+      // Attach server session token for /_api requests so the proxy can
+      // enforce per-user data filters server-side.
+      if (options.url.startsWith("/_api")) {
+        const sessionToken = localStorage.getItem("auth.sessionToken");
+        if (sessionToken) {
+          headers["X-Session-Token"] = sessionToken;
+        }
+      }
+
       // Call through Power Pages API
       console.log(`[API] ${options.method || "GET"} ${options.url}`);
 
