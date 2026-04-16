@@ -9,6 +9,7 @@ import {
 } from "react";
 
 import { useMsal, useIsAuthenticated } from "@azure/msal-react";
+import type { AccountInfo } from "@azure/msal-browser";
 import { InteractionStatus } from "@azure/msal-browser";
 import { loginRequest, signupRequest } from "./azureConfig";
 import { useDataverseApi } from "@/hooks/useDataverseApi";
@@ -35,6 +36,7 @@ const AuthContext = createContext<AuthContextShape | null>(null);
 
 const STORAGE_KEY = "auth.loggedIn";
 const USER_KEY = "auth.user";
+const SESSION_TOKEN_KEY = "auth.sessionToken";
 
 /* -------------------------------------------------------
    LOCAL STORAGE HELPERS
@@ -63,6 +65,7 @@ const authStorage = {
   clearAuth: (): void => {
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(USER_KEY);
+    localStorage.removeItem(SESSION_TOKEN_KEY);
   },
 
   isLoggedIn: (): boolean => {
@@ -108,6 +111,36 @@ async function getCurrentUserContact(
   } catch (error) {
     console.error("Error fetching user contact:", error);
     return null;
+  }
+}
+
+/* -------------------------------------------------------
+   SERVER SESSION TOKEN BOOTSTRAP
+------------------------------------------------------- */
+
+/** Exchange the MSAL idToken for a server-issued signed session token.
+ *  The server verifies the email claim, looks up the contactId in Dataverse,
+ *  and returns a short-lived HMAC-signed token the proxy will use to enforce
+ *  per-user data filters on every /_api request.
+ */
+async function fetchAndStoreSessionToken(idToken: string): Promise<void> {
+  try {
+    const res = await fetch("/api/auth/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken }),
+    });
+    if (!res.ok) {
+      console.warn("[Session] Could not obtain session token:", res.status);
+      return;
+    }
+    const data = await res.json();
+    if (data.sessionToken) {
+      localStorage.setItem(SESSION_TOKEN_KEY, data.sessionToken);
+      console.log("[Session] Session token stored");
+    }
+  } catch (err) {
+    console.warn("[Session] Session token request failed:", err);
   }
 }
 
@@ -202,6 +235,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
           : instance.getAllAccounts();
 
         if (accounts.length > 0) {
+          // Bootstrap server session token from MSAL idToken
+          try {
+            const tokenResp = await instance.acquireTokenSilent({
+              scopes: ["openid"],
+              account: accounts[0],
+            });
+            await fetchAndStoreSessionToken(tokenResp.idToken);
+          } catch (tokenErr) {
+            console.warn("[Session] Could not acquire idToken for session bootstrap:", tokenErr);
+          }
+
           const loggedUser = await createUserProfile(accounts[0], callApi);
           authStorage.setUser(loggedUser);
           setUser(loggedUser);
