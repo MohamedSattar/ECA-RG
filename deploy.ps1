@@ -115,8 +115,8 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # --- 5. Deploy ZIP via Kudu ZipDeploy API ------------------------------------
-# Direct Kudu API avoids the OneDeploy build pipeline which fails on
-# Windows-generated ZIPs (backslash paths break Linux rsync).
+# Using Kudu directly for all slots avoids the OneDeploy build pipeline which
+# triggers Oryx and fails with "Could not resolve entry module index.html".
 Write-Step "Deploying ZIP to '$AppName' (slot: $AzureSlot) ..."
 
 $pubCreds = az webapp deployment list-publishing-credentials `
