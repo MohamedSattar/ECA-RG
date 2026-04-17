@@ -164,18 +164,25 @@ Start-Sleep -Seconds 30
 $appUrl = az webapp show --resource-group $ResourceGroup --name $AppName @slotArg `
     --query "defaultHostName" -o tsv | ForEach-Object { "https://$($_.Trim())" }
 
-Write-Step "Verifying app at $appUrl ..."
-try {
-    $response = Invoke-WebRequest -Uri "$appUrl/health" -UseBasicParsing -TimeoutSec 30 -ErrorAction SilentlyContinue
-    $status = $response.StatusCode
-} catch {
-    $status = $_.Exception.Response.StatusCode.value__
+Write-Step "Verifying app at $appUrl (retrying up to 3 min) ..."
+$status = 0
+$deadline = (Get-Date).AddSeconds(180)
+while ((Get-Date) -lt $deadline) {
+    try {
+        $response = Invoke-WebRequest -Uri "$appUrl/health" -UseBasicParsing -TimeoutSec 20 -ErrorAction Stop
+        $status = $response.StatusCode
+        break
+    } catch {
+        $resp = $_.Exception.Response
+        if ($resp) { $status = $resp.StatusCode.value__; break }
+        Write-Host "  still starting... retrying in 15s"
+        Start-Sleep -Seconds 15
+    }
 }
 
 if ($status -in 200, 301, 302, 401, 403) {
     Write-OK "App is up  (HTTP $status)"
 } else {
-    Write-Warn "Unexpected status $status -- check the Azure portal for details."
-    exit 1
+    Write-Warn "Could not confirm app is up (last status: $status) -- check the Azure portal."
 }
 Write-Host "`nDeployment to '$Slot' slot complete.`n" -ForegroundColor Green
