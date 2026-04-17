@@ -107,8 +107,12 @@ Write-OK "Package size: $sizeMB MB"
 Write-Step "Setting startup command: '$StartupCommand' ..."
 $slotArg = if ($AzureSlot -ne "production") { @("--slot", $AzureSlot) } else { @() }
 az webapp config set --resource-group $ResourceGroup --name $AppName @slotArg --startup-file $StartupCommand | Out-Null
-if ($LASTEXITCODE -ne 0) { throw "Failed to set startup command" }
-Write-OK "Startup command set"
+if ($LASTEXITCODE -ne 0) {
+    Write-Warn "Could not update startup command (account may lack slot config write permission)."
+    Write-Warn "Ensure '$StartupCommand' is set in the Azure portal for slot '$AzureSlot'."
+} else {
+    Write-OK "Startup command set"
+}
 
 # --- 5. Deploy ZIP via Kudu ZipDeploy API ------------------------------------
 # Direct Kudu API avoids the OneDeploy build pipeline which fails on
