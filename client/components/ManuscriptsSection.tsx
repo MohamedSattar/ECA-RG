@@ -183,7 +183,6 @@ export const ManuscriptsSection: React.FC<ManuscriptsSectionProps> = ({
                   status: (opt?.key as number) ?? 1,
                 }))
               }
-              disabled
             />
           </div>
         </div>

@@ -6,7 +6,7 @@ import { createRoot } from "react-dom/client";
 import { Toaster as Sonner } from "@/ui/sonner";
 import { TooltipProvider } from "@/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { SiteLayout } from "@/layout/SiteLayout";
@@ -20,6 +20,7 @@ import myTheme from "./styles/flunetUITheme";
 import ApplicationsNew from "./pages/ApplicationsNew";
 import GrantDetail from "./pages/GrantDetail";
 import Profile from "./pages/Profile";
+
 
 // Lazy load page components
 const Login = lazy(() => import("./pages/Login"));
@@ -35,6 +36,7 @@ const ReportingDetailsEdit = lazy(
 );
 const FormApplication = lazy(() => import("./pages/FormApplication"));
 const Notifications = lazy(() => import("./pages/Notifications"));
+
 
 const queryClient = new QueryClient();
 
@@ -87,20 +89,24 @@ const App = () => (
                       }
                     />
                     <Route
-                      path="/applyapplication"
+                      path="/application/:id"
                       element={
                         <ProtectedRoute>
                           <FormApplication />
                         </ProtectedRoute>
                       }
-                    />
+                    />                 
                     <Route
-                      path="/researches"
+                      path="/research"
                       element={
                         <ProtectedRoute>
                           <Researches />
                         </ProtectedRoute>
                       }
+                    />
+                    <Route
+                      path="/researches"
+                      element={<Navigate to="/research" replace />}
                     />
                     <Route
                       path="/applications"

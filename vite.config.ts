@@ -80,7 +80,7 @@ function expressPlugin(): Plugin {
 
       // Add middleware to handle proxy routes FIRST (before Vite's fallback)
       server.middlewares.use((req, res, next) => {
-        if (req.url.startsWith("/_api") || req.url.startsWith("/_layout")) {
+        if (req.url?.startsWith("/_api") || req.url?.startsWith("/_layout") || req.url?.startsWith("/api/")) {
           console.log(`[Vite] Proxying to Express: ${req.method} ${req.url}`);
           expressApp(req as any, res as any, next);
         } else {

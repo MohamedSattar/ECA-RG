@@ -1,16 +1,24 @@
 import * as React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Reveal from "@/motion/Reveal";
 import { IconButton } from "@fluentui/react/lib/Button";
 import { PrimaryButton } from "@fluentui/react/lib/Button";
 import { Icon } from "@fluentui/react/lib/Icon";
-import { aedFormat, getFileKey } from "@/services/utility";
+import { getFileKey } from "@/services/utility";
 import { HEADING_TEXT } from "@/styles/constants";
 import { popupInputStyles } from "@/styles/popupInputStyles";
+import {
+  formatReportingMonthName,
+  HealthIndicatorPill,
+} from "@/components/ReportingHealthIndicator";
+import { labelForPrmktReportType } from "@/constants/reportType";
+import { SectionGuidelineHint } from "@/components/SectionGuidelineHint";
 
 export interface ReportItem {
   id?: string;
+  /** Dataverse choice `prmkt_reporttype` */
+  prmtk_reporttype?: number;
   prmtk_reporttitle: string;
   prmtk_reportingyear: string;
   prmtk_reportingmonth: string;
@@ -31,6 +39,7 @@ export interface ReportItem {
 }
 
 export interface AddReportForm {
+  prmtk_reporttype?: number;
   prmtk_reporttitle: string;
   prmtk_reportingyear: string;
   prmtk_reportingmonth: string;
@@ -61,6 +70,8 @@ interface ReportingSectionProps {
   ) => void;
   form: any;
   edit?: boolean;
+  /** When true (e.g. guided tour step), expand the collapsible body. */
+  expandForGuide?: boolean;
 }
 
 export const INITIAL_REPORT_FORM: AddReportForm = {
@@ -79,22 +90,6 @@ export const INITIAL_REPORT_FORM: AddReportForm = {
   prmtk_lessonslearnedandimplications: "",
   prmtk_feedback: "",
   files: [],
-};
-
-// Helper to get health indicator text
-const getHealthIndicatorText = (value: number | string | undefined): string => {
-  if (!value) return "-";
-  const numValue = typeof value === "string" ? parseInt(value) : value;
-  switch (numValue) {
-    case 1:
-      return "Healthy (Green)";
-    case 2:
-      return "Challenging (Orange)";
-    case 3:
-      return "Risky (Red)";
-    default:
-      return "-";
-  }
 };
 
 // Helper function to format date for display (only date part)
@@ -119,25 +114,35 @@ export const ReportingSection: React.FC<ReportingSectionProps> = ({
   onUpdateItemFiles,
   form,
   edit = true,
+  expandForGuide = false,
 }) => {
   const [showSection, setShowSection] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (expandForGuide) setShowSection(true);
+  }, [expandForGuide]);
   const [searchParams] = useSearchParams();
 
   const buildReportingUrl = (path: string) => {
     const base = `/applyresearch/${path}`;
-    const q = searchParams.toString();
+    const researchId = searchParams.get("researchId");
+    const q = researchId
+      ? `researchId=${encodeURIComponent(researchId)}`
+      : "";
     return q ? `${base}?${q}` : base;
   };
-
-  const totalBudgetSpent = reportItems
-    .filter((r) => r.action !== "remove")
-    .reduce((sum, r) => sum + (r.prmtk_budgetspent || 0), 0);
 
   return (
     <div className="mt-8 rounded-xl border bg-white p-6">
       <div className="flex items-center justify-between min-h-[52px]">
-        <h2 className={HEADING_TEXT}>Reporting Details</h2>
+        <div className="flex items-center gap-2">
+          <h2 className={HEADING_TEXT}>Reporting Details</h2>
+          <SectionGuidelineHint
+            sectionName="Reporting Details"
+            description="Submit monthly reports by month-end (no later than the 1st day of the next month). Interim is due 9 months after project start date, and final is due 18 months after start date."
+          />
+        </div>
         <IconButton
           iconProps={{
             iconName: showSection ? "ChevronUp" : "ChevronDown",
@@ -170,6 +175,9 @@ export const ReportingSection: React.FC<ReportingSectionProps> = ({
                       Report Title
                     </th>
                     <th className="px-6 py-3 font-semibold text-white">
+                      Report Type
+                    </th>
+                    <th className="px-6 py-3 font-semibold text-white">
                       Reporting Year
                     </th>
                     <th className="px-6 py-3 font-semibold text-white">
@@ -200,15 +208,18 @@ export const ReportingSection: React.FC<ReportingSectionProps> = ({
                         {item.prmtk_reporttitle}
                       </td>
                       <td className="px-6 py-3 text-[#475569]">
+                        {labelForPrmktReportType(item.prmtk_reporttype)}
+                      </td>
+                      <td className="px-6 py-3 text-[#475569]">
                         {item.prmtk_reportingyear}
                       </td>
                       <td className="px-6 py-3 text-[#475569]">
-                        {item.prmtk_reportingmonth}
+                        {formatReportingMonthName(item.prmtk_reportingmonth)}
                       </td>
                       <td className="px-6 py-3 text-[#475569]">
-                        {getHealthIndicatorText(
-                          item.prmtk_researchhealthindicator,
-                        )}
+                        <HealthIndicatorPill
+                          value={item.prmtk_researchhealthindicator}
+                        />
                       </td>
                       <td className="px-6 py-3">
                         {item.files && item.files.length > 0 ? (
@@ -279,7 +290,7 @@ export const ReportingSection: React.FC<ReportingSectionProps> = ({
                   {reportItems.length === 0 && (
                     <tr>
                       <td
-                        colSpan={edit ? 6 : 5}
+                        colSpan={edit ? 7 : 6}
                         className="px-6 py-8 text-center text-[#94a3b8]"
                       >
                         No reports added.

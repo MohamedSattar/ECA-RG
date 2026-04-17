@@ -1,0 +1,199 @@
+name: Deploy to Azure Web App
+
+on:
+  push:
+    branches:
+      - main          # → Production slot
+      - dev           # → Dev slot
+      - Dev-New       # → Dev slot
+      - adding-issemination-activities  # → Stage slot
+  workflow_dispatch:
+    inputs:
+      slot:
+        description: 'Deployment slot (prod / dev / stage)'
+        required: true
+        default: 'prod'
+        type: choice
+        options:
+          - prod
+          - dev
+          - stage
+
+env:
+  AZURE_WEBAPP_NAME: researchgrant
+  NODE_VERSION: '20.x'
+
+jobs:
+  resolve-slot:
+    name: Resolve Target Slot
+    runs-on: ubuntu-latest
+    outputs:
+      slot: ${{ steps.slot.outputs.slot }}
+      publish_secret: ${{ steps.slot.outputs.publish_secret }}
+    steps:
+      - id: slot
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            SLOT="${{ github.event.inputs.slot }}"
+          elif [ "${{ github.ref_name }}" = "main" ]; then
+            SLOT="prod"
+          elif [ "${{ github.ref_name }}" = "dev" ] || [ "${{ github.ref_name }}" = "Dev-New" ]; then
+            SLOT="dev"
+          else
+            SLOT="stage"
+          fi
+          echo "slot=$SLOT" >> "$GITHUB_OUTPUT"
+          if   [ "$SLOT" = "prod" ];  then echo "publish_secret=AZURE_WEBAPP_PUBLISH_PROFILE_PROD"  >> "$GITHUB_OUTPUT"
+          elif [ "$SLOT" = "dev" ];   then echo "publish_secret=AZURE_WEBAPP_PUBLISH_PROFILE_DEV"   >> "$GITHUB_OUTPUT"
+          else                             echo "publish_secret=AZURE_WEBAPP_PUBLISH_PROFILE_STAGE" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    needs: resolve-slot
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build client & server
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      # Copy runtime files needed by the server alongside the built output
+      - name: Prepare deployment package
+        run: |
+          cp package.json dist/
+          cp package-lock.json dist/
+          # Create a web.config so IIS/Azure routes all requests to the Node process
+          cat > dist/web.config << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <configuration>
+            <system.webServer>
+              <handlers>
+                <add name="iisnode" path="server/node-build.mjs" verb="*" modules="iisnode"/>
+              </handlers>
+              <rewrite>
+                <rules>
+                  <rule name="NodeInspector" patternSyntax="ECMAScript" stopProcessing="true">
+                    <match url="^server\/node-build.mjs\/debug[\/]?" />
+                  </rule>
+                  <rule name="StaticContent">
+                    <action type="Rewrite" url="spa{REQUEST_URI}"/>
+                  </rule>
+                  <rule name="DynamicContent">
+                    <conditions>
+                      <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="True"/>
+                    </conditions>
+                    <action type="Rewrite" url="server/node-build.mjs"/>
+                  </rule>
+                </rules>
+              </rewrite>
+              <security>
+                <requestFiltering>
+                  <hiddenSegments>
+                    <remove segment="bin"/>
+                  </hiddenSegments>
+                </requestFiltering>
+              </security>
+              <httpErrors existingResponse="PassThrough" />
+              <iisnode watchedFiles="web.config;*.js" node_env="production" />
+            </system.webServer>
+          </configuration>
+          EOF
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-build-${{ github.sha }}
+          path: dist/
+          retention-days: 1
+
+  deploy:
+    name: Deploy to ${{ needs.resolve-slot.outputs.slot }} slot
+    runs-on: ubuntu-latest
+    needs: [resolve-slot, build]
+    environment:
+      name: ${{ needs.resolve-slot.outputs.slot }}
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-build-${{ github.sha }}
+          path: dist/
+
+      - name: Install production dependencies in dist/
+        run: |
+          cd dist
+          npm ci --omit=dev
+
+      - name: Deploy to Azure Web App (${{ needs.resolve-slot.outputs.slot }} slot)
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          slot-name: ${{ needs.resolve-slot.outputs.slot == 'prod' && 'production' || needs.resolve-slot.outputs.slot }}
+          publish-profile: ${{ secrets[needs.resolve-slot.outputs.publish_secret] }}
+          package: dist/
+
+  restart-and-verify:
+    name: Restart & Verify Server
+    runs-on: ubuntu-latest
+    needs: [resolve-slot, deploy]
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Restart Azure Web App slot
+        run: |
+          SLOT="${{ needs.resolve-slot.outputs.slot }}"
+          RESOURCE_GROUP="research-grants-dev"
+
+          if [ "$SLOT" = "prod" ]; then
+            echo "Restarting production slot..."
+            az webapp restart \
+              --name "${{ env.AZURE_WEBAPP_NAME }}" \
+              --resource-group "$RESOURCE_GROUP"
+          else
+            echo "Restarting $SLOT slot..."
+            az webapp restart \
+              --name "${{ env.AZURE_WEBAPP_NAME }}" \
+              --resource-group "$RESOURCE_GROUP" \
+              --slot "$SLOT"
+          fi
+
+      - name: Wait for app to warm up
+        run: sleep 30
+
+      - name: Verify app is responding
+        run: |
+          SLOT="${{ needs.resolve-slot.outputs.slot }}"
+          if [ "$SLOT" = "prod" ]; then
+            URL="https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
+          else
+            URL="https://${{ env.AZURE_WEBAPP_NAME }}-$SLOT.azurewebsites.net"
+          fi
+          echo "Pinging $URL ..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$URL" || true)
+          echo "HTTP status: $HTTP_STATUS"
+          if [[ "$HTTP_STATUS" =~ ^(200|301|302|401|403)$ ]]; then
+            echo "App is up and running."
+          else
+            echo "Warning: unexpected status $HTTP_STATUS — check Azure portal for details."
+            exit 1
+          fi
+
+      - name: Azure Logout
+        if: always()
+        run: az logout

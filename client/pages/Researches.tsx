@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import Reveal from "@/motion/Reveal";
 import { useDataverseApi } from "@/hooks/useDataverseApi";
 import {
@@ -67,20 +67,35 @@ export default function Researches() {
       console.log("Fetched researches:", list);
       setResearches(list);
 
-      // Build lookup maps for Application Reference, Research Area and Principal Investigator
-      const [appsRes, areasRes, contactsRes] = await Promise.all([
-        callApi<{ value: any[] }>({
-          url: `/_api/${TableName.APPLICATIONS}?$select=${ApplicationKeys.APPLICATIONID},${ApplicationKeys.APPLICATIONTITLE}&$top=500`,
-          method: "GET",
-        }),
-        callApi<{ value: any[] }>({
-          url: `/_api/${TableName.RESEARCHAREAS}?$select=${ResearchAreaKeys.RESEARCHAREAID},${ResearchAreaKeys.AREANAME}&$top=500`,
-          method: "GET",
-        }),
-        callApi<{ value: any[] }>({
-          url: `/_api/${TableName.CONTACTS}?$select=${ContactKeys.CONTACTID},${ContactKeys.FULLNAME}&$top=500`,
-          method: "GET",
-        }),
+      const appIds = new Set<string>();
+      const areaIds = new Set<string>();
+      for (const row of list) {
+        const appRef = row[ResearchKeys.APPLICATIONREFERENCE] as string | undefined;
+        const area = row[ResearchKeys.RESEARCHAREA] as string | undefined;
+        if (appRef) appIds.add(appRef);
+        if (area) areaIds.add(area);
+      }
+
+      const appFilter = Array.from(appIds)
+        .map((id) => `${ApplicationKeys.APPLICATIONID} eq ${id}`)
+        .join(" or ");
+      const areaFilter = Array.from(areaIds)
+        .map((id) => `${ResearchAreaKeys.RESEARCHAREAID} eq ${id}`)
+        .join(" or ");
+
+      const [appsRes, areasRes] = await Promise.all([
+        appIds.size === 0
+          ? Promise.resolve({ value: [] as any[] })
+          : callApi<{ value: any[] }>({
+              url: `/_api/${TableName.APPLICATIONS}?$select=${ApplicationKeys.APPLICATIONID},${ApplicationKeys.APPLICATIONTITLE}&$filter=(${appFilter})`,
+              method: "GET",
+            }),
+        areaIds.size === 0
+          ? Promise.resolve({ value: [] as any[] })
+          : callApi<{ value: any[] }>({
+              url: `/_api/${TableName.RESEARCHAREAS}?$select=${ResearchAreaKeys.RESEARCHAREAID},${ResearchAreaKeys.AREANAME}&$filter=(${areaFilter})`,
+              method: "GET",
+            }),
       ]);
 
       const appMap: Record<string, string> = {};
@@ -107,12 +122,11 @@ export default function Researches() {
       setResearchAreaMap(areaMap);
 
       const principalMap: Record<string, string> = {};
-      for (const contact of contactsRes?.value ?? []) {
-        const id = contact[ContactKeys.CONTACTID] as string | undefined;
-        if (id) {
-          principalMap[id] =
-            (contact[ContactKeys.FULLNAME] as string | undefined) ?? "";
-        }
+      if (currentUserId) {
+        principalMap[currentUserId] =
+          (user?.contact?.[ContactKeys.FULLNAME] as string | undefined) ||
+          user?.name ||
+          "";
       }
       setPiMap(principalMap);
     } catch (err) {
@@ -122,7 +136,7 @@ export default function Researches() {
     } finally {
       setLoading(false);
     }
-  }, [callApi, currentUserApplicationURL]);
+  }, [callApi, currentUserApplicationURL, currentUserId, user?.name, user?.contact]);
 
   useEffect(() => {
     if (!currentUserId) return;
@@ -132,32 +146,14 @@ export default function Researches() {
 
   const applicationResearches = useMemo(() => researches || [], [researches]);
 
-  const onView = (item: any) => {
-    navigate(
-      `/applyresearch?applicationId=${item[ResearchKeys.APPLICATIONREFERENCE]}&researchId=${item[ResearchKeys.RESEARCHID]}&formType=view`,
-      {
-        state: {
-          applicationId: item[ResearchKeys.APPLICATIONREFERENCE],
-          researchId: item[ResearchKeys.RESEARCHID],
-          formType: "view",
-          item: item,
-        },
+  const openResearch = (item: any) => {
+    const id = item[ResearchKeys.RESEARCHID];
+    navigate(`/applyresearch?researchId=${id}`, {
+      state: {
+        researchId: id,
+        item,
       },
-    );
-  };
-
-  const onEdit = (item: any) => {
-    navigate(
-      `/applyresearch?applicationId=${item[ResearchKeys.APPLICATIONREFERENCE]}&researchId=${item[ResearchKeys.RESEARCHID]}&formType=edit`,
-      {
-        state: {
-          applicationId: item[ResearchKeys.APPLICATIONREFERENCE],
-          researchId: item[ResearchKeys.RESEARCHID],
-          formType: "edit",
-          item: item,
-        },
-      },
-    );
+    });
   };
 
 
@@ -169,7 +165,7 @@ export default function Researches() {
           <div className="container py-4 md:py-4 grid gap-10 md:grid-cols-2 items-center">
             <div className="max-w-2xl">
               <h1 className="text-4xl md:text-6xl font-extrabold leading-tight tracking-tight text-white">
-                My Research Status
+                My Research
               </h1>
             </div>
 
@@ -255,9 +251,9 @@ export default function Researches() {
                         <td className="px-6 py-3">
                           <div className="flex items-center gap-2">
                             <IconButton
-                              onClick={() => onEdit(item)}
-                              title="Edit Research"
-                              aria-label={`Edit ${item.title}`}
+                              onClick={() => openResearch(item)}
+                              title="Open research"
+                              aria-label={`Open ${item.title}`}
                               iconProps={{ iconName: "Edit" }}
                               styles={popupInputStyles.editButton}
                             />

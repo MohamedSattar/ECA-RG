@@ -9,7 +9,6 @@ import {
 import Reveal from "@/motion/Reveal";
 import { useAuth } from "@/state/auth";
 import { toast } from "@/ui/use-toast";
-import { TeamMemberSection } from "@/components/TeamMemberSection";
 import {
   WorkforceDevelopmentSection,
   WorkforceDevelopmentItem,
@@ -26,6 +25,7 @@ import { useDataverseApi } from "@/hooks/useDataverseApi";
 import { TextField } from "@fluentui/react/lib/TextField";
 import { DatePicker } from "@fluentui/react/lib/DatePicker";
 import { IconButton } from "@fluentui/react/lib/Button";
+import { Icon } from "@fluentui/react/lib/Icon";
 import { Label } from "@fluentui/react/lib/Label";
 import { IDropdownOption } from "@fluentui/react/lib/Dropdown";
 import { DefaultButton, PrimaryButton } from "@fluentui/react/lib/Button";
@@ -47,6 +47,7 @@ import {
   ManuscriptFields,
   ResearchActivityFields,
 } from "@/constants";
+import { parsePrmktReportTypeFromApi } from "@/constants/reportType";
 import { getDeliverableTypeText } from "@/constants/deliverables";
 import { ConfirmDialog, ErrorDialog, SuccessDialog } from "@/components/Dialog";
 import { OverlayLoader } from "@/components/Loader";
@@ -62,6 +63,8 @@ import {
   loadDeliverableFiles,
   loadDisseminationActivityFiles,
   getDisseminationActivityFolderPath,
+  loadResearchActivityFiles,
+  getResearchActivityFolderPath,
   normalizeGetFilesResponse,
 } from "@/services/reportFileUpload";
 import { BudgetHeaderFields } from "@/constants/budgetHeader";
@@ -74,6 +77,7 @@ import { BudgetLineItemFields } from "@/constants/budgetLineItem";
 import { BudgetCategorys } from "@/constants/options";
 import { FileUploadSection } from "@/components/FileUploadSection";
 import { HEADING_TEXT } from "@/styles/constants";
+import { getApplyResearchFormTypeFromResearchRecord } from "@/constants/researchFormMode";
 import { popupInputStyles } from "@/styles/popupInputStyles";
 import { ReportingSection, ReportItem } from "@/components/ReportingSection";
 import {
@@ -90,8 +94,13 @@ import {
   Deliverable,
 } from "@/components/DeliverablesSection";
 import { FileUploadSectionResearch } from "@/components/FileUploadSectionResearch";
+import { SectionGuidelineHint } from "@/components/SectionGuidelineHint";
+import SectionGuideTour, {
+  SectionGuideTourSection,
+} from "@/components/SectionGuideTour";
 import { Dropdown } from "@fluentui/react/lib/Dropdown";
 import { Badge } from "@/ui/badge";
+import { BudgetSpendDialog } from "@/components/BudgetSpendDialog";
 
 interface TeamMember {
   id: string;
@@ -134,6 +143,7 @@ interface FormState {
   applicationTitle?: string;
   researchAreaName?: string;
   principalInvestigatorName?: string;
+  leadInstitute?: string;
 }
 
 interface AddMemberForm {
@@ -177,52 +187,67 @@ const INITIAL_MEMBER_FORM: AddMemberForm = {
   role: "",
 };
 
+const APPLY_RESEARCH_GUIDE_SKIP_KEY = "applyresearch.guide.skipped.v1";
+
+type GuideSectionKey =
+  | "budget"
+  | "reporting"
+  | "dissemination"
+  | "workforce"
+  | "manuscripts"
+  | "capacity"
+  | "deliverables"
+  | "attachments";
+
+const APPLY_RESEARCH_GUIDE_SECTIONS: SectionGuideTourSection<GuideSectionKey>[] = [
+  {
+    key: "budget",
+    title: "Budget Management",
+    hint: "Report cumulative expenditures to date and clearly mention any requested budget adjustments or shifts across budget categories/rows.",
+  },
+  {
+    key: "reporting",
+    title: "Reporting Details",
+    hint: "Submit monthly reports by month-end (no later than the 1st day of the next month). Interim is due 9 months after project start date, and final is due 18 months after start date.",
+  },
+  {
+    key: "dissemination",
+    title: "Dissemination Activities",
+    hint: "Maintain a running list of dissemination activities and upload evidence materials such as presentations, posters, photos, or links.",
+  },
+  {
+    key: "workforce",
+    title: "Emirati Workforce Development",
+    hint: "Keep a running list of Emirati workforce members, including joining/end dates, role on project, and education level.",
+  },
+  {
+    key: "manuscripts",
+    title: "Manuscripts",
+    hint: "Use the required manuscript status flow and share drafts with ECA at least 45 days before journal submission for review.",
+  },
+  {
+    key: "capacity",
+    title: "Capacity Building",
+    hint: "Track each workshop/training item with objective, audience, delivery format, status, and key outputs or lessons learned.",
+  },
+  {
+    key: "deliverables",
+    title: "Final Deliverables",
+    hint: "For final reporting, include required outputs in the grant contract, such as publication-ready drafts and audience-friendly summary products.",
+  },
+  {
+    key: "attachments",
+    title: "Extra Attachments",
+    hint: "Attach supporting evidence files that validate progress, outputs, and dissemination activities across the reporting period.",
+  },
+];
+
 // Tailwind class constants
 
 function formatDate(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
-
-// Helper function to process team members
-const processTeamMembers = async (
-  team: TeamMember[],
-  researchId: string,
-  callApi: (options: any) => Promise<any>,
-): Promise<void> => {
-  const upsertPromises = team
-    .filter((member) => member.action !== "remove")
-    .map(async (member) => {
-      const method = member.action === "existing" ? "PATCH" : "POST";
-      const url =
-        member.action === "existing"
-          ? `/_api/${TableName.RESEARCHTEAMMEMBER}(${member.id})`
-          : `/_api/${TableName.RESEARCHTEAMMEMBER}`;
-
-      const data: Record<string, any> = {
-        [ResearchTeamMemberKeys.TEAMMEMBERNAME]: member.name,
-        [ResearchTeamMemberKeys.ROLE]: member.role,
-      };
-
-      if (member.action === "new") {
-        data[ResearchTeamMemberKeys.RESEARCH_ID] =
-          `/${TableName.RESEARCHES}(${researchId})`;
-      }
-
-      return callApi({ url, method, data });
-    });
-
-  const removePromises = team
-    .filter((member) => member.action === "remove" && member.id !== researchId)
-    .map(async (member) =>
-      callApi({
-        url: `/_api/${TableName.RESEARCHTEAMMEMBER}(${member.id})`,
-        method: "DELETE",
-      }),
-    );
-
-  await Promise.all([...upsertPromises, ...removePromises]);
-};
 
 /** Format date string (YYYY-MM-DD) to Dataverse ISO date-time (YYYY-MM-DDTHH:mm:ss.000Z). */
 const toDataverseDate = (dateStr: string | undefined): string | null => {
@@ -309,35 +334,61 @@ const processResearchActivities = async (
   items: ResearchActivityItem[],
   researchId: string,
   callApi: (options: any) => Promise<any>,
+  options?: {
+    researchNumber?: string;
+    uploadFiles?: (files: File[], folder: string) => Promise<void>;
+  },
 ): Promise<void> => {
   const toAdd = items.filter((i) => !i.removed && i.action === "new");
   const researchEntitySet = ResearchActivityFields.RESEARCH_ENTITY_SET;
-  const addPromises = toAdd.map((item) => {
+  for (const item of toAdd) {
     const data: Record<string, any> = {
       [ResearchActivityFields.TITLE]: item.title,
       [ResearchActivityFields.DATE]: toDataverseDate(item.date),
       [ResearchActivityFields.DELIVERY_FORMAT]: item.deliveryFormat || null,
       [ResearchActivityFields.AUDIENCE]: item.audience || null,
       [ResearchActivityFields.STATUS]: item.status,
+      [ResearchActivityFields.OBJECTIVE]: item.objective || null,
+      [ResearchActivityFields.KEY_OUTPUTS]: item.keyOutputsOrLessons || null,
       [ResearchActivityFields.RESEARCH_ID]: `/${researchEntitySet}(${researchId})`,
     };
-    return callApi({
+    const res = await callApi({
       url: `/_api/${TableName.RESEARCHACTIVITIES}`,
       method: "POST",
       data,
     });
-  });
-  await Promise.all(addPromises);
+    const entityId = (res as { headers?: Headers })?.headers
+      ?.get("OData-EntityId")
+      ?.match(/\(([^)]+)\)/)?.[1];
+    const newFiles = (item.files || []).filter((f) => f.action === "new");
+    if (
+      options?.researchNumber &&
+      options?.uploadFiles &&
+      entityId &&
+      newFiles.length > 0
+    ) {
+      const folder = getResearchActivityFolderPath(
+        options.researchNumber,
+        item.title,
+        item.date,
+        entityId,
+      );
+      await options.uploadFiles(
+        newFiles.map((f) => f.file),
+        folder,
+      );
+    }
+  }
 };
 
 // Helper function to get research number
 const getResearchNumber = async (
-  formType: string,
+  hasExistingResearch: boolean,
   researchId: string,
   stateResearchNumber: string | undefined,
   callApi: (options: any) => Promise<any>,
 ): Promise<string> => {
-  if (formType === "edit" && stateResearchNumber) {
+  if (hasExistingResearch && stateResearchNumber) {
     return stateResearchNumber;
   }
 
@@ -669,7 +720,6 @@ export default function FormResearch() {
     ...INITIAL_FORM_STATE,
     submissionDate: formatDate(new Date()),
   }));
-  const [showGeneral, setShowGeneral] = useState(false);
   const [showTeam, setShowTeam] = useState(false);
   const [showBudget, setShowBudget] = useState(false);
   const [showManuscripts, setShowManuscripts] = useState(false);
@@ -679,6 +729,15 @@ export default function FormResearch() {
   const [showLoader, setShowLoader] = useState(false);
   const [dialogMessage, setDialogMessage] = useState("");
   const [teamMemberRoles, setTeamMemberRoles] = useState<IDropdownOption[]>([]);
+  const budgetSectionRef = useRef<HTMLDivElement | null>(null);
+  const reportingSectionRef = useRef<HTMLDivElement | null>(null);
+  const disseminationSectionRef = useRef<HTMLDivElement | null>(null);
+  const workforceSectionRef = useRef<HTMLDivElement | null>(null);
+  const manuscriptsSectionRef = useRef<HTMLDivElement | null>(null);
+  const capacitySectionRef = useRef<HTMLDivElement | null>(null);
+  const deliverablesSectionRef = useRef<HTMLDivElement | null>(null);
+  const attachmentsSectionRef = useRef<HTMLDivElement | null>(null);
+  const guideContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Lazy loading states for optional sections
   const [reportsLoaded, setReportsLoaded] = useState(false);
@@ -689,13 +748,13 @@ export default function FormResearch() {
   const { callApi } = useDataverseApi();
   const { triggerFlow } = useFlowApi();
   const [searchParams] = useSearchParams();
-  const formType = searchParams.get("formType") || "new";
   const researchAreaId = searchParams.get("researchId") || "";
-  const applicationId = searchParams.get("applicationId") || "";
+  /** No research id in URL → create new research; otherwise load by id (edit/view from API status). */
+  const isNewResearch = !researchAreaId;
   // console.log("FormResearch state:", form);
   // console.log("Current state:", state);
 
-  // Helper to map budget line items
+  // Helper to map budget line items (without spends)
   const mapBudgetLineItems = (items: any[]): BudgetLineItem[] => {
     if (!items || !Array.isArray(items)) return [];
 
@@ -705,8 +764,58 @@ export default function FormResearch() {
       prmtk_description: item[BudgetLineItemFields.DESCRIPTION] || "",
       prmtk_amount: parseFloat(item[BudgetLineItemFields.AMOUNT] || "0"),
       prmtk_category: item[BudgetLineItemFields.CATEGORY] || "",
+      justification: (item.prmtk_justification as string) ?? "",
       action: "existing" as const,
     }));
+  };
+
+  // Enrich line items with spend summary (Total Spent / Remaining Budget)
+  const addSpendSummaryToLineItems = async (
+    items: BudgetLineItem[],
+  ): Promise<BudgetLineItem[]> => {
+    if (!items.length) return items;
+
+    const updated = await Promise.all(
+      items.map(async (item) => {
+        if (!item.id) return item;
+        try {
+          const res = await callApi<{ value?: any[] }>({
+            url: `/_api/prmtk_budgetspends?$filter=_prmtk_lineitem_value eq ${item.id}`,
+            method: "GET",
+          });
+          const value = Array.isArray(res?.value) ? res.value : [];
+          if (!value.length) {
+            return {
+              ...item,
+              totalSpent: 0,
+              remainingBudget: item.prmtk_amount,
+            };
+          }
+
+          const total = value.reduce((sum, v: any) => {
+            const raw =
+              v.prmtk_spent ??
+              v.prmtk_amount ??
+              v.prmtk_budgetspent ??
+              v["prmtk_spent"] ??
+              v["prmtk_budgetspent"];
+            const n = Number(raw);
+            return sum + (isNaN(n) ? 0 : n);
+          }, 0);
+
+          const remaining = item.prmtk_amount - total;
+          return {
+            ...item,
+            totalSpent: total,
+            remainingBudget: remaining,
+          };
+        } catch {
+          return item;
+        }
+      }),
+    );
+
+    return updated;
   };
 
   // Helper to map budget header
@@ -722,7 +831,7 @@ export default function FormResearch() {
   };
 
   const loadBudgetDetails = async (applicationId: string): Promise<void> => {
-    if (formType === "new") {
+    if (isNewResearch) {
       return;
     }
     try {
@@ -762,17 +871,23 @@ export default function FormResearch() {
   };
 
   const loadReportStatus = async (researchId: string): Promise<void> => {
-    if (formType === "new") {
+    if (isNewResearch) {
       return;
     }
     try {
       // are not yet on the Dataverse entity; omit from $select until backend adds them.
-      const reportSelect = `${StatusReportFields.STATUSREPORTID},${StatusReportFields.REPORTTITLE},${StatusReportFields.REPORTINGYEAR},${StatusReportFields.REPORTINGMONTH},${StatusReportFields.REPORTINGDATE},${StatusReportFields.BUDGETSPENT_BASE},${StatusReportFields.RESEARCHHEALTHINDICATOR},${StatusReportFields.ACHIEVEMENTS},${StatusReportFields.CHALLENGES},${StatusReportFields.KEYACTIVITIES},${StatusReportFields.UPCOMINGACTIVITIES},${StatusReportFields.JOURNALPUBLICATIONS},${StatusReportFields.WORKFORCEDEVELOPMENT}`;
+      const reportSelect = `${StatusReportFields.STATUSREPORTID},${StatusReportFields.REPORTTYPE},${StatusReportFields.REPORTTITLE},${StatusReportFields.REPORTINGYEAR},${StatusReportFields.REPORTINGMONTH},${StatusReportFields.REPORTINGDATE},${StatusReportFields.BUDGETSPENT_BASE},${StatusReportFields.RESEARCHHEALTHINDICATOR},${StatusReportFields.ACHIEVEMENTS},${StatusReportFields.CHALLENGES},${StatusReportFields.KEYACTIVITIES},${StatusReportFields.UPCOMINGACTIVITIES},${StatusReportFields.JOURNALPUBLICATIONS},${StatusReportFields.WORKFORCEDEVELOPMENT}`;
 
       const res2 = await callApi<{ value: any[] }>({
         url: `/_api/${TableName.STATUSREPORT}?$filter=${StatusReportFields.RESEARCH} eq ${researchId}&$select=${reportSelect}`,
         method: "GET",
       });
+
+      const status = (res2 as { status?: number }).status;
+      if (status != null && status >= 400) {
+        console.error("Failed to load status reports:", res2);
+        return;
+      }
 
       const filteredReports = res2.value || [];
 
@@ -781,7 +896,7 @@ export default function FormResearch() {
         form.researchNumber || state?.item?.[ResearchKeys.RESEARCHNUMBER];
       if (!researchNumber) {
         researchNumber = await getResearchNumber(
-          formType,
+          !isNewResearch,
           researchId,
           state?.item?.[ResearchKeys.RESEARCHNUMBER],
           callApi,
@@ -808,6 +923,9 @@ export default function FormResearch() {
 
           return {
             id: item[StatusReportFields.STATUSREPORTID],
+            prmtk_reporttype: parsePrmktReportTypeFromApi(
+              item[StatusReportFields.REPORTTYPE],
+            ),
             prmtk_reporttitle: item[StatusReportFields.REPORTTITLE] || "",
             prmtk_reportingyear: item[StatusReportFields.REPORTINGYEAR] || "",
             prmtk_reportingmonth: item[StatusReportFields.REPORTINGMONTH] || "",
@@ -841,8 +959,7 @@ export default function FormResearch() {
         reportItems: reportsWithFiles,
       }));
     } catch (error) {
-      console.error("Failed to load budget details:", error);
-      // Don't throw error - budget is optional
+      console.error("Failed to load reporting details:", error);
     }
   };
 
@@ -850,7 +967,7 @@ export default function FormResearch() {
   const loadDisseminationRequests = async (
     researchId: string,
   ): Promise<void> => {
-    if (formType === "new") {
+    if (isNewResearch) {
       return;
     }
     try {
@@ -913,7 +1030,7 @@ export default function FormResearch() {
   const loadDisseminationActivities = async (
     researchId: string,
   ): Promise<DisseminationActivity[]> => {
-    if (formType === "new") return [];
+    if (isNewResearch) return [];
     try {
       const activitySelect = `${DisseminationActivityFields.DISSEMINATIONACTIVITYID},${DisseminationActivityFields.NAME},${DisseminationActivityFields.PRESENTER},${DisseminationActivityFields.DATE},${DisseminationActivityFields.TYPE},${DisseminationActivityFields.MATERIALSUSED}`;
       const res = await callApi<{ value: any[] }>({
@@ -924,7 +1041,7 @@ export default function FormResearch() {
         form.researchNumber || state?.item?.[ResearchKeys.RESEARCHNUMBER];
       if (!researchNumber) {
         researchNumber = await getResearchNumber(
-          formType,
+          !isNewResearch,
           researchId,
           state?.item?.[ResearchKeys.RESEARCHNUMBER],
           callApi,
@@ -968,7 +1085,7 @@ export default function FormResearch() {
   };
 
   const loadDeliverables = async (researchId: string): Promise<void> => {
-    if (formType === "new") {
+    if (isNewResearch) {
       return;
     }
     try {
@@ -987,7 +1104,7 @@ export default function FormResearch() {
         form.researchNumber || state?.item?.[ResearchKeys.RESEARCHNUMBER];
       if (!researchNumber) {
         researchNumber = await getResearchNumber(
-          formType,
+          !isNewResearch,
           researchId,
           state?.item?.[ResearchKeys.RESEARCHNUMBER],
           callApi,
@@ -1040,7 +1157,7 @@ export default function FormResearch() {
   };
 
   const loadTeamMembers = async (researchId: string): Promise<void> => {
-    if (formType === "new") {
+    if (isNewResearch) {
       return;
     }
     try {
@@ -1075,7 +1192,7 @@ export default function FormResearch() {
   };
 
   const loadWorkforceDevelopments = async (researchId: string): Promise<void> => {
-    if (formType === "new") return;
+    if (isNewResearch) return;
     try {
       const select = `${WorkforceDevelopmentFields.WORKFORCEDEVELOPMENTID},${WorkforceDevelopmentFields.NAME},${WorkforceDevelopmentFields.JOININGDATE},${WorkforceDevelopmentFields.ENDDATE},${WorkforceDevelopmentFields.ROLE},${WorkforceDevelopmentFields.EDUCATIONALLEVEL}`;
       const res = await callApi<{ value: any[] }>({
@@ -1099,7 +1216,7 @@ export default function FormResearch() {
   };
 
   const loadManuscripts = async (researchId: string): Promise<void> => {
-    if (formType === "new") return;
+    if (isNewResearch) return;
     try {
       const select = `${ManuscriptFields.MANUSCRIPTID},${ManuscriptFields.TITLE},${ManuscriptFields.AUTHORS},${ManuscriptFields.JOURNAL},${ManuscriptFields.STATUS}`;
       const filter = `${ManuscriptFields.RESEARCH} eq ${researchId}`;
@@ -1122,8 +1239,10 @@ export default function FormResearch() {
     }
   };
 
-  const loadResearchActivities = async (researchId: string): Promise<void> => {
-    if (formType === "new") return;
+  const loadResearchActivities = async (
+    researchId: string,
+  ): Promise<ResearchActivityItem[]> => {
+    if (isNewResearch) return [];
     try {
       const select = `${ResearchActivityFields.ACTIVITYID},${ResearchActivityFields.TITLE},${ResearchActivityFields.DATE},${ResearchActivityFields.DELIVERY_FORMAT},${ResearchActivityFields.AUDIENCE},${ResearchActivityFields.STATUS},${ResearchActivityFields.OBJECTIVE},${ResearchActivityFields.KEY_OUTPUTS}`;
       const filter = `${ResearchActivityFields.RESEARCH} eq ${researchId}`;
@@ -1132,20 +1251,50 @@ export default function FormResearch() {
         method: "GET",
       });
       const value = res.value ?? [];
-      const items: ResearchActivityItem[] = value.map((row: any) => ({
-        id: row[ResearchActivityFields.ACTIVITYID],
-        title: row[ResearchActivityFields.TITLE] ?? "",
-        date: row[ResearchActivityFields.DATE] ?? "",
-        deliveryFormat: row[ResearchActivityFields.DELIVERY_FORMAT] ?? "",
-        audience: row[ResearchActivityFields.AUDIENCE] ?? "",
-        status: row[ResearchActivityFields.STATUS] ?? 1,
-        objective: row[ResearchActivityFields.OBJECTIVE] ?? "",
-        keyOutputsOrLessons: row[ResearchActivityFields.KEY_OUTPUTS] ?? "",
-        action: "existing",
-      }));
-      setForm((prev) => ({ ...prev, researchActivities: items }));
+      let researchNumber =
+        form.researchNumber || state?.item?.[ResearchKeys.RESEARCHNUMBER];
+      if (!researchNumber) {
+        researchNumber = await getResearchNumber(
+          !isNewResearch,
+          researchId,
+          state?.item?.[ResearchKeys.RESEARCHNUMBER],
+          callApi,
+        );
+      }
+      const listWithFiles = await Promise.all(
+        value.map(async (row: any) => {
+          const id = row[ResearchActivityFields.ACTIVITYID];
+          const title = row[ResearchActivityFields.TITLE] ?? "";
+          const date = row[ResearchActivityFields.DATE] ?? "";
+          let files: { file: File; action: "existing" }[] = [];
+          if (researchNumber && id) {
+            files = await loadResearchActivityFiles(
+              researchNumber,
+              title,
+              date,
+              id,
+              triggerFlow,
+            );
+          }
+          return {
+            id,
+            title,
+            date,
+            deliveryFormat: row[ResearchActivityFields.DELIVERY_FORMAT] ?? "",
+            audience: row[ResearchActivityFields.AUDIENCE] ?? "",
+            status: row[ResearchActivityFields.STATUS] ?? 1,
+            objective: row[ResearchActivityFields.OBJECTIVE] ?? "",
+            keyOutputsOrLessons: row[ResearchActivityFields.KEY_OUTPUTS] ?? "",
+            action: "existing" as const,
+            files,
+          };
+        }),
+      );
+      setForm((prev) => ({ ...prev, researchActivities: listWithFiles }));
+      return listWithFiles;
     } catch (error) {
       console.error("Failed to load research activities:", error);
+      return [];
     }
   };
 
@@ -1155,7 +1304,7 @@ export default function FormResearch() {
       setShowLoader(true);
       try {
         // Select only necessary fields to reduce payload; expand for summary display names
-        const select = `${ResearchKeys.RESEARCHID},${ResearchKeys.RESEARCHTITLE},${ResearchKeys.STARTDATE},${ResearchKeys.ENDDATE},${ResearchKeys.RESEARCHAREA},${ResearchKeys.APPLICATIONREFERENCE},${ResearchKeys.PRINCIPALINVESTIGATOR},${ResearchKeys.RESEARCHNUMBER}`;
+        const select = `${ResearchKeys.RESEARCHID},${ResearchKeys.RESEARCHTITLE},${ResearchKeys.STARTDATE},${ResearchKeys.ENDDATE},${ResearchKeys.RESEARCHAREA},${ResearchKeys.APPLICATIONREFERENCE},${ResearchKeys.PRINCIPALINVESTIGATOR},${ResearchKeys.RESEARCHNUMBER},${ResearchKeys.STATUSCODE}`;
         const expand =
           `${ExpandRelations.RESEARCH_TEAM_MEMBER},` +
           `prmtk_ApplicationReference($select=prmtk_applicationtitle),` +
@@ -1188,7 +1337,7 @@ export default function FormResearch() {
 
         // Load research number and files
         const researchNumber = await getResearchNumber(
-          form.type,
+          !isNewResearch,
           researchId,
           state?.item?.[ResearchKeys.RESEARCHNUMBER],
           callApi,
@@ -1226,7 +1375,9 @@ export default function FormResearch() {
           principalInvestigator:
             research[ResearchKeys.PRINCIPALINVESTIGATOR] || "",
           submissionDate: prev.submissionDate, // Keep original submission date
-          type: formType === "view" ? "view" : "edit",
+          type: getApplyResearchFormTypeFromResearchRecord(
+            research as Record<string, unknown>,
+          ),
           files: files || [],
           researchNumber: research[ResearchKeys.RESEARCHNUMBER] || null,
           applicationTitle: appRef?.prmtk_applicationtitle ?? undefined,
@@ -1243,7 +1394,7 @@ export default function FormResearch() {
         setShowLoader(false);
       }
     },
-    [callApi, formType, triggerFlow, state?.type, user],
+    [callApi, isNewResearch, researchAreaId, triggerFlow, state?.item, user],
   );
 
   const loadApplicationFiles = async (
@@ -1285,40 +1436,40 @@ export default function FormResearch() {
   // Lazy load optional sections
   const loadOptionalReportData = useCallback(
     async (researchId: string) => {
-      if (reportsLoaded || formType === "new") return;
+      if (reportsLoaded || isNewResearch) return;
       await loadReportStatus(researchId);
       setReportsLoaded(true);
     },
-    [formType, reportsLoaded],
+    [isNewResearch, reportsLoaded],
   );
 
   /* commented: dissemination not needed for now
   const loadOptionalDisseminationData = useCallback(
     async (researchId: string) => {
-      if (disseminationLoaded || formType === "new") return;
+      if (disseminationLoaded || isNewResearch) return;
       await loadDisseminationRequests(researchId);
       setDisseminationLoaded(true);
     },
-    [formType, disseminationLoaded],
+    [isNewResearch, disseminationLoaded],
   );
   */
 
   const loadOptionalDisseminationActivitiesData = useCallback(
     async (researchId: string) => {
-      if (disseminationActivitiesLoaded || formType === "new") return;
+      if (disseminationActivitiesLoaded || isNewResearch) return;
       await loadDisseminationActivities(researchId);
       setDisseminationActivitiesLoaded(true);
     },
-    [formType, disseminationActivitiesLoaded],
+    [isNewResearch, disseminationActivitiesLoaded],
   );
 
   const loadOptionalDeliverableData = useCallback(
     async (researchId: string) => {
-      if (deliverablesLoaded || formType === "new") return;
+      if (deliverablesLoaded || isNewResearch) return;
       await loadDeliverables(researchId);
       setDeliverablesLoaded(true);
     },
-    [formType, deliverablesLoaded],
+    [isNewResearch, deliverablesLoaded],
   );
 
   // Load all budget versions for research
@@ -1332,12 +1483,21 @@ export default function FormResearch() {
           method: "GET",
         });
 
-        const versions: BudgetVersion[] = (res?.value || []).map((v: any) => ({
+        const rawVersions = (res?.value || []).map((v: any) => ({
           id: v[BudgetHeaderFields.BUDGETHEADERID],
           version: v[BudgetHeaderFields.VERSIONNUMBER_BUDGET] || 1,
           status: v[BudgetHeaderFields.STATUS] || 101,
           name: v[BudgetHeaderFields.BUDGETNAME] || "",
-          isActive: v[BudgetHeaderFields.STATUS] === 103, // 103 = Approved
+        }));
+
+        // Mark only one version as active in the UI:
+        // the first "Approved" (status 103) in the list (latest version due to desc order).
+        const activeApprovedId =
+          rawVersions.find((v) => v.status === 103)?.id ?? null;
+
+        const versions: BudgetVersion[] = rawVersions.map((v) => ({
+          ...v,
+          isActive: activeApprovedId !== null && v.id === activeApprovedId,
         }));
 
         setForm((prev) => ({
@@ -1381,11 +1541,14 @@ export default function FormResearch() {
 
         const budgetHeader = mapBudgetHeader(budgetData);
         const budgetLineItems = mapBudgetLineItems(lineItems);
+        const itemsWithSpends = await addSpendSummaryToLineItems(
+          budgetLineItems,
+        );
 
         setForm((prev) => ({
           ...prev,
           budgetHeaders: budgetHeader,
-          budgetLineItems: budgetLineItems,
+          budgetLineItems: itemsWithSpends,
           selectedBudgetVersion: budgetHeaderId,
         }));
       } catch (error) {
@@ -1397,6 +1560,19 @@ export default function FormResearch() {
 
   // Handle Update Budget (clone current budget)
   const [showCloneBudgetConfirm, setShowCloneBudgetConfirm] = useState(false);
+  const [spendDialogOpen, setSpendDialogOpen] = useState(false);
+  const [selectedSpendLineItem, setSelectedSpendLineItem] =
+    useState<BudgetLineItem | null>(null);
+
+  const handleOpenSpendDialog = (lineItem: BudgetLineItem) => {
+    setSelectedSpendLineItem(lineItem);
+    setSpendDialogOpen(true);
+  };
+
+  const handleCloseSpendDialog = () => {
+    setSpendDialogOpen(false);
+    setSelectedSpendLineItem(null);
+  };
   const handleUpdateBudgetClick = () => {
     setShowCloneBudgetConfirm(true);
   };
@@ -1526,7 +1702,7 @@ export default function FormResearch() {
 
   // Lazy load optional sections after main data loads (with a slight delay to prioritize main content)
   useEffect(() => {
-    if (formType !== "new" && researchAreaId && form.title) {
+    if (!isNewResearch && researchAreaId && form.title) {
       // Delay lazy loading to prioritize initial render
       const timer = setTimeout(async () => {
         await Promise.all([
@@ -1542,7 +1718,7 @@ export default function FormResearch() {
   }, [
     researchAreaId,
     form.title,
-    formType,
+    isNewResearch,
     loadOptionalReportData,
     // loadOptionalDisseminationData, // commented: dissemination not needed for now
     loadOptionalDisseminationActivitiesData,
@@ -1550,125 +1726,6 @@ export default function FormResearch() {
   ]);
 
   const canSubmit = useMemo(() => form.title.trim().length > 0, [form.title]);
-
-  const handleAddMember = useCallback(
-    async (member: AddMemberForm) => {
-      const newMember: TeamMember = {
-        id: crypto.randomUUID(),
-        name: member.name,
-        role: member.role,
-        customRoleName: member.customRoleName,
-        educationLevel: member.educationLevel,
-        action: "new",
-      } as any;
-      if (formType !== "new") {
-        setShowLoader(true);
-        try {
-          const memberData: Record<string, any> = {
-            [ResearchTeamMemberKeys.TEAMMEMBERNAME]: newMember.name,
-            [ResearchTeamMemberKeys.ROLE]: newMember.role,
-            [ResearchTeamMemberKeys.RESEARCH_ID]: `/${TableName.RESEARCHES}(${researchAreaId})`,
-          };
-          if (member.customRoleName) {
-            memberData[ApplicationTeamMemberFields.CUSTOMROLE] =
-              member.customRoleName;
-          }
-          if (member.educationLevel) {
-            memberData[ResearchTeamMemberKeys.EDUCATIONLEVEL] =
-              member.educationLevel;
-          }
-          await callApi({
-            url: `/_api/${TableName.RESEARCHTEAMMEMBER}`,
-            method: "POST",
-            data: memberData,
-          });
-
-          // Refetch team members to get the correct IDs from the database
-          await loadTeamMembers(researchAreaId);
-        } catch (error) {
-          toast({
-            title: "Error",
-            description: "Failed to add team member.",
-          });
-        } finally {
-          setShowLoader(false);
-        }
-      } else {
-        // For new forms, add to state immediately
-        setForm((prev) => ({ ...prev, team: [...prev.team, newMember] }));
-      }
-    },
-    [formType, researchAreaId, callApi, loadTeamMembers],
-  );
-
-  const handleRemoveMember = useCallback(async (id: string) => {
-    if (formType !== "new") {
-      const itemToRemove = form.budgetLineItems.find((li) => li.id === id);
-      setShowLoader(true);
-      const api = await callApi({
-        url: `/_api/${TableName.RESEARCHTEAMMEMBER}(${id})`,
-        method: "DELETE",
-      });
-      setShowLoader(false);
-    }
-    setForm((prev) => ({
-      ...prev,
-      team: prev.team.filter((m) => m.id !== id),
-    }));
-  }, []);
-
-  const handleEditMember = useCallback(
-    async (id: string, member: AddMemberForm) => {
-      if (formType !== "new") {
-        setShowLoader(true);
-        const memberData: Record<string, any> = {
-          [ResearchTeamMemberKeys.TEAMMEMBERNAME]: member.name,
-          [ResearchTeamMemberKeys.ROLE]: member.role,
-          [ResearchTeamMemberKeys.RESEARCH_ID]: `/${TableName.RESEARCHES}(${researchAreaId})`,
-        };
-        if (member.customRoleName) {
-          memberData[ApplicationTeamMemberFields.CUSTOMROLE] =
-            member.customRoleName;
-        }
-        if (member.educationLevel) {
-          memberData[ResearchTeamMemberKeys.EDUCATIONLEVEL] =
-            member.educationLevel;
-        }
-        try {
-          await callApi({
-            url: `/_api/${TableName.RESEARCHTEAMMEMBER}(${id})`,
-            method: "PATCH",
-            data: memberData,
-          });
-          toast({
-            title: "Success",
-            description: "Team member updated successfully.",
-          });
-        } catch (error) {
-          toast({
-            title: "Error",
-            description: "Failed to update team member.",
-          });
-        }
-        setShowLoader(false);
-      }
-      setForm((prev) => ({
-        ...prev,
-        team: prev.team.map((m) =>
-          m.id === id
-            ? {
-                ...m,
-                name: member.name,
-                role: member.role,
-                customRoleName: member.customRoleName,
-                educationLevel: member.educationLevel,
-              }
-            : m,
-        ),
-      }));
-    },
-    [formType],
-  );
 
   const handleAddWorkforceDevelopment = useCallback(
     async (payload: {
@@ -1678,7 +1735,7 @@ export default function FormResearch() {
       roleInProject: string;
       educationalLevel: string;
     }) => {
-      if (formType !== "new" && researchAreaId) {
+      if (!isNewResearch && researchAreaId) {
         setShowLoader(true);
         try {
           const researchEntitySet =
@@ -1710,7 +1767,7 @@ export default function FormResearch() {
           await loadWorkforceDevelopments(researchAreaId);
           toast({
             title: "Success",
-            description: "Emirates Workforce Development added successfully.",
+            description: "Emirati Workforce Development added successfully.",
           });
         } catch (error) {
           console.error("Failed to add workforce development:", error);
@@ -1741,13 +1798,13 @@ export default function FormResearch() {
         }));
       }
     },
-    [formType, researchAreaId, callApi, loadWorkforceDevelopments],
+    [isNewResearch, researchAreaId, callApi, loadWorkforceDevelopments],
   );
 
   const handleRemoveWorkforceDevelopment = useCallback(
     async (id: string) => {
       const item = form.workforceDevelopments.find((i) => i.id === id);
-      if (formType !== "new" && item?.action === "existing") {
+      if (!isNewResearch && item?.action === "existing") {
         setShowLoader(true);
         try {
           await callApi({
@@ -1783,7 +1840,7 @@ export default function FormResearch() {
         }));
       }
     },
-    [formType, form.workforceDevelopments, callApi],
+    [isNewResearch, form.workforceDevelopments, callApi],
   );
 
   const handleEditWorkforceDevelopment = useCallback(
@@ -1798,7 +1855,7 @@ export default function FormResearch() {
       },
     ) => {
       const item = form.workforceDevelopments.find((i) => i.id === id);
-      if (formType !== "new" && item?.action === "existing") {
+      if (!isNewResearch && item?.action === "existing") {
         setShowLoader(true);
         try {
           const data: Record<string, any> = {
@@ -1874,7 +1931,7 @@ export default function FormResearch() {
         }));
       }
     },
-    [formType, form.workforceDevelopments, callApi],
+    [isNewResearch, form.workforceDevelopments, callApi],
   );
 
   const handleAddManuscript = useCallback(
@@ -1884,7 +1941,7 @@ export default function FormResearch() {
       journal: string;
       status: number;
     }) => {
-      if (formType !== "new" && researchAreaId) {
+      if (!isNewResearch && researchAreaId) {
         setShowLoader(true);
         try {
           const researchEntitySet = ManuscriptFields.RESEARCH_ENTITY_SET;
@@ -1941,13 +1998,13 @@ export default function FormResearch() {
         }));
       }
     },
-    [formType, researchAreaId, callApi, loadManuscripts],
+    [isNewResearch, researchAreaId, callApi, loadManuscripts],
   );
 
   const handleRemoveManuscript = useCallback(
     async (id: string) => {
       const item = form.manuscripts.find((i) => i.id === id);
-      if (formType !== "new" && item?.action === "existing") {
+      if (!isNewResearch && item?.action === "existing") {
         setShowLoader(true);
         try {
           await callApi({
@@ -1981,7 +2038,7 @@ export default function FormResearch() {
         }));
       }
     },
-    [formType, form.manuscripts, callApi],
+    [isNewResearch, form.manuscripts, callApi],
   );
 
   const handleEditManuscript = useCallback(
@@ -1995,7 +2052,7 @@ export default function FormResearch() {
       },
     ) => {
       const item = form.manuscripts.find((i) => i.id === id);
-      if (formType !== "new" && item?.action === "existing") {
+      if (!isNewResearch && item?.action === "existing") {
         setShowLoader(true);
         try {
           const data: Record<string, any> = {
@@ -2065,7 +2122,7 @@ export default function FormResearch() {
         }));
       }
     },
-    [formType, form.manuscripts, callApi],
+    [isNewResearch, form.manuscripts, callApi],
   );
 
   const handleAddResearchActivity = useCallback(
@@ -2077,9 +2134,10 @@ export default function FormResearch() {
       status: number;
       objective: string;
       keyOutputsOrLessons: string;
+      files?: { file: File; action: "new" | "existing" | "remove" }[];
     }) => {
       // Use Research record ID from URL (researchAreaId = searchParams "researchId"), not form.researchArea (Research Area ID)
-      if (formType !== "new" && researchAreaId) {
+      if (!isNewResearch && researchAreaId) {
         setShowLoader(true);
         try {
           const researchEntitySet = ResearchActivityFields.RESEARCH_ENTITY_SET;
@@ -2098,7 +2156,53 @@ export default function FormResearch() {
             method: "POST",
             data,
           });
-          await loadResearchActivities(researchAreaId);
+          const list = await loadResearchActivities(researchAreaId);
+          const researchNumber =
+            form.researchNumber || state?.item?.[ResearchKeys.RESEARCHNUMBER];
+          const newFiles = (payload.files || []).filter((f) => f.action === "new");
+          if (researchNumber && newFiles.length > 0 && list.length > 0) {
+            const newActivity =
+              list.find(
+                (a) =>
+                  a.title === payload.title &&
+                  String(a.date || "").slice(0, 10) ===
+                    String(payload.date || "").slice(0, 10),
+              ) || list[list.length - 1];
+            const folder = getResearchActivityFolderPath(
+              researchNumber,
+              newActivity.title,
+              newActivity.date ?? "",
+              newActivity.id,
+            );
+            await Promise.all(
+              newFiles.map(async (f) => {
+                const base64Content = await fileToBase64(f.file);
+                const response = await triggerFlow(APIURL.FileUploadEndpoint, {
+                  FileContent: base64Content,
+                  FileName: f.file.name,
+                  Library: "Researches",
+                  Folder: folder,
+                  FileType: "other",
+                  UserEmail: user?.contact?.[ContactFields.EMAILADDRESS1] || "",
+                });
+                if (!response.success) {
+                  throw new Error(`Failed to upload ${f.file.name}`);
+                }
+              }),
+            );
+            const existingFiles = newFiles.map((f) => ({
+              file: f.file,
+              action: "existing" as const,
+            }));
+            setForm((prev) => ({
+              ...prev,
+              researchActivities: prev.researchActivities.map((a) =>
+                a.id === newActivity.id
+                  ? { ...a, files: [...(a.files || []), ...existingFiles] }
+                  : a,
+              ),
+            }));
+          }
           toast({
             title: "Success",
             description: "Research activity added.",
@@ -2126,6 +2230,7 @@ export default function FormResearch() {
           objective: payload.objective,
           keyOutputsOrLessons: payload.keyOutputsOrLessons,
           action: "new",
+          files: payload.files || [],
         };
         setForm((prev) => ({
           ...prev,
@@ -2133,7 +2238,16 @@ export default function FormResearch() {
         }));
       }
     },
-    [formType, researchAreaId, callApi, loadResearchActivities],
+    [
+      isNewResearch,
+      researchAreaId,
+      callApi,
+      loadResearchActivities,
+      form.researchNumber,
+      state?.item,
+      triggerFlow,
+      user?.contact,
+    ],
   );
 
   const handleRemoveResearchActivity = useCallback(
@@ -2187,13 +2301,41 @@ export default function FormResearch() {
         status: number;
         objective: string;
         keyOutputsOrLessons: string;
+        files?: { file: File; action: "new" | "existing" | "remove" }[];
       },
     ) => {
       const item = form.researchActivities.find((i) => i.id === id);
       const isExisting = item?.action === "existing";
+      const researchNumber =
+        form.researchNumber || state?.item?.[ResearchKeys.RESEARCHNUMBER];
+      const folder =
+        researchNumber && id
+          ? getResearchActivityFolderPath(
+              researchNumber,
+              payload.title,
+              payload.date ?? "",
+              id,
+            )
+          : "";
+
       if (isExisting) {
         setShowLoader(true);
         try {
+          if (payload.files && folder) {
+            const toDelete = payload.files.filter((f) => f.action === "remove");
+            for (const f of toDelete) {
+              try {
+                await triggerFlow(APIURL.FileDeleteEndpoint, {
+                  FileName: f.file.name,
+                  Library: "Researches",
+                  Folder: folder,
+                });
+              } catch (err) {
+                console.error(`Failed to delete file ${f.file.name}:`, err);
+              }
+            }
+          }
+
           const data: Record<string, any> = {
             [ResearchActivityFields.TITLE]: payload.title,
             [ResearchActivityFields.DATE]: toDataverseDate(payload.date),
@@ -2208,6 +2350,41 @@ export default function FormResearch() {
             method: "PATCH",
             data,
           });
+
+          if (payload.files && folder) {
+            const newFiles = payload.files.filter((f) => f.action === "new");
+            if (newFiles.length > 0) {
+              await Promise.all(
+                newFiles.map(async (f) => {
+                  const base64Content = await fileToBase64(f.file);
+                  const response = await triggerFlow(APIURL.FileUploadEndpoint, {
+                    FileContent: base64Content,
+                    FileName: f.file.name,
+                    Library: "Researches",
+                    Folder: folder,
+                    FileType: "other",
+                    UserEmail:
+                      user?.contact?.[ContactFields.EMAILADDRESS1] || "",
+                  });
+                  if (!response.success) {
+                    throw new Error(`Failed to upload ${f.file.name}`);
+                  }
+                }),
+              );
+            }
+          }
+
+          const keptExisting = (payload.files || []).filter(
+            (f) => f.action !== "remove",
+          );
+          const newAsExisting = (payload.files || [])
+            .filter((f) => f.action === "new")
+            .map((f) => ({ file: f.file, action: "existing" as const }));
+          const mergedFiles = [
+            ...keptExisting.filter((f) => f.action === "existing"),
+            ...newAsExisting,
+          ];
+
           setForm((prev) => ({
             ...prev,
             researchActivities: prev.researchActivities.map((i) =>
@@ -2221,6 +2398,7 @@ export default function FormResearch() {
                     status: payload.status,
                     objective: payload.objective,
                     keyOutputsOrLessons: payload.keyOutputsOrLessons,
+                    files: mergedFiles,
                   }
                 : i,
             ),
@@ -2242,6 +2420,15 @@ export default function FormResearch() {
           setShowLoader(false);
         }
       } else {
+        const keptExisting = (payload.files || []).filter(
+          (f) => f.action !== "remove",
+        );
+        const mergedFiles = [
+          ...keptExisting.filter((f) => f.action === "existing"),
+          ...(payload.files || [])
+            .filter((f) => f.action === "new")
+            .map((f) => ({ file: f.file, action: "new" as const })),
+        ];
         setForm((prev) => ({
           ...prev,
           researchActivities: prev.researchActivities.map((i) =>
@@ -2255,13 +2442,14 @@ export default function FormResearch() {
                   status: payload.status,
                   objective: payload.objective,
                   keyOutputsOrLessons: payload.keyOutputsOrLessons,
+                  files: mergedFiles,
                 }
               : i,
           ),
         }));
       }
     },
-    [form.researchActivities, callApi],
+    [form.researchActivities, form.researchNumber, state?.item, callApi, triggerFlow, user?.contact],
   );
 
   const handleFilesAdd = useCallback(
@@ -2301,6 +2489,7 @@ export default function FormResearch() {
   // Report handlers
   const handleAddReport = useCallback(
     async (item: {
+      prmtk_reporttype?: number;
       prmtk_reporttitle: string;
       prmtk_reportingyear: string;
       prmtk_reportingmonth: string;
@@ -2319,6 +2508,7 @@ export default function FormResearch() {
     }) => {
       const newReport: ReportItem = {
         id: crypto.randomUUID(),
+        prmtk_reporttype: item.prmtk_reporttype,
         prmtk_reporttitle: item.prmtk_reporttitle,
         prmtk_reportingyear: item.prmtk_reportingyear,
         prmtk_reportingmonth: item.prmtk_reportingmonth,
@@ -2341,7 +2531,7 @@ export default function FormResearch() {
         action: "new",
       };
 
-      if (formType !== "new") {
+      if (!isNewResearch) {
         setShowLoader(true);
         try {
           const reportData: Record<string, any> = {
@@ -2354,6 +2544,13 @@ export default function FormResearch() {
             ),
             [StatusReportFields.RESEARCH_ID]: `/${TableName.RESEARCHES}(${researchAreaId})`,
           };
+
+          if (
+            typeof item.prmtk_reporttype === "number" &&
+            !Number.isNaN(item.prmtk_reporttype)
+          ) {
+            reportData[StatusReportFields.REPORTTYPE] = item.prmtk_reporttype;
+          }
 
           // Add optional fields if they have values
           if (item.prmtk_researchhealthindicator) {
@@ -2433,12 +2630,12 @@ export default function FormResearch() {
         reportItems: [...prev.reportItems, newReport],
       }));
     },
-    [formType, researchAreaId, callApi],
+    [isNewResearch, researchAreaId, callApi],
   );
 
   const handleRemoveReport = useCallback(
     async (id: string) => {
-      if (formType !== "new") {
+      if (!isNewResearch) {
         const itemToRemove = form.reportItems.find((ri) => ri.id === id);
         if (itemToRemove && itemToRemove.action === "existing") {
           setShowLoader(true);
@@ -2467,13 +2664,14 @@ export default function FormResearch() {
         reportItems: prev.reportItems.filter((ri) => ri.id !== id),
       }));
     },
-    [formType, form.reportItems, callApi],
+    [isNewResearch, form.reportItems, callApi],
   );
 
   const handleEditReport = useCallback(
     async (
       id: string,
       item: {
+        prmtk_reporttype?: number;
         prmtk_reporttitle: string;
         prmtk_reportingyear: string;
         prmtk_reportingmonth: string;
@@ -2491,7 +2689,7 @@ export default function FormResearch() {
         files?: { file: File; action: "new" | "existing" | "remove" }[];
       },
     ) => {
-      if (formType !== "new") {
+      if (!isNewResearch) {
         setShowLoader(true);
         try {
           // Handle file deletions first
@@ -2531,6 +2729,13 @@ export default function FormResearch() {
               item.prmtk_budgetspent,
             ),
           };
+
+          if (
+            typeof item.prmtk_reporttype === "number" &&
+            !Number.isNaN(item.prmtk_reporttype)
+          ) {
+            reportData[StatusReportFields.REPORTTYPE] = item.prmtk_reporttype;
+          }
 
           // Add optional fields if they have values
           if (item.prmtk_researchhealthindicator) {
@@ -2611,6 +2816,7 @@ export default function FormResearch() {
           ri.id === id
             ? {
                 ...ri,
+                prmtk_reporttype: item.prmtk_reporttype,
                 prmtk_reporttitle: item.prmtk_reporttitle,
                 prmtk_reportingyear: item.prmtk_reportingyear,
                 prmtk_reportingmonth: item.prmtk_reportingmonth,
@@ -2636,7 +2842,7 @@ export default function FormResearch() {
         ),
       }));
     },
-    [formType, callApi],
+    [isNewResearch, callApi],
   );
 
   /* commented: dissemination handlers not needed for now
@@ -2661,7 +2867,7 @@ export default function FormResearch() {
         action: "new",
       };
 
-      if (formType !== "new") {
+      if (!isNewResearch) {
         setShowLoader(true);
         try {
           const requestData: Record<string, any> = {
@@ -2728,12 +2934,12 @@ export default function FormResearch() {
         }));
       }
     },
-    [formType, researchAreaId, callApi, loadDisseminationRequests],
+    [isNewResearch, researchAreaId, callApi, loadDisseminationRequests],
   );
 
   const handleRemoveDisseminationRequest = useCallback(
     async (id: string) => {
-      if (formType !== "new") {
+      if (!isNewResearch) {
         const itemToRemove = form.disseminationRequests.find(
           (dr) => dr.id === id,
         );
@@ -2766,7 +2972,7 @@ export default function FormResearch() {
         ),
       }));
     },
-    [formType, form.disseminationRequests, callApi],
+    [isNewResearch, form.disseminationRequests, callApi],
   );
 
   const handleEditDisseminationRequest = useCallback(
@@ -2781,7 +2987,7 @@ export default function FormResearch() {
       },
       research?: string,
     ) => {
-      if (formType !== "new") {
+      if (!isNewResearch) {
         setShowLoader(true);
         try {
           // Handle file deletions first
@@ -2895,7 +3101,7 @@ export default function FormResearch() {
         ),
       }));
     },
-    [formType, callApi],
+    [isNewResearch, callApi],
   );
   */ // end commented: dissemination handlers
 
@@ -2952,7 +3158,7 @@ export default function FormResearch() {
   // Dissemination Activities handlers
   const handleAddDisseminationActivity = useCallback(
     async (item: AddDisseminationActivityForm) => {
-      if (formType !== "new") {
+      if (!isNewResearch) {
         setShowLoader(true);
         try {
           const payload: Record<string, unknown> = {
@@ -3038,7 +3244,7 @@ export default function FormResearch() {
       }
     },
     [
-      formType,
+      isNewResearch,
       researchAreaId,
       callApi,
       form.researchNumber,
@@ -3049,7 +3255,7 @@ export default function FormResearch() {
 
   const handleRemoveDisseminationActivity = useCallback(
     async (id: string) => {
-      if (formType !== "new") {
+      if (!isNewResearch) {
         setShowLoader(true);
         try {
           await callApi({
@@ -3078,7 +3284,7 @@ export default function FormResearch() {
         ),
       }));
     },
-    [formType, researchAreaId, callApi],
+    [isNewResearch, researchAreaId, callApi],
   );
 
   const handleEditDisseminationActivity = useCallback(
@@ -3095,7 +3301,7 @@ export default function FormResearch() {
           )
         : "";
 
-      if (formType !== "new") {
+      if (!isNewResearch) {
         setShowLoader(true);
         try {
           if (item.files && folder && handleDeleteFile) {
@@ -3195,7 +3401,7 @@ export default function FormResearch() {
       }
     },
     [
-      formType,
+      isNewResearch,
       researchAreaId,
       callApi,
       form.researchNumber,
@@ -3262,7 +3468,7 @@ export default function FormResearch() {
           action: "new",
         };
 
-        if (formType !== "new") {
+        if (!isNewResearch) {
           const deliverableData: Record<string, any> = {
             [DeliverableFields.DELIVERABLENAME]: item.deliverableName,
             [DeliverableFields.DESCRIPTION]: item.description,
@@ -3329,7 +3535,7 @@ export default function FormResearch() {
       }
     },
     [
-      formType,
+      isNewResearch,
       researchAreaId,
       callApi,
       loadDeliverables,
@@ -3341,7 +3547,7 @@ export default function FormResearch() {
 
   const handleRemoveDeliverable = useCallback(
     async (id: string) => {
-      if (formType !== "new") {
+      if (!isNewResearch) {
         const itemToRemove = form.deliverables.find((d) => d.id === id);
         if (itemToRemove && itemToRemove.action === "existing") {
           setShowLoader(true);
@@ -3370,7 +3576,7 @@ export default function FormResearch() {
         deliverables: prev.deliverables.filter((d) => d.id !== id),
       }));
     },
-    [formType, form.deliverables, callApi],
+    [isNewResearch, form.deliverables, callApi],
   );
 
   // Handler to update files in form state after immediate operations
@@ -3436,6 +3642,21 @@ export default function FormResearch() {
     [],
   );
 
+  const handleUpdateResearchActivityFiles = useCallback(
+    (
+      itemId: string,
+      files: { file: File; action: "new" | "existing" | "remove" }[],
+    ) => {
+      setForm((prev) => ({
+        ...prev,
+        researchActivities: prev.researchActivities.map((item) =>
+          item.id === itemId ? { ...item, files } : item,
+        ),
+      }));
+    },
+    [],
+  );
+
   const handleEditDeliverable = useCallback(
     async (
       id: string,
@@ -3483,7 +3704,7 @@ export default function FormResearch() {
           }
         }
 
-        if (formType !== "new") {
+        if (!isNewResearch) {
           const deliverableData: Record<string, any> = {
             [DeliverableFields.DELIVERABLENAME]: item.deliverableName,
             [DeliverableFields.DESCRIPTION]: item.description,
@@ -3529,7 +3750,7 @@ export default function FormResearch() {
       }
     },
     [
-      formType,
+      isNewResearch,
       callApi,
       triggerFlow,
       form.deliverables,
@@ -3574,7 +3795,7 @@ export default function FormResearch() {
         status?: number;
         headers?: Headers;
       }>({
-        url: `/_api/${TableName.RESEARCHES}${form.type === "edit" ? `(${state?.researchId})` : ""}`,
+        url: `/_api/${TableName.RESEARCHES}${form.type === "edit" ? `(${researchAreaId})` : ""}`,
         method: form.type === "edit" ? "PATCH" : "POST",
         data: researchData,
       });
@@ -3587,7 +3808,7 @@ export default function FormResearch() {
 
       const researchId =
         form.type === "edit"
-          ? state?.researchId
+          ? researchAreaId
           : res?.headers?.get("OData-EntityId")?.match(/\(([^)]+)\)/)?.[1];
 
       if (!researchId) {
@@ -3598,7 +3819,7 @@ export default function FormResearch() {
 
       // Get research number for file uploads
       const researchNumber = await getResearchNumber(
-        form.type,
+        form.type !== "new",
         researchId,
         state?.item?.[ResearchKeys.RESEARCHNUMBER],
         callApi,
@@ -3606,18 +3827,33 @@ export default function FormResearch() {
 
       // Process all related data in parallel
       await Promise.all([
-        processTeamMembers(form.team, researchId, callApi),
         processWorkforceDevelopments(
           form.workforceDevelopments,
           researchId,
           callApi,
         ),
         processManuscripts(form.manuscripts, researchId, callApi),
-        processResearchActivities(
-          form.researchActivities,
-          researchId,
-          callApi,
-        ),
+        processResearchActivities(form.researchActivities, researchId, callApi, {
+          researchNumber,
+          uploadFiles: async (files, folder) => {
+            await Promise.all(
+              files.map(async (file) => {
+                const base64Content = await fileToBase64(file);
+                const response = await triggerFlow(APIURL.FileUploadEndpoint, {
+                  FileContent: base64Content,
+                  FileName: file.name,
+                  Library: "Researches",
+                  Folder: folder,
+                  FileType: "other",
+                  UserEmail: user?.contact?.[ContactFields.EMAILADDRESS1] || "",
+                });
+                if (!response.success) {
+                  throw new Error(`Failed to upload ${file.name}`);
+                }
+              }),
+            );
+          },
+        }),
         processBudgetData(
           form.budgetHeaders,
           form.budgetLineItems,
@@ -3649,6 +3885,32 @@ export default function FormResearch() {
 
   const location = useLocation();
   const isReportingSubRoute = location.pathname.includes("/reporting/");
+  const guideSectionRefs = useMemo(
+    () =>
+      ({
+        budget: budgetSectionRef,
+        reporting: reportingSectionRef,
+        dissemination: disseminationSectionRef,
+        workforce: workforceSectionRef,
+        manuscripts: manuscriptsSectionRef,
+        capacity: capacitySectionRef,
+        deliverables: deliverablesSectionRef,
+        attachments: attachmentsSectionRef,
+      }) as Record<GuideSectionKey, React.RefObject<HTMLDivElement | null>>,
+    [],
+  );
+
+  const [guideActiveSectionKey, setGuideActiveSectionKey] =
+    useState<GuideSectionKey | null>(null);
+
+  const handleGuideStepChange = useCallback((sectionKey: GuideSectionKey) => {
+    setGuideActiveSectionKey(sectionKey);
+    if (sectionKey === "budget") setShowBudget(true);
+    if (sectionKey === "workforce") setShowTeam(true);
+    if (sectionKey === "manuscripts") setShowManuscripts(true);
+    if (sectionKey === "capacity") setShowCapacity(true);
+  }, []);
+
   if (isReportingSubRoute) {
     return (
       <Outlet
@@ -3667,87 +3929,151 @@ export default function FormResearch() {
 
   return (
     <section className="bg-white">
-      <div className="container py-16">
+      <div ref={guideContainerRef} className="container py-16">
+        <SectionGuideTour
+          sections={APPLY_RESEARCH_GUIDE_SECTIONS}
+          storageKey={APPLY_RESEARCH_GUIDE_SKIP_KEY}
+          containerRef={guideContainerRef}
+          sectionRefs={guideSectionRefs}
+          onStepChange={handleGuideStepChange}
+          triggerButtonText="Show Section Guide"
+          secondaryButtonStyles={popupInputStyles.researchSecondaryButton}
+          primaryButtonStyles={popupInputStyles.researchPrimaryButton}
+        />
+
         <Reveal>
-          <div className="rounded-xl border border-[#e2e8f0] bg-slate-50 p-6">
-            <div className="text-xs tracking-[0.25em] text-[#475569] uppercase">
-              Research
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            {/* Header */}
+            <div className="border-b border-slate-100 bg-slate-50 px-5 py-4">
+              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+                Research
+              </p>
+              <h1 className="mt-1 text-xl font-bold text-slate-900 md:text-2xl">
+                {form.type === "new"
+                  ? "New Application"
+                  : form.title || state?.item?.[ResearchKeys.RESEARCHNUMBER] || "Research"}
+              </h1>
+             
             </div>
-            <h1 className="mt-1 text-xl md:text-2xl font-bold tracking-tight text-[#1e293b]">
-              {form.type === "new"
-                ? "New Application"
-                : `Research : ${form.title || state?.item?.[ResearchKeys.RESEARCHNUMBER] || ""}`}
-            </h1>
-            <p className="mt-2 text-[#475569]">
-              Complete the sections below and submit your proposal.
-            </p>
-            {form.type !== "new" && (
-              <>
-                <div className="mt-6 pt-6 border-t border-[#e2e8f0]" />
-                <dl className=" grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4 text-sm">
-                  <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-4">
-                    <dt className="text-[#475569] opacity-90 shrink-0 min-w-[10rem]">
-                      Submission Date
-                    </dt>
-                    <dd className="font-semibold text-[#1e293b]">
-                      {form.submissionDate}
-                    </dd>
+
+            {/* Overview + Team: 8 cols | 4 cols */}
+            {(form.type !== "new" || form.team.length > 0) && (
+              <div className="grid grid-cols-1 lg:grid-cols-12">
+                {form.type !== "new" && (
+                  <div className="border-b border-slate-100 px-5 py-4 lg:col-span-8 lg:border-b-0 lg:border-r lg:py-5">
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Overview
+                    </p>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      {[
+                      
+                        {
+                          label: "Application Reference",
+                          value: form.applicationTitle ?? "—",
+                          iconName: "Page",
+                        },
+                        {
+                          label: "Research Area",
+                          value: form.researchAreaName ?? "—",
+                          iconName: "FolderSearch",
+                        },
+                        {
+                          label: "Start Date",
+                          value: form.startDate
+                            ? form.startDate.toLocaleDateString()
+                            : "—",
+                          iconName: "CalendarDay",
+                        },
+                        {
+                          label: "End Date",
+                          value: form.endDate
+                            ? form.endDate.toLocaleDateString()
+                            : "—",
+                          iconName: "CalendarDay",
+                        },
+                        {
+                          label: "Principal Investigator",
+                          value: form.principalInvestigatorName ?? "—",
+                          iconName: "Contact",
+                        },
+                          {
+                          label: "Lead Institute",
+                          value: form.leadInstitute ?? "—",
+                          iconName: "Contact",
+                        },
+                      ].map(({ label, value, iconName }) => (
+                        <div
+                          key={label}
+                          className="flex items-start gap-2.5 rounded-md border border-slate-100 bg-slate-50/50 px-3 py-2"
+                        >
+                          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-600">
+                            <Icon
+                              iconName={iconName}
+                              styles={{ root: { fontSize: 14 } }}
+                            />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="text-xs text-slate-500">
+                              {label}
+                            </span>
+                            <span className="mt-0.5 block text-sm font-medium text-slate-800">
+                              {value}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-4">
-                    <dt className="text-[#475569] opacity-90 shrink-0 min-w-[10rem]">
-                      Application Reference
-                    </dt>
-                    <dd className="font-semibold text-[#1e293b]">
-                      {form.applicationTitle ?? "—"}
-                    </dd>
+                )}
+                {form.team.length > 0 && (
+                  <div className="px-5 py-4 lg:col-span-4 lg:py-5">
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Team members
+                    </p>
+                    <ul className="space-y-2">
+                      {form.team.map((member) => (
+                        <li
+                          key={member.id}
+                          className="flex items-center gap-3 rounded-md border border-slate-100 bg-slate-50/50 px-3 py-2"
+                        >
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-600">
+                            <Icon
+                              iconName="Contact"
+                              styles={{ root: { fontSize: 16 } }}
+                            />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-slate-900">
+                              {member.name || "—"}
+                            </p>
+                            <p className="truncate text-xs text-slate-500">
+                              {teamMemberRoles.find(
+                                (r) => String(r.key) === String(member.role),
+                              )?.text ?? member.role ?? "—"}
+                            </p>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-4">
-                    <dt className="text-[#475569] opacity-90 shrink-0 min-w-[10rem]">
-                      Research Area
-                    </dt>
-                    <dd className="font-semibold text-[#1e293b]">
-                      {form.researchAreaName ?? "—"}
-                    </dd>
-                  </div>
-                  <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-4">
-                    <dt className="text-[#475569] opacity-90 shrink-0 min-w-[10rem]">
-                      Start Date
-                    </dt>
-                    <dd className="font-semibold text-[#1e293b]">
-                      {form.startDate
-                        ? form.startDate.toLocaleDateString()
-                        : "—"}
-                    </dd>
-                  </div>
-                  <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-4">
-                    <dt className="text-[#475569] opacity-90 shrink-0 min-w-[10rem]">
-                      End Date
-                    </dt>
-                    <dd className="font-semibold text-[#1e293b]">
-                      {form.endDate
-                        ? form.endDate.toLocaleDateString()
-                        : "—"}
-                    </dd>
-                  </div>
-                  <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-4">
-                    <dt className="text-[#475569] opacity-90 shrink-0 min-w-[10rem]">
-                      Principal Investigator
-                    </dt>
-                    <dd className="font-semibold text-[#1e293b]">
-                      {form.principalInvestigatorName ?? "—"}
-                    </dd>
-                  </div>
-                </dl>
-              </>
+                )}
+              </div>
             )}
           </div>
         </Reveal>
 
         {/* Budget Details Section */}
-        <div className="mt-8 rounded-xl border border-[#e2e8f0] bg-white p-6">
+        <div
+          ref={budgetSectionRef}
+          className="mt-8 rounded-xl border border-[#e2e8f0] bg-white p-6"
+        >
           <div className="flex items-center justify-between min-h-[52px]">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <h2 className={HEADING_TEXT}>Budget Management</h2>
+              <SectionGuidelineHint
+                sectionName="Budget Management"
+                description="Report cumulative expenditures to date and clearly mention any requested budget adjustments or shifts across budget categories/rows."
+              />
               {form.budgetHeaders && form.budgetVersions.length > 0 && (
                 <Badge
                   variant={
@@ -3789,10 +4115,18 @@ export default function FormResearch() {
                           (v) => v.id === form.selectedBudgetVersion,
                         )?.status === 102
                       ? "Submitted"
-                      : form.budgetVersions.find(
+                    : form.budgetVersions.find(
                             (v) => v.id === form.selectedBudgetVersion,
                           )?.status === 103
-                        ? "Approved"
+                      ? "Approved"
+                    : form.budgetVersions.find(
+                          (v) => v.id === form.selectedBudgetVersion,
+                        )?.status === 104
+                      ? "Rejected"
+                        : form.budgetVersions.find(
+                          (v) => v.id === form.selectedBudgetVersion,
+                        )?.status === 105
+                      ? "Archived"
                         : "Unknown"}
                 </Badge>
               )}
@@ -3807,7 +4141,7 @@ export default function FormResearch() {
           </div>
           {showBudget && (
             <>
-              <div className="flex items-center justify-between gap-4 mt-4 mb-4">
+              <div className="mt-4 mb-4 flex flex-wrap items-center gap-4">
                 {form.budgetVersions.length > 0 ? (
                   <Dropdown
                     label=""
@@ -3820,6 +4154,10 @@ export default function FormResearch() {
                             ? "Submitted"
                             : v.status === 103
                               ? "Approved"
+                              : v.status === 104
+                              ? "Rejected"
+                              : v.status === 105
+                              ? "Archived"
                               : "Unknown"
                       }${v.isActive ? " (Active)" : ""}`,
                     }))}
@@ -3830,57 +4168,35 @@ export default function FormResearch() {
                 ) : (
                   <span />
                 )}
-                <div className="flex items-center gap-4">
-                  <PrimaryButton
-                  text="Update Budget"
-                  onClick={handleUpdateBudgetClick}
-                  iconProps={{ iconName: "Copy" }}
-                  styles={popupInputStyles.researchPrimaryButton}
-                  disabled={
-                    !form.budgetHeaders ||
-                    !form.budgetVersions.find(
-                      (v) => v.id === form.selectedBudgetVersion,
-                    )?.isActive ||
-                    form.budgetVersions.some(
-                      (v) =>
-                        v.version >
-                        (form.budgetVersions.find(
-                          (ver) => ver.id === form.selectedBudgetVersion,
-                        )?.version || 0),
-                    )
-                  }
-                />
-                <DefaultButton
-                  text="Submit Budget"
-                  onClick={handleEditBudgetClick}
-                  iconProps={{ iconName: "Send" }}
-                  styles={popupInputStyles.researchPrimaryButton}
-                  disabled={
-                    !form.budgetHeaders ||
-                    form.budgetVersions.find(
-                      (v) => v.id === form.selectedBudgetVersion,
-                    )?.status !== 101
-                  }
-                />
-                </div>
               </div>
               <BudgetSection
-            key={`${form.budgetLineItems}`}
-            budgetHeader={form.budgetHeaders}
-            budgetLineItem={form.budgetLineItems}
-            budgetCategories={BudgetCategorys}
-            edit={
-              form.budgetVersions.find(
-                (v) => v.id === form.selectedBudgetVersion,
-              )?.status === 101
-            }
-            onAddBudgetLineItem={(item) => {
+                key={`${form.budgetLineItems}`}
+                budgetHeader={form.budgetHeaders}
+                budgetLineItem={form.budgetLineItems}
+                budgetCategories={BudgetCategorys}
+                formType="Research"
+                edit={
+                  form.budgetVersions.find(
+                    (v) => v.id === form.selectedBudgetVersion,
+                  )?.status === 101
+                }
+                canEditSpend={
+                  form.budgetVersions.find(
+                    (v) => v.id === form.selectedBudgetVersion,
+                  )?.status === 103 &&
+                  form.budgetVersions.find(
+                    (v) => v.id === form.selectedBudgetVersion,
+                  )?.isActive
+                }
+                onEditSpend={handleOpenSpendDialog}
+                onAddBudgetLineItem={(item) => {
               const newLineItem: BudgetLineItem = {
                 id: crypto.randomUUID(), // Ensure a unique ID is generated
                 prmtk_lineitemname: item.name,
                 prmtk_category: item.category,
                 prmtk_description: item.description,
                 prmtk_amount: parseFloat(item.amount),
+                justification: item.justification,
                 action: "new",
               };
               setForm((prev) => ({
@@ -3888,8 +4204,8 @@ export default function FormResearch() {
                 budgetLineItems: [...prev.budgetLineItems, newLineItem],
               }));
             }}
-            onEditBudgetLineItem={async (id, item) => {
-              if (formType !== "new") {
+                onEditBudgetLineItem={async (id, item) => {
+              if (!isNewResearch) {
                 setShowLoader(true);
                 try {
                   const lineItemData: Record<string, any> = {
@@ -3934,9 +4250,9 @@ export default function FormResearch() {
                     : li,
                 ),
               }));
-            }}
+                }}
             onRemoveBudgetLineItem={async (id) => {
-              if (formType !== "new") {
+              if (!isNewResearch) {
                 const itemToRemove = form.budgetLineItems.find(
                   (li) => li.id === id,
                 );
@@ -3953,25 +4269,61 @@ export default function FormResearch() {
                   (li) => li.id !== id,
                 ),
               }));
-            }}
+                }}
             form={form}
           />
+              <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
+                <DefaultButton
+                  text="Submit Budget"
+                  onClick={handleEditBudgetClick}
+                  iconProps={{ iconName: "Send" }}
+                  styles={popupInputStyles.researchPrimaryButton}
+                  disabled={
+                    !form.budgetHeaders ||
+                    form.budgetVersions.find(
+                      (v) => v.id === form.selectedBudgetVersion,
+                    )?.status !== 101
+                  }
+                />
+                <PrimaryButton
+                  text="Request Budget Change"
+                  onClick={handleUpdateBudgetClick}
+                  iconProps={{ iconName: "Copy" }}
+                  styles={popupInputStyles.researchDangerButton}
+                  disabled={
+                    !form.budgetHeaders ||
+                    !form.budgetVersions.find(
+                      (v) => v.id === form.selectedBudgetVersion,
+                    )?.isActive ||
+                    form.budgetVersions.some(
+                      (v) =>
+                        v.version >
+                        (form.budgetVersions.find(
+                          (ver) => ver.id === form.selectedBudgetVersion,
+                        )?.version || 0),
+                    )
+                  }
+                />
+              </div>
             </>
           )}
         </div>
 
         {/* Report Section */}
-        <ReportingSection
-          reportItems={form.reportItems}
-          edit={true}
-          onAddReportItem={handleAddReport}
-          onEditReportItem={handleEditReport}
-          onRemoveReportItem={handleRemoveReport}
-          onDeleteFile={handleDeleteFile}
-          onUploadFile={handleUploadFile}
-          onUpdateItemFiles={handleUpdateReportFiles}
-          form={form}
-        />
+        <div ref={reportingSectionRef} className="mt-6">
+          <ReportingSection
+            reportItems={form.reportItems}
+            edit={true}
+            onAddReportItem={handleAddReport}
+            onEditReportItem={handleEditReport}
+            onRemoveReportItem={handleRemoveReport}
+            onDeleteFile={handleDeleteFile}
+            onUploadFile={handleUploadFile}
+            onUpdateItemFiles={handleUpdateReportFiles}
+            form={form}
+            expandForGuide={guideActiveSectionKey === "reporting"}
+          />
+        </div>
 
         {/* commented: DisseminationRequestSection not needed for now
         <DisseminationRequestSection
@@ -3988,56 +4340,45 @@ export default function FormResearch() {
         */}
 
         {/* Dissemination Activities Section */}
-        <DisseminationActivitiesSection
-          activities={form.disseminationActivities}
-          edit={true}
-          onAddActivity={handleAddDisseminationActivity}
-          onEditActivity={handleEditDisseminationActivity}
-          onRemoveActivity={handleRemoveDisseminationActivity}
-          onDeleteFile={handleDeleteFile}
-          onUploadFile={handleUploadFile}
-          onUpdateItemFiles={handleUpdateDisseminationActivityFiles}
-          form={form}
-        />
+        <div ref={disseminationSectionRef} className="mt-6">
+          <DisseminationActivitiesSection
+            activities={form.disseminationActivities}
+            edit={true}
+            onAddActivity={handleAddDisseminationActivity}
+            onEditActivity={handleEditDisseminationActivity}
+            onRemoveActivity={handleRemoveDisseminationActivity}
+            onDeleteFile={handleDeleteFile}
+            onUploadFile={handleUploadFile}
+            onUpdateItemFiles={handleUpdateDisseminationActivityFiles}
+            form={form}
+            expandForGuide={guideActiveSectionKey === "dissemination"}
+          />
+        </div>
 
-        {/* Deliverables Section */}
-        <DeliverablesSection
-          deliverables={form.deliverables}
-          edit={true}
-          onAddDeliverable={handleAddDeliverable}
-          onEditDeliverable={handleEditDeliverable}
-          onRemoveDeliverable={handleRemoveDeliverable}
-          onDeleteFile={handleDeleteFile}
-          onUploadFile={handleUploadFile}
-          onUpdateItemFiles={handleUpdateDeliverableFiles}
-          form={form}
-        />
-
-        {/* Team Members && Emirates Workforce Development Section */}
-        <div className="mt-6 rounded-xl border border-[#e2e8f0] bg-white p-6">
+        {/* Emirates Workforce Development Section */}
+        <div
+          ref={workforceSectionRef}
+          className="mt-6 rounded-xl border border-[#e2e8f0] bg-white p-6"
+        >
           <div className="flex items-center justify-between">
-            <h2 className={HEADING_TEXT}>
-              Team members && Emirates Workforce Development
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className={HEADING_TEXT}>Emirati Workforce Development</h2>
+              <SectionGuidelineHint
+                sectionName="Emirati Workforce Development"
+                description="Keep a running list of Emirati workforce members, including joining/end dates, role on project, and education level."
+              />
+            </div>
             <IconButton
               iconProps={{
                 iconName: showTeam ? "ChevronUp" : "ChevronDown",
               }}
               onClick={() => setShowTeam((prev) => !prev)}
-              ariaLabel="Toggle team members and workforce development"
+              ariaLabel="Toggle Emirati Workforce Development"
               disabled={form.type === "view"}
             />
           </div>
           {showTeam && (
             <>
-              <TeamMemberSection
-                team={form.team}
-                teamMemberRoles={teamMemberRoles}
-                onAddMember={handleAddMember}
-                onRemoveMember={handleRemoveMember}
-                onEditMember={handleEditMember}
-                form={form}
-              />
               <WorkforceDevelopmentSection
                 items={form.workforceDevelopments}
                 onAdd={handleAddWorkforceDevelopment}
@@ -4050,11 +4391,20 @@ export default function FormResearch() {
         </div>
 
         {/* Manuscripts Drafts and Journal Publications Section */}
-        <div className="mt-6 rounded-xl border border-[#e2e8f0] bg-white p-6">
+        <div
+          ref={manuscriptsSectionRef}
+          className="mt-6 rounded-xl border border-[#e2e8f0] bg-white p-6"
+        >
           <div className="flex items-center justify-between">
-            <h2 className={HEADING_TEXT}>
-              Manuscripts Drafts and Journal Publications
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className={HEADING_TEXT}>
+                Manuscripts Drafts and Journal Publications
+              </h2>
+              <SectionGuidelineHint
+                sectionName="Manuscripts"
+                description="Use the required manuscript status flow and share drafts with ECA at least 45 days before journal submission for review."
+              />
+            </div>
             <IconButton
               iconProps={{
                 iconName: showManuscripts ? "ChevronUp" : "ChevronDown",
@@ -4064,22 +4414,33 @@ export default function FormResearch() {
             />
           </div>
           {showManuscripts && (
-            <ManuscriptsSection
-              items={form.manuscripts}
-              onAdd={handleAddManuscript}
-              onRemove={handleRemoveManuscript}
-              onEdit={handleEditManuscript}
-              form={form}
-            />
+            <>
+              <ManuscriptsSection
+                items={form.manuscripts}
+                onAdd={handleAddManuscript}
+                onRemove={handleRemoveManuscript}
+                onEdit={handleEditManuscript}
+                form={form}
+              />
+            </>
           )}
         </div>
 
         {/* Capacity Building Workshops, Training, and Engagement Activities */}
-        <div className="mt-6 rounded-xl border border-[#e2e8f0] bg-white p-6">
+        <div
+          ref={capacitySectionRef}
+          className="mt-6 rounded-xl border border-[#e2e8f0] bg-white p-6"
+        >
           <div className="flex items-center justify-between">
-            <h2 className={HEADING_TEXT}>
-              Capacity Building Workshops, Training, and Engagement Activities
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className={HEADING_TEXT}>
+                Capacity Building Workshops, Training, and Engagement Activities
+              </h2>
+              <SectionGuidelineHint
+                sectionName="Capacity Building"
+                description="Track each workshop/training item with objective, audience, delivery format, status, and key outputs or lessons learned."
+              />
+            </div>
             <IconButton
               iconProps={{
                 iconName: showCapacity ? "ChevronUp" : "ChevronDown",
@@ -4089,24 +4450,47 @@ export default function FormResearch() {
             />
           </div>
           {showCapacity && (
-            <CapacityBuildingSection
-              items={form.researchActivities}
-              onAdd={handleAddResearchActivity}
-              onRemove={handleRemoveResearchActivity}
-              onEdit={handleEditResearchActivity}
-              form={form}
-            />
+            <>
+              <CapacityBuildingSection
+                items={form.researchActivities}
+                onAdd={handleAddResearchActivity}
+                onRemove={handleRemoveResearchActivity}
+                onEdit={handleEditResearchActivity}
+                onDeleteFile={handleDeleteFile}
+                onUploadFile={handleUploadFile}
+                onUpdateItemFiles={handleUpdateResearchActivityFiles}
+                form={form}
+              />
+            </>
           )}
         </div>
 
-        {/* File Upload Section */}
+        {/* Final Deliverables Section */}
+        <div ref={deliverablesSectionRef} className="mt-6">
+          <DeliverablesSection
+            deliverables={form.deliverables}
+            edit={true}
+            onAddDeliverable={handleAddDeliverable}
+            onEditDeliverable={handleEditDeliverable}
+            onRemoveDeliverable={handleRemoveDeliverable}
+            onDeleteFile={handleDeleteFile}
+            onUploadFile={handleUploadFile}
+            onUpdateItemFiles={handleUpdateDeliverableFiles}
+            form={form}
+            expandForGuide={guideActiveSectionKey === "deliverables"}
+          />
+        </div>
 
-        <FileUploadSectionResearch
-          onFilesAdd={handleFilesAdd}
-          onFileRemove={handleFileRemove}
-          form={form}
-          files={form.files}
-        />
+        {/* Extra Attachments (File Upload) Section */}
+        <div ref={attachmentsSectionRef} className="mt-6">
+          <FileUploadSectionResearch
+            onFilesAdd={handleFilesAdd}
+            onFileRemove={handleFileRemove}
+            form={form}
+            files={form.files}
+            expandForGuide={guideActiveSectionKey === "attachments"}
+          />
+        </div>
 
         <Reveal className="mt-8">
           <div className="flex items-center justify-end gap-3">
@@ -4124,8 +4508,8 @@ export default function FormResearch() {
         hidden={!showSuccessDialog}
         message={dialogMessage}
         onDismiss={() => {
-          navigate("/researches", { state: {} });
-        }}
+          navigate("/research", { state: {} });
+                }}
       />
       <ErrorDialog
         hidden={!showErrorDialog}
@@ -4136,18 +4520,39 @@ export default function FormResearch() {
       />
       <ConfirmDialog
         hidden={!showCloneBudgetConfirm}
-        title="Clone Budget"
-        message="Are you sure you want to create a new budget version? This will clone the current budget header and all line items with Draft status."
+        title="Request Budget Change"
+        message="Are you sure you want to request for a budget change? This will require additional approval from ECA Research Team."
         onConfirm={handleUpdateBudgetConfirm}
         onCancel={() => setShowCloneBudgetConfirm(false)}
       />
       <ConfirmDialog
         hidden={!showSubmitBudgetConfirm}
         title="Submit Budget"
-        message="Are you sure you want to submit this budget version? Once submitted, it cannot be edited until reviewed."
+        message="Are you sure you want to submit this budget version? Once submitted, it cannot be edited until reviewed and approved."
         onConfirm={handleEditBudgetConfirm}
         onCancel={() => setShowSubmitBudgetConfirm(false)}
       />
+      {selectedSpendLineItem && (
+        <BudgetSpendDialog
+          open={spendDialogOpen}
+          onClose={handleCloseSpendDialog}
+          lineItem={selectedSpendLineItem}
+          onSaved={({ totalSpend, remainingBudget }) => {
+            setForm((prev) => ({
+              ...prev,
+              budgetLineItems: prev.budgetLineItems.map((item) =>
+                item.id === selectedSpendLineItem.id
+                  ? {
+                      ...item,
+                      totalSpent: totalSpend,
+                      remainingBudget,
+                    }
+                  : item,
+              ),
+            }));
+          }}
+        />
+      )}
       <OverlayLoader
         isVisible={showLoader}
         label="Your request is being processed..."

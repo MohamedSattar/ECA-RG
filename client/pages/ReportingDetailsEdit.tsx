@@ -46,6 +46,7 @@ export default function ReportingDetailsEdit() {
   useEffect(() => {
     if (reportItem) {
       setReportForm({
+        prmtk_reporttype: reportItem.prmtk_reporttype ?? 1,
         prmtk_reporttitle: reportItem.prmtk_reporttitle || "",
         prmtk_reportingyear: reportItem.prmtk_reportingyear
           ? reportItem.prmtk_reportingyear.toString()
@@ -77,8 +78,10 @@ export default function ReportingDetailsEdit() {
   }, [reportItem]);
 
   const buildBackUrl = () => {
-    const q = searchParams.toString();
-    return q ? `/applyresearch?${q}` : "/applyresearch";
+    const researchId = searchParams.get("researchId");
+    return researchId
+      ? `/applyresearch?researchId=${encodeURIComponent(researchId)}`
+      : "/applyresearch";
   };
 
   const handleSubmit = () => {
@@ -88,6 +91,8 @@ export default function ReportingDetailsEdit() {
 
     if (
       !reportTitle ||
+      reportForm.prmtk_reporttype == null ||
+      Number.isNaN(reportForm.prmtk_reporttype) ||
       !reportForm.prmtk_reportingyear ||
       !reportForm.prmtk_reportingmonth ||
       !reportForm.prmtk_budgetspent ||

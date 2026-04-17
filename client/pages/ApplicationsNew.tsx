@@ -53,6 +53,12 @@ export default function ApplicationsNew() {
     setLoading(true);
     setError(null);
 
+    if (!currentUserId) {
+      setApps([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await callApi<{value:any}>({ url: currentUserApplicationURL, method: "GET" });
       const list = res?.value ?? [];
@@ -69,34 +75,38 @@ export default function ApplicationsNew() {
 
   useEffect(() => {
     loadApps();
-  }, []);
+  }, [currentUserId]);
 
   const applications = useMemo(() => apps || [], [apps]);
 
   const onView = (item:any) => {
     const title = (item[ApplicationKeys.APPLICATIONTITLE] as string) ?? "Application";
-    navigate("/applyapplication", {
-      state: {
-        applicationId: item[ApplicationKeys.APPLICATIONID],
-        grantCycleId: item[ApplicationKeys.GRANTCYCLE],
-        researchAreaId: item[ApplicationKeys.RESEARCHAREA],
-        formType:"view",
-        item:item
-      }
-    });
+    navigate(
+      `/application?item=${item[ApplicationKeys.APPLICATIONID]}`,
+      {
+        state: {
+          applicationId: item[ApplicationKeys.APPLICATIONID],
+          grantCycleId: item[ApplicationKeys.GRANTCYCLE],
+          researchAreaId: item[ApplicationKeys.RESEARCHAREA],
+          item: item,
+        },
+      },
+    );
   };
 
   const onEdit = (item: any) => {
     const title = (item[ApplicationKeys.APPLICATIONTITLE] as string) ?? "Application";
-    navigate("/applyapplication", {
-      state: {
-        applicationId: item[ApplicationKeys.APPLICATIONID],
-        grantCycleId: item[ApplicationKeys.GRANTCYCLE],
-        researchAreaId: item[ApplicationKeys.RESEARCHAREA],
-        formType:"edit",
-        item: item,
-      }
-    });
+    navigate(
+      `/application?item=${item[ApplicationKeys.APPLICATIONID]}`,
+      {
+        state: {
+          applicationId: item[ApplicationKeys.APPLICATIONID],
+          grantCycleId: item[ApplicationKeys.GRANTCYCLE],
+          researchAreaId: item[ApplicationKeys.RESEARCHAREA],
+          item: item,
+        },
+      },
+    );
 
   };
 
@@ -112,7 +122,7 @@ export default function ApplicationsNew() {
             </div>
 
             <Link
-              to="/applyapplication"
+              to="/application"
               className="inline-flex shrink-0 items-center rounded-md bg-[#e78f6a] px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-[#de835c]"
             >
               Apply for a Grant

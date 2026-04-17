@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { ChevronDown, User } from "lucide-react";
 import Reveal from "@/motion/Reveal";
 import { useDataverseApi } from "@/hooks/useDataverseApi";
-import { normalizeImageUrl } from "@/lib/utils";
+import { formatDate, normalizeImageUrl } from "@/lib/utils";
 import {
   ApplicationFields,
   ApplicationKeys,
@@ -519,13 +519,13 @@ export default function Index() {
         // Navigate to view/edit the existing application
         toast.success("Redirecting to your application...");
         navigate(
-          `/applyapplication?grantCycleId=${grantCycleId}&researchAreaId=${researchAreaId}&formType=view&item=${existingApplication.prmtk_applicationid}`,
+          `/application/${existingApplication.prmtk_applicationid}`,
         );
       } else {
         // Create a new draft application
         const applicationData = {
           [ApplicationKeys.APPLICATIONTITLE]: "Draft Application",
-          [ApplicationKeys.ABSTRACT]: "Draft",
+          [ApplicationKeys.ABSTRACT]: "",
           [ApplicationKeys.SUBMISSIONDATE]: new Date().toISOString(),
           [ApplicationKeys.MAINAPPLICANT_ID]: `/${TableName.CONTACTS}(${user.contact[ContactKeys.CONTACTID]})`,
           [ApplicationKeys.GRANTCYCLE_ID]: `/${TableName.GRANTCYCLES}(${grantCycleId})`,
@@ -556,9 +556,7 @@ export default function Index() {
         }
 
         toast.success("Application created successfully!");
-        navigate(
-          `/applyapplication?item=${applicationId}&grantCycleId=${grantCycleId}&researchAreaId=${researchAreaId}&formType=edit`,
-        );
+        navigate(`/application/${applicationId}`);
       }
     } catch (error) {
       console.error("Error handling grant application:", error);
@@ -581,7 +579,8 @@ export default function Index() {
                 zIndex: 1,
                 width: "175px",
               }}
-              src="/images/girl.png"
+              src="/images/application.png"
+              // src="/images/girl.png"
               alt="Background pattern"
             />
           </div>
@@ -600,15 +599,14 @@ export default function Index() {
                 ECA Research Grants Portal
               </h1>
               <p className="mt-4 text-base md:text-lg text-white/80 max-w-xl">
-                Empowering university faculty to drive innovation in early
-                childhood development through research excellence
+             A dedicated platform for researchers to explore active grants, submit proposals, track grant progress, and register for updates on future funding opportunities.
               </p>
               <div className="mt-8 flex flex-col sm:flex-row gap-3">
                 {/*<PrimaryButton
                   onClick={() => {
                     console.log("Navigating to apply for research area:", grant?.[GrantCycleKeys.GRANTCYCLEID]);
 
-                    navigate("/applyapplication", {
+                    navigate("/application", {
                       state: {
                         grantCycleId: grant?.[GrantCycleKeys.GRANTCYCLEID],
                         researchAreaId: null
@@ -653,7 +651,7 @@ export default function Index() {
 
             {/* Hero Collage */}
             <div className="relative h-[380px] md:h-[440px]">
-              <img
+              {/* <img
                 style={{
                   position: "absolute",
                   right: "0px",
@@ -663,13 +661,15 @@ export default function Index() {
                 }}
                 src="/images/girl.png"
                 alt="Background pattern"
-              />
+              /> */}
 
+            <div className="relative flex justify-center md:justify-end">
               <img
-                src="images/bg2.png"
-                alt="Hero collage"
-                className="absolute right-0 top-0 h-full w-auto max-w-none"
+                src="/images/application.png"
+                alt="Illustration"
+                className="h-auto w-auto max-w-none"
               />
+            </div>
             </div>
           </div>
         </Reveal>
@@ -695,7 +695,7 @@ export default function Index() {
                       Start Date
                     </div>
                     <div className="font-medium text-right text-light-brown">
-                      {grant[GrantCycleKeys.STARTDATE_FORMATTED]}
+                      {formatDate(grant[GrantCycleKeys.STARTDATE])}
                     </div>
                   </div>
                   <div className="grid grid-cols-[1fr_auto] items-center text-sm">
@@ -703,7 +703,7 @@ export default function Index() {
                       End Date
                     </div>
                     <div className="font-medium text-right text-light-brown">
-                      {grant[GrantCycleKeys.ENDDATE_FORMATTED]}
+                      {formatDate(grant[GrantCycleKeys.ENDDATE])}
                     </div>
                   </div>
                 </div>
@@ -774,7 +774,7 @@ export default function Index() {
               childhood development through research excellence
             </p>
             <Link
-              to="/applyapplication"
+              to="/application"
               className="mt-6 inline-flex items-center text-brown font-semibold hover:underline"
             >
               Contact Us

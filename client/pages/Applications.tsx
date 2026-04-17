@@ -61,6 +61,12 @@ export default function Applications() {
     setLoading(true);
     setError(null);
 
+    if (!currentUserId) {
+      setApps([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await callApi<{ value: any }>({
         url: currentUserApplicationURL,
@@ -81,7 +87,7 @@ export default function Applications() {
 
   useEffect(() => {
     loadApps();
-  }, []);
+  }, [currentUserId]);
 
   const applications = useMemo(() => apps || [], [apps]);
 
@@ -116,13 +122,12 @@ export default function Applications() {
   const onView = (item: any) => {
     const statusLabel = getStatusLabel(item);
     navigate(
-      `/applyapplication?item=${item[ApplicationKeys.APPLICATIONID]}&grantCycleId=${item[ApplicationKeys.GRANTCYCLE]}&researchAreaId=${item[ApplicationKeys.RESEARCHAREA]}&status=${encodeURIComponent(statusLabel)}&applicationNumber=${item[ApplicationKeys.APPLICATIONNUMBER]}&formType=view`,
+      `/application/${item[ApplicationKeys.APPLICATIONID]}`,
       {
         state: {
           applicationId: item[ApplicationKeys.APPLICATIONID],
           grantCycleId: item[ApplicationKeys.GRANTCYCLE],
           researchAreaId: item[ApplicationKeys.RESEARCHAREA],
-          formType: "view",
           item: item,
           status: statusLabel,
         },
@@ -133,13 +138,12 @@ export default function Applications() {
   const onEdit = (item: any) => {
     const statusLabel = getStatusLabel(item);
     navigate(
-      `/applyapplication?item=${item[ApplicationKeys.APPLICATIONID]}&grantCycleId=${item[ApplicationKeys.GRANTCYCLE]}&researchAreaId=${item[ApplicationKeys.RESEARCHAREA]}&status=${encodeURIComponent(statusLabel)}&applicationNumber=${item[ApplicationKeys.APPLICATIONNUMBER]}&formType=edit`,
+      `/application/${item[ApplicationKeys.APPLICATIONID]}`,
       {
         state: {
           applicationId: item[ApplicationKeys.APPLICATIONID],
           grantCycleId: item[ApplicationKeys.GRANTCYCLE],
           researchAreaId: item[ApplicationKeys.RESEARCHAREA],
-          formType: "edit",
           item: item,
           status: statusLabel,
         },
@@ -189,7 +193,8 @@ export default function Applications() {
               {status}
             </div>
             <IconButton
-              iconProps={{ iconName: "Edit" }}
+              iconProps={{ iconName:  status.toLowerCase() === "draft" ||
+                  status.toLowerCase() === "return for updates" ?"Edit" : "View"}}
               title="Edit Application"
               onClick={() => {
                 if (
@@ -228,6 +233,7 @@ export default function Applications() {
               {researchArea}
             </p>
           </div>
+          {  status.toLowerCase() != "draft" &&
           <div>
             <p className="text-xs font-medium text-[#64748b] uppercase tracking-wide">
               Submitted
@@ -235,7 +241,9 @@ export default function Applications() {
             <p className="text-sm text-[#1e293b] mt-1 font-medium">
               {submittedDate}
             </p>
+       
           </div>
+             }
         </div>
       </div>
     );
@@ -305,7 +313,7 @@ export default function Applications() {
           <div className="container py-4 md:py-4 grid gap-10 md:grid-cols-2 items-center">
             <div className="max-w-2xl">
               <h1 className="text-4xl md:text-6xl font-extrabold leading-tight tracking-tight text-white">
-                My Grant Status
+                My Applications (Proposals)
               </h1>
             </div>
 
@@ -331,7 +339,7 @@ export default function Applications() {
               </h2>
 
               {/* <Link
-                to="/applyapplication"
+                to="/application"
                 className="bg-[#E46D5A] text-white px-6 py-2 rounded flex items-center gap-2 mt-4 md:mt-0"
               >
                 <span className="text-lg">＋</span>

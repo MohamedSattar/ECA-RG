@@ -90,6 +90,23 @@ async function getCurrentUserContact(
       method: "GET",
     });
 
+    if(response?.value?.length ==0)
+    {
+      const data={
+        emailaddress1:email
+      }
+      const resp = await callApi<{ value: any[] }>({
+      url: `/_api/${TableName.CONTACTS}?$filter=${filter}`,
+      method: "POST",
+      data
+    });
+    const response = await callApi<{ value: any[] }>({
+      url: `/_api/${TableName.CONTACTS}?$filter=${filter}`,
+      method: "GET",
+    });
+    return response?.value?.length ? response.value[0] : null;
+    }
+
     return response?.value?.length ? response.value[0] : null;
   } catch (error) {
     console.error("Error fetching user contact:", error);
@@ -258,7 +275,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       isLoading,
       isLoggingIn: isInteractionInProgress,
 
-      login: async (isSignup?: boolean) => {
+      login: async () => {
         try {
           // Prevent concurrent login attempts
           if (isInteractionInProgress) {
@@ -269,14 +286,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
           }
 
           setIsInteractionInProgress(true);
-          const requestType = isSignup ? "signup" : "login";
-          console.log(`[Auth] Starting SSO ${requestType}...`);
+        
 
-          const request = isSignup ? signupRequest : loginRequest;
           console.log("[Auth] Using redirect flow for authentication");
 
           // Use redirect for all environments
-          await instance.loginRedirect(request);
+          await instance.loginRedirect(loginRequest);
           // Note: Control won't return here as redirect navigates away
         } catch (error: any) {
           // Handle specific MSAL errors

@@ -32,6 +32,9 @@ export interface BudgetLineItem {
   prmtk_amount: number;
   prmtk_category: string;
   action?: "new" | "existing" | "remove";
+  totalSpent?: number;
+  remainingBudget?: number;
+  justification:string;
 }
 
 interface AddBudgetLineForm {
@@ -39,17 +42,21 @@ interface AddBudgetLineForm {
   description: string;
   amount: string;
   category: string;
+  justification:string;
 }
 
 interface BudgetSectionProps {
   budgetCategories: IDropdownOption[];
   budgetHeader: BudgetHeader;
   budgetLineItem: BudgetLineItem[];
+  formType:"Research" | "Application"
   onAddBudgetLineItem: (item: AddBudgetLineForm) => void;
   onRemoveBudgetLineItem: (id: string) => void;
   onEditBudgetLineItem: (id: string, item: AddBudgetLineForm) => void;
   form: any;
   edit?: boolean;
+  canEditSpend?: boolean;
+  onEditSpend?: (lineItem: BudgetLineItem) => void;
 }
 
 const INITIAL_LINE_FORM: AddBudgetLineForm = {
@@ -57,6 +64,7 @@ const INITIAL_LINE_FORM: AddBudgetLineForm = {
   description: "",
   amount: "",
   category: "",
+  justification:""
 };
 
 export const BudgetSection: React.FC<BudgetSectionProps> = ({
@@ -66,8 +74,11 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
   onAddBudgetLineItem,
   onRemoveBudgetLineItem,
   onEditBudgetLineItem,
+  formType,
   form,
   edit = true,
+  canEditSpend = false,
+  onEditSpend,
 }) => {
   const [showSection, setShowSection] = useState(true);
   const [lineForm, setLineForm] =
@@ -108,14 +119,46 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
       description: item.prmtk_description,
       amount: item.prmtk_amount.toString(),
       category: item.prmtk_category,
+      justification:item.justification
     });
     setEditingLineId(item.id);
     setIsLineDialogOpen(true);
   };
 
-  const totalLineItemAmount = budgetLineItem
-    .filter((l) => l.action !== "remove")
-    .reduce((sum, l) => sum + l.prmtk_amount, 0);
+  const activeBudgetLines = useMemo(
+    () => budgetLineItem.filter((l) => l.action !== "remove"),
+    [budgetLineItem],
+  );
+
+  const totalLineItemAmount = useMemo(
+    () => activeBudgetLines.reduce((sum, l) => sum + l.prmtk_amount, 0),
+    [activeBudgetLines],
+  );
+
+  const totalSpentSum = useMemo(
+    () =>
+      activeBudgetLines.reduce(
+        (sum, l) => sum + (l.totalSpent != null ? l.totalSpent : 0),
+        0,
+      ),
+    [activeBudgetLines],
+  );
+
+  const totalRemainingSum = useMemo(
+    () =>
+      activeBudgetLines.reduce(
+        (sum, l) => sum + (l.remainingBudget != null ? l.remainingBudget : 0),
+        0,
+      ),
+    [activeBudgetLines],
+  );
+
+  const footerExtraCols =
+    (edit && form.type !== "view" ? 1 : 0) +
+    (canEditSpend && form.type !== "view" ? 1 : 0);
+
+  const baseColumnCount = formType === "Application" ? 4 : 6;
+  const totalTableColumns = baseColumnCount + footerExtraCols;
 
   return (
     <div className="mt-8 rounded-xl border bg-white p-6">
@@ -166,8 +209,23 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
               minWidth={"50vw"}
             >
               <div className="grid gap-4 py-2">
+                    <div>
+                  <Label htmlFor="lineCategory">Category</Label>
+                  <Dropdown
+                    id="lineCategory"
+                    placeholder="Select a category"
+                    options={categoryOptions}
+                    selectedKey={lineForm.category || null}
+                    onChange={(_, option) =>
+                      setLineForm({
+                        ...lineForm,
+                        category: (option?.key as string) || "",
+                      })
+                    }
+                  />
+                </div>
                 <div>
-                  <Label htmlFor="lineName">Item Name</Label>
+                  <Label htmlFor="lineName">Activity</Label>
                   <TextField
                     id="lineName"
                     value={lineForm.name}
@@ -205,22 +263,25 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                     type="number"
                   />
                 </div>
+            
                 <div>
-                  <Label htmlFor="lineCategory">Category</Label>
-                  <Dropdown
-                    id="lineCategory"
-                    placeholder="Select a category"
-                    options={categoryOptions}
-                    selectedKey={lineForm.category || null}
-                    onChange={(_, option) =>
+                  <Label htmlFor="lineJustification">Add Justification</Label>
+                  <TextField
+                    id="lineJustification"
+                    value={lineForm.justification}
+                    onChange={(e, newValue) =>
                       setLineForm({
                         ...lineForm,
-                        category: (option?.key as string) || "",
+                        justification: newValue || "",
                       })
                     }
+                    placeholder="Enter Justification"
+                    multiline
+                    rows={3}
                   />
                 </div>
               </div>
+              
               <FluentDialogFooter>
                 <PrimaryButton
                   onClick={handleAddBudgetLine}
@@ -244,7 +305,7 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                 <thead className="bg-[#1D2054]">
                   <tr className="text-left">
                     <th className="px-6 py-3 font-semibold text-white">
-                      Item Name
+                      Activity
                     </th>
                     <th className="px-6 py-3 font-semibold text-white">
                       Description
@@ -254,10 +315,24 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                     </th>
                     <th className="px-6 py-3 font-semibold text-white text-right">
                       Amount
+                    </th>                    
+              
+                    
+                    <th style={{display :formType=="Research"?"table-cell":"none"}} className="px-6 py-3 font-semibold text-white text-right">
+                      Total Spent
                     </th>
-                    {edit && (
+                    <th style={{display :formType=="Research"?"table-cell":"none"}} className="px-6 py-3 font-semibold text-white text-right">
+                      Remaining Budget
+                    </th>
+                    
+                    {edit && form.type !== "view"  && (
                       <th className="px-6 py-3 font-semibold text-white text-right">
                         Actions
+                      </th>
+                    )}
+                    {canEditSpend && form.type !== "view" && (
+                      <th className="px-6 py-3 font-semibold text-white text-right">
+                        Update Spend
                       </th>
                     )}
                   </tr>
@@ -284,6 +359,18 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                       <td className="px-6 py-3 text-right font-medium text-[#1e293b]">
                         {aedFormat(item.prmtk_amount)}
                       </td>
+                    
+                      <td style={{display :formType=="Research"?"table-cell":"none"}} className="px-6 py-3 text-right font-medium text-[#1e293b]">
+                        {item.totalSpent != null
+                          ? aedFormat(item.totalSpent)
+                          : "-"}
+                      </td>
+                      <td style={{display :formType=="Research"?"table-cell":"none"}} className="px-6 py-3 text-right font-medium text-[#1e293b]">
+                        {item.remainingBudget != null
+                          ? aedFormat(item.remainingBudget)
+                          : "-"}
+                      </td>
+                     
                       {edit && form.type !== "view" && (
                         <td className="px-6 py-3 text-right">
                           {item.action === "remove" ? (
@@ -310,12 +397,23 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                           )}
                         </td>
                       )}
+                      {canEditSpend && (
+                        <td className="px-6 py-3 text-right">
+                          <IconButton
+                            onClick={() => onEditSpend?.(item)}
+                            iconProps={{ iconName: "Edit" }}
+                            title="Edit spend"
+                            ariaLabel="Edit spend"
+                            styles={popupInputStyles.editButton}
+                          />
+                        </td>
+                      )}
                     </tr>
                   ))}
                   {budgetLineItem.length === 0 && (
                     <tr>
                       <td
-                        colSpan={edit ? 5 : 4}
+                        colSpan={totalTableColumns}
                         className="px-6 py-8 text-center text-[#94a3b8]"
                       >
                         No budget line items added.
@@ -326,15 +424,30 @@ export const BudgetSection: React.FC<BudgetSectionProps> = ({
                 <tfoot className="bg-[#f8fafc] border-t-2 border-[#e2e8f0]">
                   <tr>
                     <td
-                      colSpan={edit ? 3 : 2}
-                      className="px-6 py-3 font-semibold text-[#1D2054]"
+                      colSpan={3}
+                      className="px-6 py-3 font-semibold text-[#1D2054] text-base"
                     >
-                      Total Amount
+                      Total
                     </td>
-                    <td colSpan={3} className="px-6 py-3 font-bold text-right text-[#1D2054] text-lg">
+                    <td className="px-6 py-3 font-bold text-right text-[#1D2054] text-lg">
                       {aedFormat(totalLineItemAmount)}
                     </td>
-                   
+                    {formType === "Research" ? (
+                      <>
+                        <td className="px-6 py-3 font-bold text-right text-[#1D2054] text-lg">
+                          {aedFormat(totalSpentSum)}
+                        </td>
+                        <td className="px-6 py-3 font-bold text-right text-[#1D2054] text-lg">
+                          {aedFormat(totalRemainingSum)}
+                        </td>
+                      </>
+                    ) : null}
+                    {edit && form.type !== "view" && (
+                      <td className="px-6 py-3" />
+                    )}
+                    {canEditSpend && form.type !== "view" && (
+                      <td className="px-6 py-3" />
+                    )}
                   </tr>
                 </tfoot>
               </table>
