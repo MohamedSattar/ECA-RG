@@ -62,6 +62,16 @@ if (-not $SkipBuild) {
     if ($LASTEXITCODE -ne 0) { throw "npm install failed" }
     Write-OK "Dependencies ready"
 
+    # VITE_ variables are baked into the client bundle at build time — they are NOT
+    # read from Azure App Settings at runtime. Load the correct slot env file now.
+    $envFile = Join-Path $ProjectRoot ".env $Slot"
+    if (Test-Path $envFile) {
+        Copy-Item $envFile (Join-Path $ProjectRoot ".env") -Force
+        Write-OK "Loaded build-time env from '.env $Slot'"
+    } else {
+        Write-Warn "No '.env $Slot' file found — using existing .env (VITE_ vars may be wrong)"
+    }
+
     Write-Step "Building client (Vite) ..."
     node "$ProjectRoot/node_modules/vite/bin/vite.js" build
     if ($LASTEXITCODE -ne 0) { throw "Client build failed" }
