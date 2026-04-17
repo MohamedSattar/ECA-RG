@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pwsh -File deploy.ps1 -Slot prod)",
+      "Bash(pwsh -File deploy.ps1 -Slot prod -SkipBuild)",
+      "Bash(az webapp *)",
+      "Bash(python -c \"import sys,json; logs=json.load\\(sys.stdin\\); [print\\(l['log_time'], l['message']\\) for l in logs if l['message'].strip\\(\\)]\")",
+      "Bash(az rest *)",
+      "Bash(python -c \"import sys,json; [print\\(l.get\\('log_time',''\\)[:19], l.get\\('message',''\\)\\) for l in json.load\\(sys.stdin\\) if l.get\\('message',''\\).strip\\(\\)]\")",
+      "Bash(az account *)",
+      "Bash(curl -s -H 'Authorization: Bearer __TRACKED_VAR__' https://researchgrant-haegdscxfchcepem.scm.uaenorth-01.azurewebsites.net/api/deployments/f43543c3-be30-4a32-8bd3-2955b692af15/log)",
+      "Bash(curl -s -H 'Authorization: Bearer __TRACKED_VAR__' https://researchgrant-haegdscxfchcepem.scm.uaenorth-01.azurewebsites.net/api/logs/docker)",
+      "Bash(python -c \"import sys,json; logs=json.load\\(sys.stdin\\); [print\\(l['machineName'], l['href']\\) for l in logs]\")",
+      "Bash(curl -s -H 'Authorization: Bearer __TRACKED_VAR__' https://researchgrant-haegdscxfchcepem.scm.uaenorth-01.azurewebsites.net/api/vfs/LogFiles/2026_04_17_ln0xsdlwk00006N_docker.log)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" --max-time 15 \"https://researchgrant-haegdscxfchcepem.uaenorth-01.azurewebsites.net\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" --max-time 10 \"https://researchgrant-haegdscxfchcepem.uaenorth-01.azurewebsites.net\")",
+      "Bash(powershell.exe -ExecutionPolicy Bypass -File deploy.ps1 -SkipBuild)",
+      "Bash(powershell.exe -Command ' *)",
+      "Bash(python3 -c \" import json, sys logs = json.load\\(sys.stdin\\) for l in logs: print\\(l.get\\('log_time',''\\)[:19], l.get\\('type',''\\), l.get\\('message',''\\)\\) if l.get\\('details_url'\\): print\\(' DETAILS:', l['details_url']\\) \")",
+      "Bash(cp \".env prod\" .env)",
+      "Bash(node node_modules/vite/bin/vite.js build)",
+      "Bash(node node_modules/vite/bin/vite.js build --config vite.config.server.ts)"
+    ]
+  }
+}
