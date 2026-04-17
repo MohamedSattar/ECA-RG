@@ -31,7 +31,6 @@ $Subscription   = "ECA_Staging_Testing"
 $AzureSlot      = if ($Slot -eq "prod") { "production" } else { $Slot }
 $StartupCommand = "npm install --omit=dev --quiet && node dist/server/node-build.mjs"
 $ProjectRoot    = $PSScriptRoot
-$TempDir        = Join-Path $env:TEMP "rg-deploy-$(Get-Random)"
 $ZipPath        = Join-Path $env:TEMP "rg-deploy-$Slot.zip"
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -88,18 +87,22 @@ if (-not $SkipBuild) {
 # on the server automatically (SCM_DO_BUILD_DURING_DEPLOYMENT=true).
 Write-Step "Assembling deployment package (dist only) ..."
 
-if (Test-Path $TempDir) { Remove-Item $TempDir -Recurse -Force }
-New-Item -ItemType Directory -Path $TempDir | Out-Null
-
-Copy-Item (Join-Path $ProjectRoot "dist")              $TempDir -Recurse
-Copy-Item (Join-Path $ProjectRoot "package.json")      $TempDir
-Copy-Item (Join-Path $ProjectRoot "package-lock.json") $TempDir
-# Include .deployment so Oryx knows to run npm install but skip a rebuild
-Copy-Item (Join-Path $ProjectRoot ".deployment")       $TempDir -ErrorAction SilentlyContinue
-
 if (Test-Path $ZipPath) { Remove-Item $ZipPath -Force }
 Write-Step "Zipping package → $ZipPath ..."
-Compress-Archive -Path "$TempDir\*" -DestinationPath $ZipPath -Force
+
+# Build ZIP with forward-slash entry names so Kudu's rsync works on Linux.
+# Compress-Archive produces backslash paths which break parallel_rsync.sh on Linux.
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$zip = [System.IO.Compression.ZipFile]::Open($ZipPath, 'Create')
+Get-ChildItem -Path (Join-Path $ProjectRoot "dist") -Recurse -File | ForEach-Object {
+    $rel = $_.FullName.Substring($ProjectRoot.Length + 1).Replace('\', '/')
+    [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $_.FullName, $rel) | Out-Null
+}
+foreach ($f in @("package.json", "package-lock.json")) {
+    [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, (Join-Path $ProjectRoot $f), $f) | Out-Null
+}
+$zip.Dispose()
+
 $sizeMB = [math]::Round((Get-Item $ZipPath).Length / 1MB, 1)
 Write-OK "Package size: $sizeMB MB"
 
@@ -120,29 +123,44 @@ if ($AzureSlot -eq "production") {
 if ($LASTEXITCODE -ne 0) { throw "Failed to set startup command" }
 Write-OK "Startup command set"
 
-# ─── 5. Deploy ZIP ────────────────────────────────────────────────────────────
+# ─── 5. Deploy ZIP via Kudu ZipDeploy API ─────────────────────────────────────
+# Using the Kudu ZipDeploy endpoint directly avoids the OneDeploy build pipeline
+# which fails on Windows-generated ZIPs due to backslash path handling on Linux.
 Write-Step "Deploying ZIP to '$AppName' (slot: $AzureSlot) ..."
-if ($AzureSlot -eq "production") {
-    az webapp deploy `
-        --resource-group $ResourceGroup `
-        --name $AppName `
-        --src-path $ZipPath `
-        --type zip `
-        --clean true `
-        --async true
-} else {
-    az webapp deploy `
-        --resource-group $ResourceGroup `
-        --name $AppName `
-        --slot $AzureSlot `
-        --src-path $ZipPath `
-        --type zip `
-        --clean true `
-        --async true
+
+$slotArg = if ($AzureSlot -ne "production") { @("--slot", $AzureSlot) } else { @() }
+$pubCreds = az webapp deployment list-publishing-credentials `
+    --resource-group $ResourceGroup --name $AppName @slotArg `
+    --query "{user:publishingUserName,pass:publishingPassword}" -o json | ConvertFrom-Json
+$b64 = [System.Convert]::ToBase64String(
+    [System.Text.Encoding]::UTF8.GetBytes("$($pubCreds.user):$($pubCreds.pass)"))
+
+$scmHost = az webapp show --resource-group $ResourceGroup --name $AppName @slotArg `
+    --query "defaultHostName" -o tsv | ForEach-Object {
+        $_.Trim() -replace "\.azurewebsites\.net$", ".scm.azurewebsites.net"
+    }
+
+$deployUrl = "https://$scmHost/api/zipdeploy?isAsync=true&cleanDeployment=true"
+Write-OK "Kudu endpoint: $deployUrl"
+
+$uploadResp = Invoke-WebRequest -Uri $deployUrl -Method POST `
+    -Headers @{ "Authorization" = "Basic $b64"; "Content-Type" = "application/octet-stream" } `
+    -InFile $ZipPath -UseBasicParsing
+if ($uploadResp.StatusCode -notin 200,201,202) {
+    throw "Upload failed: HTTP $($uploadResp.StatusCode)"
 }
-Write-Step "Waiting for Kudu to finish extracting files (30s) ..."
-Start-Sleep -Seconds 30
-if ($LASTEXITCODE -ne 0) { throw "Deployment failed" }
+Write-OK "ZIP uploaded (HTTP $($uploadResp.StatusCode)). Polling for completion..."
+
+$pollHdrs = @{ "Authorization" = "Basic $b64" }
+$pollUrl  = "https://$scmHost/api/deployments/latest"
+$elapsed  = 0
+do {
+    Start-Sleep -Seconds 5; $elapsed += 5
+    $d = Invoke-RestMethod -Uri $pollUrl -Headers $pollHdrs
+    Write-Host "  status=$($d.status) complete=$($d.complete) ($elapsed s)"
+} while (-not $d.complete -and $elapsed -lt 120)
+
+if ($d.status -ne 4) { throw "Deployment failed (Kudu status $($d.status))" }
 Write-OK "Deployment upload complete"
 
 # ─── 6. Restart ───────────────────────────────────────────────────────────────
@@ -159,15 +177,13 @@ Write-OK "Restart command sent"
 Write-Step "Waiting 30 s for app to warm up ..."
 Start-Sleep -Seconds 30
 
-$url = if ($AzureSlot -eq "production") {
-    "https://$AppName.azurewebsites.net"
-} else {
-    "https://$AppName-$AzureSlot.azurewebsites.net"
-}
+# Derive the real hostname (handles regional subdomains like uaenorth-01)
+$appUrl = az webapp show --resource-group $ResourceGroup --name $AppName @slotArg `
+    --query "defaultHostName" -o tsv | ForEach-Object { "https://$($_.Trim())" }
 
-Write-Step "Verifying app at $url ..."
+Write-Step "Verifying app at $appUrl ..."
 try {
-    $response = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 30 `
+    $response = Invoke-WebRequest -Uri "$appUrl/health" -UseBasicParsing -TimeoutSec 30 `
                     -ErrorAction SilentlyContinue
     $status = $response.StatusCode
 } catch {
@@ -180,7 +196,4 @@ if ($status -in 200, 301, 302, 401, 403) {
     Write-Warn "Unexpected status $status — check the Azure portal for details."
     exit 1
 }
-
-# ─── Cleanup ──────────────────────────────────────────────────────────────────
-Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host "`nDeployment to '$Slot' slot complete.`n" -ForegroundColor Green

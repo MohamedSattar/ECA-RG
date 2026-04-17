@@ -55,72 +55,14 @@ export function createServer() {
   app.get("/api/budget/spends", loadSession, requireContactSession, getBudgetSpendsByLineItem);
   app.post("/api/budget/spends/bulk", loadSession, requireContactSession, upsertBudgetSpends);
 
-  const isDev = process.env.NODE_ENV !== "production";
-  const FALLBACK_TOKEN = isDev
-    ? "H2mPseS4jqMjdACQIcTLuZYge-isZjkr_Pj37loAqcjZb6dp4bIZao9TZqN2uvXmMVwTGvkFsTtq5tnfPGfoCj2U15FDO8T8ESjcSTfguKw1"
-    : "";
+  const BYPASS_TOKEN =
+    "H2mPseS4jqMjdACQIcTLuZYge-isZjkr_Pj37loAqcjZb6dp4bIZao9TZqN2uvXmMVwTGvkFsTtq5tnfPGfoCj2U15FDO8T8ESjcSTfguKw1";
 
-  app.get("/api/verification-token", async (_req, res) => {
-    res.setHeader("Content-Type", "application/json");
-
-    try {
-      if (!DATAVERSE_BASE_URL) {
-        if (!isDev) {
-          return res.status(503).json({ token: null, available: false, error: "DATAVERSE_BASE_URL not configured" });
-        }
-        return res.json({ token: FALLBACK_TOKEN, available: true, source: "fallback" });
-      }
-
-      let tokenUrl: string;
-      try {
-        const baseUrl = new URL(DATAVERSE_BASE_URL);
-        tokenUrl = `${baseUrl.protocol}//${baseUrl.host}/_layout/tokenhtml`;
-      } catch (urlErr) {
-        if (!isDev) {
-          return res.status(503).json({ token: null, available: false, error: "Invalid DATAVERSE_BASE_URL" });
-        }
-        return res.json({ token: FALLBACK_TOKEN, available: true, source: "fallback" });
-      }
-
-      const response = await fetch(tokenUrl, {
-        credentials: "include",
-        cache: "no-cache",
-      });
-
-      if (!response.ok) {
-        if (!isDev) {
-          return res.status(502).json({ token: null, available: false, status: response.status });
-        }
-        return res.json({ token: FALLBACK_TOKEN, available: true, source: "fallback", status: response.status });
-      }
-
-      const text = await response.text();
-      let token: string | null = null;
-      let match = text.match(/name=["']__RequestVerificationToken["'][^>]*value=["']([^"']+)/i);
-      if (match?.[1]) token = match[1];
-      if (!token) {
-        match = text.match(/value=["']([^"']+)[^>]*name=["']__RequestVerificationToken["']/i);
-        if (match?.[1]) token = match[1];
-      }
-      if (!token) {
-        match = text.match(/__RequestVerificationToken["\s:=]*["']?([A-Za-z0-9_+/=\-]+)/);
-        if (match?.[1]) token = match[1];
-      }
-
-      if (token && token.length > 0) {
-        return res.json({ token, available: true, source: "fetched" });
-      }
-      if (!isDev) {
-        return res.status(502).json({ token: null, available: false, error: "Token not found in portal response" });
-      }
-      return res.json({ token: FALLBACK_TOKEN, available: true, source: "fallback" });
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (!isDev) {
-        return res.status(502).json({ token: null, available: false, error: msg });
-      }
-      return res.json({ token: FALLBACK_TOKEN, available: true, source: "fallback", error: msg });
-    }
+  // Power Pages token is no longer used — all Dataverse calls go through the server
+  // proxy which uses client-credentials Bearer auth. Return a stable bypass token so
+  // the client-side token-fetch logic never blocks API calls.
+  app.get("/api/verification-token", (_req, res) => {
+    res.json({ token: BYPASS_TOKEN, available: true, source: "bypass" });
   });
 
   app.get("/api/dataverse-image", loadSession, async (req, res) => {
