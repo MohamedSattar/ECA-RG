@@ -1,22 +1,13 @@
-#Requires -Modules Az.Accounts, Az.Websites
 <#
 .SYNOPSIS
-    Build and deploy the Research Grants app to Azure App Service.
-
-.DESCRIPTION
-    1. Builds client (Vite) and server (Node.js) locally.
-    2. Packages the output into a ZIP with production dependencies.
-    3. Publishes the ZIP to the target deployment slot on Azure.
-    4. Restarts the slot and verifies the app is responding.
+    Build and deploy the Research Grants app to Azure App Service (Linux).
+    Uses Azure CLI — no separate login needed if already signed in via VS Code.
 
 .PARAMETER Slot
     Target deployment slot: prod | dev | stage  (default: prod)
 
 .PARAMETER SkipBuild
     Skip the npm build step (use if dist/ is already up-to-date).
-
-.PARAMETER SkipLogin
-    Skip Connect-AzAccount (use if you are already logged in).
 
 .EXAMPLE
     .\deploy.ps1                        # deploy to production
@@ -27,20 +18,21 @@ param(
     [ValidateSet("prod", "dev", "stage")]
     [string]$Slot = "prod",
 
-    [switch]$SkipBuild,
-    [switch]$SkipLogin
+    [switch]$SkipBuild
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 # ─── Configuration ────────────────────────────────────────────────────────────
-$AppName       = "researchgrant"
-$ResourceGroup = "research-grants-dev"
-$AzureSlot     = if ($Slot -eq "prod") { "production" } else { $Slot }
-$ProjectRoot   = $PSScriptRoot
-$TempDir       = Join-Path $env:TEMP "rg-deploy-$(Get-Random)"
-$ZipPath       = Join-Path $env:TEMP "rg-deploy-$Slot.zip"
+$AppName        = "researchgrant"
+$ResourceGroup  = "research-grants-dev"
+$Subscription   = "ECA_Staging_Testing"
+$AzureSlot      = if ($Slot -eq "prod") { "production" } else { $Slot }
+$StartupCommand = "npm install --omit=dev --quiet && node dist/server/node-build.mjs"
+$ProjectRoot    = $PSScriptRoot
+$TempDir        = Join-Path $env:TEMP "rg-deploy-$(Get-Random)"
+$ZipPath        = Join-Path $env:TEMP "rg-deploy-$Slot.zip"
 # ──────────────────────────────────────────────────────────────────────────────
 
 function Write-Step([string]$msg) {
@@ -53,121 +45,106 @@ function Write-Warn([string]$msg) {
     Write-Host "  !!  $msg" -ForegroundColor Yellow
 }
 
-# ─── 1. Azure Login ───────────────────────────────────────────────────────────
-if (-not $SkipLogin) {
-    Write-Step "Connecting to Azure..."
-    Connect-AzAccount -ErrorAction Stop | Out-Null
-    Write-OK "Logged in as $((Get-AzContext).Account.Id)"
-}
+# ─── 1. Select Azure subscription ─────────────────────────────────────────────
+Write-Step "Setting Azure subscription to '$Subscription' ..."
+az account set --subscription $Subscription
+if ($LASTEXITCODE -ne 0) { throw "Failed to set subscription. Run 'az login' first." }
+$currentAccount = az account show --query "user.name" -o tsv
+Write-OK "Using account: $currentAccount  |  subscription: $Subscription"
 
 # ─── 2. Build ─────────────────────────────────────────────────────────────────
 if (-not $SkipBuild) {
-    Write-Step "Installing dependencies..."
     Set-Location $ProjectRoot
-    npm ci
-    if ($LASTEXITCODE -ne 0) { throw "npm ci failed" }
 
-    Write-Step "Building client + server..."
-    # Env vars for each slot are already configured in Azure App Settings.
-    # The local .env is only used for any VITE_ build-time variables.
-    npm run build
-    if ($LASTEXITCODE -ne 0) { throw "npm build failed" }
+    # npm install only adds missing packages — does not delete locked binaries like esbuild.exe
+    Write-Step "Restoring missing packages (npm install --prefer-offline) ..."
+    npm install --prefer-offline 2>&1 | Where-Object { $_ -notmatch "^npm warn" }
+    if ($LASTEXITCODE -ne 0) { throw "npm install failed" }
+    Write-OK "Dependencies ready"
+
+    Write-Step "Building client (Vite) ..."
+    node "$ProjectRoot/node_modules/vite/bin/vite.js" build
+    if ($LASTEXITCODE -ne 0) { throw "Client build failed" }
+
+    Write-Step "Building server (Node.js) ..."
+    node "$ProjectRoot/node_modules/vite/bin/vite.js" build --config vite.config.server.ts
+    if ($LASTEXITCODE -ne 0) { throw "Server build failed" }
+
     Write-OK "Build complete"
 }
 
 # ─── 3. Assemble deployment package ──────────────────────────────────────────
-Write-Step "Assembling deployment package..."
+# Only ship dist/ + package manifests — Azure Oryx installs production deps
+# on the server automatically (SCM_DO_BUILD_DURING_DEPLOYMENT=true).
+Write-Step "Assembling deployment package (dist only) ..."
 
-# Clean up any leftover temp folder
 if (Test-Path $TempDir) { Remove-Item $TempDir -Recurse -Force }
 New-Item -ItemType Directory -Path $TempDir | Out-Null
 
-# Copy built artifacts
-Copy-Item (Join-Path $ProjectRoot "dist")               $TempDir -Recurse
-Copy-Item (Join-Path $ProjectRoot "package.json")       $TempDir
-Copy-Item (Join-Path $ProjectRoot "package-lock.json")  $TempDir
+Copy-Item (Join-Path $ProjectRoot "dist")              $TempDir -Recurse
+Copy-Item (Join-Path $ProjectRoot "package.json")      $TempDir
+Copy-Item (Join-Path $ProjectRoot "package-lock.json") $TempDir
+# Include .deployment so Oryx knows to run npm install but skip a rebuild
+Copy-Item (Join-Path $ProjectRoot ".deployment")       $TempDir -ErrorAction SilentlyContinue
 
-# Install production dependencies inside the temp package
-# (express & cors must be present at runtime)
-Write-Step "Installing production dependencies in package..."
-Push-Location $TempDir
-npm ci
-if ($LASTEXITCODE -ne 0) { throw "npm ci (production package) failed" }
-Pop-Location
-
-# Write a minimal web.config so Azure/IIS routes all traffic to the Node process
-$webConfig = @"
-<?xml version="1.0" encoding="utf-8"?>
-<configuration>
-  <system.webServer>
-    <handlers>
-      <add name="iisnode" path="dist/server/node-build.mjs" verb="*" modules="iisnode"/>
-    </handlers>
-    <rewrite>
-      <rules>
-        <rule name="StaticFiles" stopProcessing="true">
-          <match url="^assets/.*" />
-          <action type="Rewrite" url="dist/spa/{R:0}"/>
-        </rule>
-        <rule name="NodeApp">
-          <match url=".*" />
-          <action type="Rewrite" url="dist/server/node-build.mjs"/>
-        </rule>
-      </rules>
-    </rewrite>
-    <iisnode node_env="production" watchedFiles="web.config" />
-    <httpErrors existingResponse="PassThrough" />
-    <security>
-      <requestFiltering><hiddenSegments><remove segment="bin"/></hiddenSegments></requestFiltering>
-    </security>
-  </system.webServer>
-</configuration>
-"@
-$webConfig | Set-Content (Join-Path $TempDir "web.config") -Encoding UTF8
-
-# Create the zip (overwrite if exists)
 if (Test-Path $ZipPath) { Remove-Item $ZipPath -Force }
-Write-Step "Zipping package to $ZipPath ..."
+Write-Step "Zipping package → $ZipPath ..."
 Compress-Archive -Path "$TempDir\*" -DestinationPath $ZipPath -Force
 $sizeMB = [math]::Round((Get-Item $ZipPath).Length / 1MB, 1)
 Write-OK "Package size: $sizeMB MB"
 
-# ─── 4. Deploy ────────────────────────────────────────────────────────────────
-Write-Step "Publishing to '$AppName' (slot: $AzureSlot) ..."
+# ─── 4. Set Linux startup command ────────────────────────────────────────────
+Write-Step "Setting startup command: '$StartupCommand' ..."
 if ($AzureSlot -eq "production") {
-    Publish-AzWebApp `
-        -ResourceGroupName $ResourceGroup `
-        -Name              $AppName `
-        -ArchivePath       $ZipPath `
-        -Force
+    az webapp config set `
+        --resource-group $ResourceGroup `
+        --name $AppName `
+        --startup-file $StartupCommand | Out-Null
 } else {
-    Publish-AzWebApp `
-        -ResourceGroupName $ResourceGroup `
-        -Name              $AppName `
-        -Slot              $AzureSlot `
-        -ArchivePath       $ZipPath `
-        -Force
+    az webapp config set `
+        --resource-group $ResourceGroup `
+        --name $AppName `
+        --slot $AzureSlot `
+        --startup-file $StartupCommand | Out-Null
 }
+if ($LASTEXITCODE -ne 0) { throw "Failed to set startup command" }
+Write-OK "Startup command set"
+
+# ─── 5. Deploy ZIP ────────────────────────────────────────────────────────────
+Write-Step "Deploying ZIP to '$AppName' (slot: $AzureSlot) ..."
+if ($AzureSlot -eq "production") {
+    az webapp deploy `
+        --resource-group $ResourceGroup `
+        --name $AppName `
+        --src-path $ZipPath `
+        --type zip `
+        --clean true `
+        --async false
+} else {
+    az webapp deploy `
+        --resource-group $ResourceGroup `
+        --name $AppName `
+        --slot $AzureSlot `
+        --src-path $ZipPath `
+        --type zip `
+        --clean true `
+        --async false
+}
+if ($LASTEXITCODE -ne 0) { throw "Deployment failed" }
 Write-OK "Deployment upload complete"
 
-# ─── 5. Restart ───────────────────────────────────────────────────────────────
-Write-Step "Restarting app service slot '$AzureSlot' ..."
+# ─── 6. Restart ───────────────────────────────────────────────────────────────
+Write-Step "Restarting slot '$AzureSlot' ..."
 if ($AzureSlot -eq "production") {
-    Restart-AzWebApp -ResourceGroupName $ResourceGroup -Name $AppName
+    az webapp restart --resource-group $ResourceGroup --name $AppName
 } else {
-    $webapp = Get-AzWebApp -ResourceGroupName $ResourceGroup -Name $AppName
-    # Invoke restart on the slot via REST (Restart-AzWebApp doesn't support -Slot)
-    $subId  = (Get-AzContext).Subscription.Id
-    $uri    = "https://management.azure.com/subscriptions/$subId/resourceGroups/$ResourceGroup" +
-              "/providers/Microsoft.Web/sites/$AppName/slots/$AzureSlot/restart?api-version=2023-01-01"
-    $token  = (Get-AzAccessToken).Token
-    Invoke-RestMethod -Uri $uri -Method Post `
-        -Headers @{ Authorization = "Bearer $token" } | Out-Null
+    az webapp restart --resource-group $ResourceGroup --name $AppName --slot $AzureSlot
 }
+if ($LASTEXITCODE -ne 0) { throw "Restart failed" }
 Write-OK "Restart command sent"
 
-# ─── 6. Verify ────────────────────────────────────────────────────────────────
-Write-Step "Waiting 30 s for app to warm up..."
+# ─── 7. Verify ────────────────────────────────────────────────────────────────
+Write-Step "Waiting 30 s for app to warm up ..."
 Start-Sleep -Seconds 30
 
 $url = if ($AzureSlot -eq "production") {
