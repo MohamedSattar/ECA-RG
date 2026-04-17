@@ -119,7 +119,7 @@ if ($AzureSlot -eq "production") {
         --src-path $ZipPath `
         --type zip `
         --clean true `
-        --async false
+        --async true
 } else {
     az webapp deploy `
         --resource-group $ResourceGroup `
@@ -128,8 +128,10 @@ if ($AzureSlot -eq "production") {
         --src-path $ZipPath `
         --type zip `
         --clean true `
-        --async false
+        --async true
 }
+Write-Step "Waiting for Kudu to finish extracting files (30s) ..."
+Start-Sleep -Seconds 30
 if ($LASTEXITCODE -ne 0) { throw "Deployment failed" }
 Write-OK "Deployment upload complete"
 
