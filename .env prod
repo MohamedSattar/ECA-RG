@@ -6,7 +6,7 @@ VITE_PUBLIC_BUILDER_KEY=__BUILDER_PUBLIC_KEY__
 PING_MESSAGE="ping pong"
 
 # API Base URL - Production Power Pages Portal
-VITE_PUBLIC_API_BASE_URL=/
+VITE_PUBLIC_API_BASE_URL=https://ecacrm.crm15.dynamics.com
 
 # Server-side Azure AD client credentials (used by server proxy to call Dataverse)
 # Set these to enable server-side client-credentials token acquisition.
@@ -15,7 +15,7 @@ AZURE_TENANT_ID=9bfb065d-cde3-4be3-8515-0b1c8fe6fc29
 AZURE_CLIENT_ID=02b145a5-cc87-408e-8333-71b77ce1d8c2
 # WARNING: keep client secret out of source control. Set this locally or in CI secrets.
 AZURE_CLIENT_SECRET=yGu8Q~Ks0XIGCABfHaeJtfMnSlI8yY_2ejRgMczc
-DATAVERSE_RESOURCE=https://eca.crm15.dynamics.com/.default
+DATAVERSE_RESOURCE=https://ecacrm.crm15.dynamics.com/.default
 
 # If true, the server proxy will forward the client's Authorization header
 # instead of using the server-side client credentials token.
@@ -43,4 +43,5 @@ VITE_FILE_DOWNLOAD_ENDPOINT=https://13c0704a1c5be57592d5177307df04.41.environmen
 # NEVER use this token in production—it has a short lifetime and is committed to git
 AZURE_LOGIN_BASE_URL=https://login.microsoftonline.com
 VITE_B2C_AUTHORITY=https://ecab2cprd.b2clogin.com/tfp/2937d7e7-683e-4287-a523-52d4ee626bc9/b2c_1a_rg_prod_susi/v2.0/
-VITE_B2C_KNOWN_AUTHORITIES=B2C_1A_RG_PROD_SUSI
+VITE_B2C_KNOWN_AUTHORITIES=ecab2cprd.b2clogin.com
+SESSION_HMAC_SECRET=dev-local-only-replace-with-openssl-rand-base64-48-in-production

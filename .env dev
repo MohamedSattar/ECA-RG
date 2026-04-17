@@ -2,7 +2,7 @@
 # For secret variables is better to use DevServerControl tool with set_env_variable: ["KEY", "SECRET"]
 
 # API Base URL - Production Power Pages Portal
-VITE_PUBLIC_API_BASE_URL="https://ecacrmdev.crm15.dynamics.com"
+VITE_PUBLIC_API_BASE_URL=https://ecacrmdev.crm15.dynamics.com
 
 # Server-side Azure AD client credentials (used by server proxy to call Dataverse)
 # Set these to enable server-side client-credentials token acquisition.

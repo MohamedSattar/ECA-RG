@@ -6,7 +6,7 @@ VITE_PUBLIC_BUILDER_KEY=__BUILDER_PUBLIC_KEY__
 PING_MESSAGE="ping pong"
 
 # API Base URL - Production Power Pages Portal
-VITE_PUBLIC_API_BASE_URL=/
+VITE_PUBLIC_API_BASE_URL=https://ecacrmstaging.crm15.dynamics.com
 
 # Server-side Azure AD client credentials (used by server proxy to call Dataverse)
 # Set these to enable server-side client-credentials token acquisition.
@@ -21,16 +21,6 @@ DATAVERSE_RESOURCE=https://ecacrmstaging.crm15.dynamics.com/.default
 # instead of using the server-side client credentials token.
 FORWARD_CLIENT_AUTH=true
 
-# B2C Client Credentials (for client-side token fallback)
-# SECURITY WARNING: Client secrets should NEVER be in source control.
-# These are used by the client fallback mechanism only—set these locally or via env vars.
-# DO NOT commit these values to git.
-VITE_B2C_CLIENT_ID=06f05863-2443-43e5-8307-f37e65e5c38c
-VITE_B2C_TOKEN_URL=https://login.microsoftonline.com/9bfb065d-cde3-4be3-8515-0b1c8fe6fc29/oauth2/token
-VITE_B2C_SCOPES=openid offline_access
-# VITE_B2C_CLIENT_SECRET should be set as an environment variable, NOT in .env
-# Example: set VITE_B2C_CLIENT_SECRET=<secret> before running dev server
-
 # Power Automate flow URLs for file operations (GetFiles, UploadFile, DeleteFile, Download)
 # Override these per environment (e.g. DEV/PROD). Fallbacks exist in client/constants/url.ts.
 VITE_FILE_UPLOAD_ENDPOINT=https://13c0704a1c5be57592d5177307df04.41.environment.api.powerplatform.com/powerautomate/automations/direct/workflows/157e829bf83e4066b845dceff212f281/triggers/manual/paths/invoke/UploadFile?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=mUGkcjnPS7mIr4CEsEYrXRN4InS22-4FxwtXzguUogo
@@ -44,3 +34,13 @@ VITE_FILE_DOWNLOAD_ENDPOINT=https://13c0704a1c5be57592d5177307df04.41.environmen
 AZURE_LOGIN_BASE_URL=https://login.microsoftonline.com
 VITE_B2C_AUTHORITY=https://ecab2ctest.b2clogin.com/tfp/63f53ffb-3a43-4cd8-a690-aa46c393c1d3/b2c_1a_rg_test_susi/v2.0/
 VITE_B2C_KNOWN_AUTHORITIES=B2C_1A_RG_TEST_SUSI
+
+# B2C Client Credentials (for client-side token fallback)
+# SECURITY WARNING: Client secrets should NEVER be in source control.
+# These are used by the client fallback mechanism only—set these locally or via env vars.
+# DO NOT commit these values to git.
+VITE_B2C_CLIENT_ID=06f05863-2443-43e5-8307-f37e65e5c38c
+VITE_B2C_TOKEN_URL=https://login.microsoftonline.com/9bfb065d-cde3-4be3-8515-0b1c8fe6fc29/oauth2/token
+VITE_B2C_SCOPES=openid offline_access
+
+SESSION_HMAC_SECRET=dev-local-only-replace-with-openssl-rand-base64-48-in-production
