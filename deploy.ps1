@@ -126,9 +126,7 @@ $b64 = [System.Convert]::ToBase64String(
     [System.Text.Encoding]::UTF8.GetBytes("$($pubCreds.user):$($pubCreds.pass)"))
 
 $scmHost = az webapp show --resource-group $ResourceGroup --name $AppName @slotArg `
-    --query "defaultHostName" -o tsv | ForEach-Object {
-        $_.Trim() -replace "\.azurewebsites\.net$", ".scm.azurewebsites.net"
-    }
+    --query "enabledHostNames[?contains(@, '.scm.')]|[0]" -o tsv | ForEach-Object { $_.Trim() }
 
 $deployUrl = "https://$scmHost/api/zipdeploy?isAsync=true&cleanDeployment=true"
 Write-OK "Kudu endpoint: $deployUrl"
