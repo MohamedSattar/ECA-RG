@@ -8,9 +8,7 @@ import {
   useState,
 } from "react";
 
-import { useMsal, useIsAuthenticated } from "@azure/msal-react";
-import type { AccountInfo } from "@azure/msal-browser";
-import { InteractionStatus } from "@azure/msal-browser";
+import { useMsal } from "@azure/msal-react";
 import { loginRequest, signupRequest } from "./azureConfig";
 import { useDataverseApi } from "@/hooks/useDataverseApi";
 import { ContactKeys, TableName } from "@/constants";
@@ -48,7 +46,6 @@ const authStorage = {
       const stored = localStorage.getItem(USER_KEY);
       return stored ? JSON.parse(stored) : null;
     } catch (error) {
-      console.error("Failed to parse stored user:", error);
       return null;
     }
   },
@@ -57,9 +54,7 @@ const authStorage = {
     try {
       localStorage.setItem(STORAGE_KEY, "true");
       localStorage.setItem(USER_KEY, JSON.stringify(user));
-    } catch (error) {
-      console.error("Failed to store user:", error);
-    }
+    } catch (error) {}
   },
 
   clearAuth: (): void => {
@@ -90,26 +85,24 @@ async function getCurrentUserContact(
       method: "GET",
     });
 
-    if(response?.value?.length ==0)
-    {
-      const data={
-        emailaddress1:email
-      }
+    if (response?.value?.length == 0) {
+      const data = {
+        emailaddress1: email,
+      };
       const resp = await callApi<{ value: any[] }>({
-      url: `/_api/${TableName.CONTACTS}?$filter=${filter}`,
-      method: "POST",
-      data
-    });
-    const response = await callApi<{ value: any[] }>({
-      url: `/_api/${TableName.CONTACTS}?$filter=${filter}`,
-      method: "GET",
-    });
-    return response?.value?.length ? response.value[0] : null;
+        url: `/_api/${TableName.CONTACTS}?$filter=${filter}`,
+        method: "POST",
+        data,
+      });
+      const response = await callApi<{ value: any[] }>({
+        url: `/_api/${TableName.CONTACTS}?$filter=${filter}`,
+        method: "GET",
+      });
+      return response?.value?.length ? response.value[0] : null;
     }
 
     return response?.value?.length ? response.value[0] : null;
   } catch (error) {
-    console.error("Error fetching user contact:", error);
     return null;
   }
 }
@@ -127,21 +120,18 @@ async function fetchAndStoreSessionToken(idToken: string): Promise<void> {
   try {
     const res = await fetch("/api/auth/session", {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ idToken }),
     });
     if (!res.ok) {
-      console.warn("[Session] Could not obtain session token:", res.status);
       return;
     }
     const data = await res.json();
     if (data.sessionToken) {
       localStorage.setItem(SESSION_TOKEN_KEY, data.sessionToken);
-      console.log("[Session] Session token stored");
     }
-  } catch (err) {
-    console.warn("[Session] Session token request failed:", err);
-  }
+  } catch (err) {}
 }
 
 /* -------------------------------------------------------
@@ -191,36 +181,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [isInteractionInProgress, setIsInteractionInProgress] = useState(false);
 
   /* -----------------------------------------------
-     HANDLE REDIRECT LOGIN
-  ------------------------------------------------ */
-
-  const handleRedirect = async () => {
-    setIsLoading(true);
-
-    try {
-      const response = await instance.handleRedirectPromise();
-      const accounts = response
-        ? [response.account]
-        : instance.getAllAccounts();
-
-      if (accounts?.length && accounts[0]) {
-        const loggedUser = await createUserProfile(accounts[0], callApi);
-        authStorage.setUser(loggedUser);
-
-        setUser(loggedUser);
-        setAuthed(true);
-      } else {
-        clearAuthState(setAuthed, setUser);
-      }
-    } catch (error) {
-      console.error("Error handling redirect:", error);
-      clearAuthState(setAuthed, setUser);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  /* -----------------------------------------------
      INIT AUTH ON MOUNT
   ------------------------------------------------ */
 
@@ -235,16 +195,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
           : instance.getAllAccounts();
 
         if (accounts.length > 0) {
-          // Bootstrap server session token from MSAL idToken
           try {
             const tokenResp = await instance.acquireTokenSilent({
               scopes: ["openid"],
               account: accounts[0],
             });
             await fetchAndStoreSessionToken(tokenResp.idToken);
-          } catch (tokenErr) {
-            console.warn("[Session] Could not acquire idToken for session bootstrap:", tokenErr);
-          }
+          } catch (tokenErr) {}
 
           const loggedUser = await createUserProfile(accounts[0], callApi);
           authStorage.setUser(loggedUser);
@@ -254,7 +211,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
           clearAuthState(setAuthed, setUser);
         }
       } catch (e) {
-        console.error("Redirect handling failed", e);
         clearAuthState(setAuthed, setUser);
       } finally {
         setIsLoading(false);
@@ -279,16 +235,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
         try {
           // Prevent concurrent login attempts
           if (isInteractionInProgress) {
-            console.warn(
-              "[Auth] Login already in progress, ignoring duplicate request",
-            );
             return;
           }
 
           setIsInteractionInProgress(true);
-        
-
-          console.log("[Auth] Using redirect flow for authentication");
 
           // Use redirect for all environments
           await instance.loginRedirect(loginRequest);
@@ -296,29 +246,21 @@ export function AuthProvider({ children }: PropsWithChildren) {
         } catch (error: any) {
           // Handle specific MSAL errors
           if (error?.errorCode === "user_cancelled") {
-            console.log("[Auth] User cancelled the login request");
             // Don't show error toast or re-throw for user cancellation - it's normal behavior
           } else if (error?.errorCode === "endpoints_resolution_error") {
-            console.error(
-              "[Auth] Azure B2C endpoint resolution failed. Check authority configuration.",
-              error,
-            );
             toast.error(
               "Authentication service unavailable. Please try again later.",
             );
             throw error;
           } else if (error?.errorCode === "network_error") {
-            console.error("[Auth] Network error during authentication", error);
             toast.error("Network error. Please check your connection.");
             throw error;
           } else if (error?.errorCode === "interaction_in_progress") {
-            console.error("[Auth] Interaction already in progress", error);
             toast.error(
               "An authentication request is already in progress. Please wait.",
             );
             throw error;
           } else {
-            console.error("[Auth] Login error:", error);
             toast.error("Authentication failed. Please try again.");
             throw error;
           }
@@ -329,14 +271,19 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       logout: async () => {
         try {
-          console.log("[Auth] Logging out...");
+          try {
+            await fetch("/api/auth/logout", {
+              method: "POST",
+              credentials: "include",
+            });
+          } catch {
+            /* ignore */
+          }
           clearAuthState(setAuthed, setUser);
           // Use redirect for logout
           await instance.logoutRedirect();
-          console.log("[Auth] Logout successful");
           toast.success("You have been logged out.");
         } catch (error) {
-          console.error("Logout error:", error);
           clearAuthState(setAuthed, setUser);
           toast.success("You have been logged out.");
         }

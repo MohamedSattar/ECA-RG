@@ -199,48 +199,49 @@ type GuideSectionKey =
   | "deliverables"
   | "attachments";
 
-const APPLY_RESEARCH_GUIDE_SECTIONS: SectionGuideTourSection<GuideSectionKey>[] = [
-  {
-    key: "budget",
-    title: "Budget Management",
-    hint: "Report cumulative expenditures to date and clearly mention any requested budget adjustments or shifts across budget categories/rows.",
-  },
-  {
-    key: "reporting",
-    title: "Reporting Details",
-    hint: "Submit monthly reports by month-end (no later than the 1st day of the next month). Interim is due 9 months after project start date, and final is due 18 months after start date.",
-  },
-  {
-    key: "dissemination",
-    title: "Dissemination Activities",
-    hint: "Maintain a running list of dissemination activities and upload evidence materials such as presentations, posters, photos, or links.",
-  },
-  {
-    key: "workforce",
-    title: "Emirati Workforce Development",
-    hint: "Keep a running list of Emirati workforce members, including joining/end dates, role on project, and education level.",
-  },
-  {
-    key: "manuscripts",
-    title: "Manuscripts",
-    hint: "Use the required manuscript status flow and share drafts with ECA at least 45 days before journal submission for review.",
-  },
-  {
-    key: "capacity",
-    title: "Capacity Building",
-    hint: "Track each workshop/training item with objective, audience, delivery format, status, and key outputs or lessons learned.",
-  },
-  {
-    key: "deliverables",
-    title: "Final Deliverables",
-    hint: "For final reporting, include required outputs in the grant contract, such as publication-ready drafts and audience-friendly summary products.",
-  },
-  {
-    key: "attachments",
-    title: "Extra Attachments",
-    hint: "Attach supporting evidence files that validate progress, outputs, and dissemination activities across the reporting period.",
-  },
-];
+const APPLY_RESEARCH_GUIDE_SECTIONS: SectionGuideTourSection<GuideSectionKey>[] =
+  [
+    {
+      key: "budget",
+      title: "Budget Management",
+      hint: "Report cumulative expenditures to date and clearly mention any requested budget adjustments or shifts across budget categories/rows.",
+    },
+    {
+      key: "reporting",
+      title: "Reporting Details",
+      hint: "Submit monthly reports by month-end (no later than the 1st day of the next month). Interim is due 9 months after project start date, and final is due 18 months after start date.",
+    },
+    {
+      key: "dissemination",
+      title: "Dissemination Activities",
+      hint: "Maintain a running list of dissemination activities and upload evidence materials such as presentations, posters, photos, or links.",
+    },
+    {
+      key: "workforce",
+      title: "Emirati Workforce Development",
+      hint: "Keep a running list of Emirati workforce members, including joining/end dates, role on project, and education level.",
+    },
+    {
+      key: "manuscripts",
+      title: "Manuscripts",
+      hint: "Use the required manuscript status flow and share drafts with ECA at least 45 days before journal submission for review.",
+    },
+    {
+      key: "capacity",
+      title: "Capacity Building",
+      hint: "Track each workshop/training item with objective, audience, delivery format, status, and key outputs or lessons learned.",
+    },
+    {
+      key: "deliverables",
+      title: "Final Deliverables",
+      hint: "For final reporting, include required outputs in the grant contract, such as publication-ready drafts and audience-friendly summary products.",
+    },
+    {
+      key: "attachments",
+      title: "Extra Attachments",
+      hint: "Attach supporting evidence files that validate progress, outputs, and dissemination activities across the reporting period.",
+    },
+  ];
 
 // Tailwind class constants
 
@@ -272,8 +273,9 @@ const processWorkforceDevelopments = async (
     const method = isExisting ? "PATCH" : "POST";
     const data: Record<string, any> = {
       [WorkforceDevelopmentFields.NAME]: item.fullName,
-      [WorkforceDevelopmentFields.JOININGDATE]:
-        toDataverseDate(item.joiningDate),
+      [WorkforceDevelopmentFields.JOININGDATE]: toDataverseDate(
+        item.joiningDate,
+      ),
       [WorkforceDevelopmentFields.ENDDATE]: toDataverseDate(item.endDate),
       [WorkforceDevelopmentFields.ROLE]: item.roleInProject || null,
       [WorkforceDevelopmentFields.EDUCATIONALLEVEL]:
@@ -423,12 +425,7 @@ const processFileUploads = async (
       const response = await triggerFlow(APIURL.FileUploadEndpoint, payload);
 
       if (response.success) {
-        // console.log(`Processed file ${file.file.name} successfully.`);
       } else {
-        console.error(
-          `Failed to process file ${file.file.name}. Error:`,
-          response.error,
-        );
       }
     });
 
@@ -443,7 +440,6 @@ const processBudgetData = async (
   callApi: (options: any) => Promise<any>,
 ): Promise<void> => {
   if (!budgetHeader) {
-    // console.log("No budget header to process");
     return;
   }
 
@@ -751,8 +747,6 @@ export default function FormResearch() {
   const researchAreaId = searchParams.get("researchId") || "";
   /** No research id in URL → create new research; otherwise load by id (edit/view from API status). */
   const isNewResearch = !researchAreaId;
-  // console.log("FormResearch state:", form);
-  // console.log("Current state:", state);
 
   // Helper to map budget line items (without spends)
   const mapBudgetLineItems = (items: any[]): BudgetLineItem[] => {
@@ -865,7 +859,6 @@ export default function FormResearch() {
         budgetLineItems: budgetLineItems,
       }));
     } catch (error) {
-      console.error("Failed to load budget details:", error);
       // Don't throw error - budget is optional
     }
   };
@@ -885,7 +878,6 @@ export default function FormResearch() {
 
       const status = (res2 as { status?: number }).status;
       if (status != null && status >= 400) {
-        console.error("Failed to load status reports:", res2);
         return;
       }
 
@@ -958,9 +950,7 @@ export default function FormResearch() {
         ...prev,
         reportItems: reportsWithFiles,
       }));
-    } catch (error) {
-      console.error("Failed to load reporting details:", error);
-    }
+    } catch (error) {}
   };
 
   /* commented: prmtk_disseminationapplicants API and dissemination not needed for now
@@ -1022,8 +1012,7 @@ export default function FormResearch() {
         disseminationRequests: requestsWithFiles,
       }));
     } catch (error) {
-      console.error("Failed to load dissemination requests:", error);
-    }
+          }
   };
   */
 
@@ -1079,7 +1068,6 @@ export default function FormResearch() {
       setForm((prev) => ({ ...prev, disseminationActivities: listWithFiles }));
       return listWithFiles;
     } catch (error) {
-      console.error("Failed to load dissemination activities:", error);
       return [];
     }
   };
@@ -1151,7 +1139,6 @@ export default function FormResearch() {
         deliverables: deliverablesWithFiles,
       }));
     } catch (error) {
-      console.error("Failed to load deliverables:", error);
       // Don't throw error - deliverables are optional
     }
   };
@@ -1170,7 +1157,6 @@ export default function FormResearch() {
       });
 
       const filteredMembers = res.value || [];
-      // console.log(filteredMembers, "filteredMembers");
 
       const teamMembers: TeamMember[] = filteredMembers.map((tm: any) => ({
         id: tm[ResearchTeamMemberKeys.RESEARCHTEAMMEMBERID],
@@ -1186,12 +1172,13 @@ export default function FormResearch() {
         team: teamMembers,
       }));
     } catch (error) {
-      console.error("Failed to load team members:", error);
       // Don't throw error - team members are optional
     }
   };
 
-  const loadWorkforceDevelopments = async (researchId: string): Promise<void> => {
+  const loadWorkforceDevelopments = async (
+    researchId: string,
+  ): Promise<void> => {
     if (isNewResearch) return;
     try {
       const select = `${WorkforceDevelopmentFields.WORKFORCEDEVELOPMENTID},${WorkforceDevelopmentFields.NAME},${WorkforceDevelopmentFields.JOININGDATE},${WorkforceDevelopmentFields.ENDDATE},${WorkforceDevelopmentFields.ROLE},${WorkforceDevelopmentFields.EDUCATIONALLEVEL}`;
@@ -1206,13 +1193,12 @@ export default function FormResearch() {
         joiningDate: row[WorkforceDevelopmentFields.JOININGDATE] ?? "",
         endDate: row[WorkforceDevelopmentFields.ENDDATE] ?? "",
         roleInProject: row[WorkforceDevelopmentFields.ROLE] ?? "",
-        educationalLevel: row[WorkforceDevelopmentFields.EDUCATIONALLEVEL] ?? "",
+        educationalLevel:
+          row[WorkforceDevelopmentFields.EDUCATIONALLEVEL] ?? "",
         action: "existing",
       }));
       setForm((prev) => ({ ...prev, workforceDevelopments: items }));
-    } catch (error) {
-      console.error("Failed to load workforce developments:", error);
-    }
+    } catch (error) {}
   };
 
   const loadManuscripts = async (researchId: string): Promise<void> => {
@@ -1234,9 +1220,7 @@ export default function FormResearch() {
         action: "existing",
       }));
       setForm((prev) => ({ ...prev, manuscripts: items }));
-    } catch (error) {
-      console.error("Failed to load manuscripts:", error);
-    }
+    } catch (error) {}
   };
 
   const loadResearchActivities = async (
@@ -1293,7 +1277,6 @@ export default function FormResearch() {
       setForm((prev) => ({ ...prev, researchActivities: listWithFiles }));
       return listWithFiles;
     } catch (error) {
-      console.error("Failed to load research activities:", error);
       return [];
     }
   };
@@ -1313,7 +1296,6 @@ export default function FormResearch() {
         const currentUserContactId = user?.contact?.[ContactFields.CONTACTID];
 
         if (!currentUserContactId) {
-          console.error("No contact ID found for current user");
           toast({
             title: "Error",
             description: "User authentication required.",
@@ -1331,7 +1313,6 @@ export default function FormResearch() {
 
         const research = res?.value?.[0];
         if (!research) {
-          console.warn("No research found with ID:", researchId);
           return;
         }
 
@@ -1385,7 +1366,6 @@ export default function FormResearch() {
           principalInvestigatorName: pi?.fullname ?? undefined,
         }));
       } catch (error) {
-        console.error("Failed to load research details:", error);
         toast({
           title: "Error",
           description: "Unable to load research details. Please try again.",
@@ -1400,7 +1380,6 @@ export default function FormResearch() {
   const loadApplicationFiles = async (
     researchNumber: string,
   ): Promise<any[]> => {
-    // console.log("ReasearchNumber", researchNumber);
     if (!researchNumber) return [];
 
     try {
@@ -1419,7 +1398,6 @@ export default function FormResearch() {
         action: "existing" as const,
       }));
     } catch (error) {
-      console.error("Failed to load application files:", error);
       return [];
     }
   };
@@ -1428,9 +1406,7 @@ export default function FormResearch() {
   const loadTeamMemberRoles = useCallback(async () => {
     try {
       setTeamMemberRoles(TeamMemberRoles.APPLICATION as any);
-    } catch (error) {
-      console.error("Failed to load team member roles:", error);
-    }
+    } catch (error) {}
   }, []);
 
   // Lazy load optional sections
@@ -1510,9 +1486,7 @@ export default function FormResearch() {
         if (versions.length > 0) {
           await loadBudgetByVersion(versions[0].id);
         }
-      } catch (error) {
-        console.error("Failed to load budget versions:", error);
-      }
+      } catch (error) {}
     },
     [callApi],
   );
@@ -1541,9 +1515,8 @@ export default function FormResearch() {
 
         const budgetHeader = mapBudgetHeader(budgetData);
         const budgetLineItems = mapBudgetLineItems(lineItems);
-        const itemsWithSpends = await addSpendSummaryToLineItems(
-          budgetLineItems,
-        );
+        const itemsWithSpends =
+          await addSpendSummaryToLineItems(budgetLineItems);
 
         setForm((prev) => ({
           ...prev,
@@ -1551,9 +1524,7 @@ export default function FormResearch() {
           budgetLineItems: itemsWithSpends,
           selectedBudgetVersion: budgetHeaderId,
         }));
-      } catch (error) {
-        console.error("Failed to load budget by version:", error);
-      }
+      } catch (error) {}
     },
     [callApi],
   );
@@ -1606,7 +1577,6 @@ export default function FormResearch() {
       await loadBudgetVersions(researchAreaId);
       await loadBudgetByVersion(newBudgetHeaderId);
     } catch (error) {
-      console.error("Failed to clone budget:", error);
       toast({
         title: "Error",
         description: "Failed to create new budget version.",
@@ -1660,7 +1630,6 @@ export default function FormResearch() {
         await loadBudgetVersions(researchAreaId);
       }
     } catch (error) {
-      console.error("Failed to submit budget:", error);
       toast({
         title: "Error",
         description: "Failed to submit budget version.",
@@ -1742,10 +1711,12 @@ export default function FormResearch() {
             WorkforceDevelopmentFields.RESEARCH_ENTITY_SET;
           const data: Record<string, any> = {
             [WorkforceDevelopmentFields.NAME]: payload.fullName,
-            [WorkforceDevelopmentFields.JOININGDATE]:
-              toDataverseDate(payload.joiningDate),
-            [WorkforceDevelopmentFields.ENDDATE]:
-              toDataverseDate(payload.endDate),
+            [WorkforceDevelopmentFields.JOININGDATE]: toDataverseDate(
+              payload.joiningDate,
+            ),
+            [WorkforceDevelopmentFields.ENDDATE]: toDataverseDate(
+              payload.endDate,
+            ),
             [WorkforceDevelopmentFields.ROLE]: payload.roleInProject || null,
             [WorkforceDevelopmentFields.EDUCATIONALLEVEL]:
               payload.educationalLevel || null,
@@ -1770,13 +1741,10 @@ export default function FormResearch() {
             description: "Emirati Workforce Development added successfully.",
           });
         } catch (error) {
-          console.error("Failed to add workforce development:", error);
           toast({
             title: "Error",
             description:
-              error instanceof Error
-                ? error.message
-                : "Failed to add record.",
+              error instanceof Error ? error.message : "Failed to add record.",
             variant: "destructive",
           });
         } finally {
@@ -1822,7 +1790,6 @@ export default function FormResearch() {
             description: "Record removed successfully.",
           });
         } catch (error) {
-          console.error("Failed to remove workforce development:", error);
           toast({
             title: "Error",
             description: "Failed to remove record.",
@@ -1860,10 +1827,12 @@ export default function FormResearch() {
         try {
           const data: Record<string, any> = {
             [WorkforceDevelopmentFields.NAME]: payload.fullName,
-            [WorkforceDevelopmentFields.JOININGDATE]:
-              toDataverseDate(payload.joiningDate),
-            [WorkforceDevelopmentFields.ENDDATE]:
-              toDataverseDate(payload.endDate),
+            [WorkforceDevelopmentFields.JOININGDATE]: toDataverseDate(
+              payload.joiningDate,
+            ),
+            [WorkforceDevelopmentFields.ENDDATE]: toDataverseDate(
+              payload.endDate,
+            ),
             [WorkforceDevelopmentFields.ROLE]: payload.roleInProject || null,
             [WorkforceDevelopmentFields.EDUCATIONALLEVEL]:
               payload.educationalLevel || null,
@@ -1901,7 +1870,6 @@ export default function FormResearch() {
             description: "Record updated successfully.",
           });
         } catch (error) {
-          console.error("Failed to update workforce development:", error);
           toast({
             title: "Error",
             description:
@@ -1971,13 +1939,10 @@ export default function FormResearch() {
             description: "Manuscript / Journal publication added successfully.",
           });
         } catch (error) {
-          console.error("Failed to add manuscript:", error);
           toast({
             title: "Error",
             description:
-              error instanceof Error
-                ? error.message
-                : "Failed to add record.",
+              error instanceof Error ? error.message : "Failed to add record.",
             variant: "destructive",
           });
         } finally {
@@ -2020,7 +1985,6 @@ export default function FormResearch() {
             description: "Record removed successfully.",
           });
         } catch (error) {
-          console.error("Failed to remove manuscript:", error);
           toast({
             title: "Error",
             description: "Failed to remove record.",
@@ -2093,7 +2057,6 @@ export default function FormResearch() {
             description: "Record updated successfully.",
           });
         } catch (error) {
-          console.error("Failed to update manuscript:", error);
           toast({
             title: "Error",
             description:
@@ -2144,11 +2107,13 @@ export default function FormResearch() {
           const data: Record<string, any> = {
             [ResearchActivityFields.TITLE]: payload.title,
             [ResearchActivityFields.DATE]: toDataverseDate(payload.date),
-            [ResearchActivityFields.DELIVERY_FORMAT]: payload.deliveryFormat || null,
+            [ResearchActivityFields.DELIVERY_FORMAT]:
+              payload.deliveryFormat || null,
             [ResearchActivityFields.AUDIENCE]: payload.audience || null,
             [ResearchActivityFields.STATUS]: payload.status,
             [ResearchActivityFields.OBJECTIVE]: payload.objective || null,
-            [ResearchActivityFields.KEY_OUTPUTS]: payload.keyOutputsOrLessons || null,
+            [ResearchActivityFields.KEY_OUTPUTS]:
+              payload.keyOutputsOrLessons || null,
             [ResearchActivityFields.RESEARCH_ID]: `/${researchEntitySet}(${researchAreaId})`,
           };
           await callApi({
@@ -2159,7 +2124,9 @@ export default function FormResearch() {
           const list = await loadResearchActivities(researchAreaId);
           const researchNumber =
             form.researchNumber || state?.item?.[ResearchKeys.RESEARCHNUMBER];
-          const newFiles = (payload.files || []).filter((f) => f.action === "new");
+          const newFiles = (payload.files || []).filter(
+            (f) => f.action === "new",
+          );
           if (researchNumber && newFiles.length > 0 && list.length > 0) {
             const newActivity =
               list.find(
@@ -2262,7 +2229,9 @@ export default function FormResearch() {
           });
           setForm((prev) => ({
             ...prev,
-            researchActivities: prev.researchActivities.filter((i) => i.id !== id),
+            researchActivities: prev.researchActivities.filter(
+              (i) => i.id !== id,
+            ),
           }));
           toast({
             title: "Success",
@@ -2330,20 +2299,20 @@ export default function FormResearch() {
                   Library: "Researches",
                   Folder: folder,
                 });
-              } catch (err) {
-                console.error(`Failed to delete file ${f.file.name}:`, err);
-              }
+              } catch (err) {}
             }
           }
 
           const data: Record<string, any> = {
             [ResearchActivityFields.TITLE]: payload.title,
             [ResearchActivityFields.DATE]: toDataverseDate(payload.date),
-            [ResearchActivityFields.DELIVERY_FORMAT]: payload.deliveryFormat || null,
+            [ResearchActivityFields.DELIVERY_FORMAT]:
+              payload.deliveryFormat || null,
             [ResearchActivityFields.AUDIENCE]: payload.audience || null,
             [ResearchActivityFields.STATUS]: payload.status,
             [ResearchActivityFields.OBJECTIVE]: payload.objective || null,
-            [ResearchActivityFields.KEY_OUTPUTS]: payload.keyOutputsOrLessons || null,
+            [ResearchActivityFields.KEY_OUTPUTS]:
+              payload.keyOutputsOrLessons || null,
           };
           await callApi({
             url: `/_api/${TableName.RESEARCHACTIVITIES}(${id})`,
@@ -2357,15 +2326,18 @@ export default function FormResearch() {
               await Promise.all(
                 newFiles.map(async (f) => {
                   const base64Content = await fileToBase64(f.file);
-                  const response = await triggerFlow(APIURL.FileUploadEndpoint, {
-                    FileContent: base64Content,
-                    FileName: f.file.name,
-                    Library: "Researches",
-                    Folder: folder,
-                    FileType: "other",
-                    UserEmail:
-                      user?.contact?.[ContactFields.EMAILADDRESS1] || "",
-                  });
+                  const response = await triggerFlow(
+                    APIURL.FileUploadEndpoint,
+                    {
+                      FileContent: base64Content,
+                      FileName: f.file.name,
+                      Library: "Researches",
+                      Folder: folder,
+                      FileType: "other",
+                      UserEmail:
+                        user?.contact?.[ContactFields.EMAILADDRESS1] || "",
+                    },
+                  );
                   if (!response.success) {
                     throw new Error(`Failed to upload ${f.file.name}`);
                   }
@@ -2449,7 +2421,14 @@ export default function FormResearch() {
         }));
       }
     },
-    [form.researchActivities, form.researchNumber, state?.item, callApi, triggerFlow, user?.contact],
+    [
+      form.researchActivities,
+      form.researchNumber,
+      state?.item,
+      callApi,
+      triggerFlow,
+      user?.contact,
+    ],
   );
 
   const handleFilesAdd = useCallback(
@@ -2602,7 +2581,6 @@ export default function FormResearch() {
                 user,
               );
             } catch (fileError) {
-              console.error("File upload error:", fileError);
               toast({
                 title: "Warning",
                 description: "Report added but some files failed to upload.",
@@ -2712,12 +2690,7 @@ export default function FormResearch() {
                   Library: "Researches",
                   Folder: `${form.researchNumber}/Status Reports/${item.prmtk_reportingyear}-${paddedMonth}`,
                 });
-              } catch (error) {
-                console.error(
-                  `Failed to delete file ${fileToDelete.file.name}:`,
-                  error,
-                );
-              }
+              } catch (error) {}
             }
           }
 
@@ -2787,7 +2760,6 @@ export default function FormResearch() {
                 user,
               );
             } catch (fileError) {
-              console.error("File upload error:", fileError);
               toast({
                 title: "Warning",
                 description: "Report updated but some files failed to upload.",
@@ -2902,8 +2874,7 @@ export default function FormResearch() {
                 user,
               );
             } catch (fileError) {
-              console.error("File upload error:", fileError);
-              toast({
+                            toast({
                 title: "Warning",
                 description: "Request added but some files failed to upload.",
                 variant: "destructive",
@@ -3015,11 +2986,7 @@ export default function FormResearch() {
                     Folder: `${form.researchNumber}/Dissemination Requests/${sanitizedDate}-${sanitizedBudget}`,
                   });
                 } catch (error) {
-                  console.error(
-                    `Failed to delete file ${fileToDelete.file.name}:`,
-                    error,
-                  );
-                }
+                                  }
               }
             }
           }
@@ -3059,8 +3026,7 @@ export default function FormResearch() {
                   user,
                 );
               } catch (fileError) {
-                console.error("File upload error:", fileError);
-                toast({
+                                toast({
                   title: "Warning",
                   description:
                     "Request updated but some files failed to upload.",
@@ -3115,7 +3081,6 @@ export default function FormResearch() {
           Folder: folder,
         });
       } catch (error) {
-        console.error(`Failed to delete file ${fileName}:`, error);
         throw error;
       }
     },
@@ -3148,7 +3113,6 @@ export default function FormResearch() {
 
         await Promise.all(uploadPromises);
       } catch (error) {
-        console.error(`Failed to upload files:`, error);
         throw error;
       }
     },
@@ -3187,7 +3151,8 @@ export default function FormResearch() {
             list.length > 0 &&
             handleUploadFile
           ) {
-            const newActivity = list.find((a) => a.name === item.name) || list[list.length - 1];
+            const newActivity =
+              list.find((a) => a.name === item.name) || list[list.length - 1];
             const folder = getDisseminationActivityFolderPath(
               researchNumber,
               newActivity.type ?? 0,
@@ -3309,9 +3274,7 @@ export default function FormResearch() {
             for (const f of toDelete) {
               try {
                 await handleDeleteFile(f.file.name, folder);
-              } catch (err) {
-                console.error(`Failed to delete file ${f.file.name}:`, err);
-              }
+              } catch (err) {}
             }
           }
 
@@ -3499,7 +3462,6 @@ export default function FormResearch() {
                 user,
               );
             } catch (fileError) {
-              console.error("File upload error:", fileError);
               toast({
                 title: "Warning",
                 description:
@@ -3524,7 +3486,6 @@ export default function FormResearch() {
           }));
         }
       } catch (error) {
-        console.error("Error adding deliverable:", error);
         toast({
           title: "Error",
           description: "Failed to add deliverable.",
@@ -3695,12 +3656,7 @@ export default function FormResearch() {
                 Library: "Researches",
                 Folder: `${form.researchNumber}/Deliverables/${sanitizedDeliverableName}-${sanitizedDeliverableType}`,
               });
-            } catch (error) {
-              console.error(
-                `Failed to delete file ${fileToDelete.file.name}:`,
-                error,
-              );
-            }
+            } catch (error) {}
           }
         }
 
@@ -3739,7 +3695,6 @@ export default function FormResearch() {
           ),
         }));
       } catch (error) {
-        console.error("Error editing deliverable:", error);
         toast({
           title: "Error",
           description: "Failed to update deliverable.",
@@ -3770,8 +3725,6 @@ export default function FormResearch() {
 
     setShowLoader(true);
     try {
-      // console.log("Submitting research:", form, "state:", state);
-
       // Create or update research
       const researchData = {
         [ResearchKeys.RESEARCHTITLE]: form.title,
@@ -3815,8 +3768,6 @@ export default function FormResearch() {
         throw new Error("Unable to retrieve research ID.");
       }
 
-      // console.log("Research saved with ID:", researchId);
-
       // Get research number for file uploads
       const researchNumber = await getResearchNumber(
         form.type !== "new",
@@ -3833,27 +3784,36 @@ export default function FormResearch() {
           callApi,
         ),
         processManuscripts(form.manuscripts, researchId, callApi),
-        processResearchActivities(form.researchActivities, researchId, callApi, {
-          researchNumber,
-          uploadFiles: async (files, folder) => {
-            await Promise.all(
-              files.map(async (file) => {
-                const base64Content = await fileToBase64(file);
-                const response = await triggerFlow(APIURL.FileUploadEndpoint, {
-                  FileContent: base64Content,
-                  FileName: file.name,
-                  Library: "Researches",
-                  Folder: folder,
-                  FileType: "other",
-                  UserEmail: user?.contact?.[ContactFields.EMAILADDRESS1] || "",
-                });
-                if (!response.success) {
-                  throw new Error(`Failed to upload ${file.name}`);
-                }
-              }),
-            );
+        processResearchActivities(
+          form.researchActivities,
+          researchId,
+          callApi,
+          {
+            researchNumber,
+            uploadFiles: async (files, folder) => {
+              await Promise.all(
+                files.map(async (file) => {
+                  const base64Content = await fileToBase64(file);
+                  const response = await triggerFlow(
+                    APIURL.FileUploadEndpoint,
+                    {
+                      FileContent: base64Content,
+                      FileName: file.name,
+                      Library: "Researches",
+                      Folder: folder,
+                      FileType: "other",
+                      UserEmail:
+                        user?.contact?.[ContactFields.EMAILADDRESS1] || "",
+                    },
+                  );
+                  if (!response.success) {
+                    throw new Error(`Failed to upload ${file.name}`);
+                  }
+                }),
+              );
+            },
           },
-        }),
+        ),
         processBudgetData(
           form.budgetHeaders,
           form.budgetLineItems,
@@ -3870,7 +3830,6 @@ export default function FormResearch() {
             : "Research submitted successfully.",
       });
     } catch (error) {
-      console.error("Submission error:", error);
       toast({
         title: "Error",
         description:
@@ -3951,9 +3910,10 @@ export default function FormResearch() {
               <h1 className="mt-1 text-xl font-bold text-slate-900 md:text-2xl">
                 {form.type === "new"
                   ? "New Application"
-                  : form.title || state?.item?.[ResearchKeys.RESEARCHNUMBER] || "Research"}
+                  : form.title ||
+                    state?.item?.[ResearchKeys.RESEARCHNUMBER] ||
+                    "Research"}
               </h1>
-             
             </div>
 
             {/* Overview + Team: 8 cols | 4 cols */}
@@ -3966,7 +3926,6 @@ export default function FormResearch() {
                     </p>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       {[
-                      
                         {
                           label: "Application Reference",
                           value: form.applicationTitle ?? "—",
@@ -3996,7 +3955,7 @@ export default function FormResearch() {
                           value: form.principalInvestigatorName ?? "—",
                           iconName: "Contact",
                         },
-                          {
+                        {
                           label: "Lead Institute",
                           value: form.leadInstitute ?? "—",
                           iconName: "Contact",
@@ -4049,7 +4008,9 @@ export default function FormResearch() {
                             <p className="truncate text-xs text-slate-500">
                               {teamMemberRoles.find(
                                 (r) => String(r.key) === String(member.role),
-                              )?.text ?? member.role ?? "—"}
+                              )?.text ??
+                                member.role ??
+                                "—"}
                             </p>
                           </div>
                         </li>
@@ -4115,19 +4076,19 @@ export default function FormResearch() {
                           (v) => v.id === form.selectedBudgetVersion,
                         )?.status === 102
                       ? "Submitted"
-                    : form.budgetVersions.find(
+                      : form.budgetVersions.find(
                             (v) => v.id === form.selectedBudgetVersion,
                           )?.status === 103
-                      ? "Approved"
-                    : form.budgetVersions.find(
-                          (v) => v.id === form.selectedBudgetVersion,
-                        )?.status === 104
-                      ? "Rejected"
+                        ? "Approved"
                         : form.budgetVersions.find(
-                          (v) => v.id === form.selectedBudgetVersion,
-                        )?.status === 105
-                      ? "Archived"
-                        : "Unknown"}
+                              (v) => v.id === form.selectedBudgetVersion,
+                            )?.status === 104
+                          ? "Rejected"
+                          : form.budgetVersions.find(
+                                (v) => v.id === form.selectedBudgetVersion,
+                              )?.status === 105
+                            ? "Archived"
+                            : "Unknown"}
                 </Badge>
               )}
             </div>
@@ -4155,10 +4116,10 @@ export default function FormResearch() {
                             : v.status === 103
                               ? "Approved"
                               : v.status === 104
-                              ? "Rejected"
-                              : v.status === 105
-                              ? "Archived"
-                              : "Unknown"
+                                ? "Rejected"
+                                : v.status === 105
+                                  ? "Archived"
+                                  : "Unknown"
                       }${v.isActive ? " (Active)" : ""}`,
                     }))}
                     selectedKey={form.selectedBudgetVersion}
@@ -4190,88 +4151,88 @@ export default function FormResearch() {
                 }
                 onEditSpend={handleOpenSpendDialog}
                 onAddBudgetLineItem={(item) => {
-              const newLineItem: BudgetLineItem = {
-                id: crypto.randomUUID(), // Ensure a unique ID is generated
-                prmtk_lineitemname: item.name,
-                prmtk_category: item.category,
-                prmtk_description: item.description,
-                prmtk_amount: parseFloat(item.amount),
-                justification: item.justification,
-                action: "new",
-              };
-              setForm((prev) => ({
-                ...prev,
-                budgetLineItems: [...prev.budgetLineItems, newLineItem],
-              }));
-            }}
-                onEditBudgetLineItem={async (id, item) => {
-              if (!isNewResearch) {
-                setShowLoader(true);
-                try {
-                  const lineItemData: Record<string, any> = {
-                    [BudgetLineItemFields.LINEITEMNAME]: item.name,
-                    [BudgetLineItemFields.CATEGORY]: item.category,
-                    [BudgetLineItemFields.DESCRIPTION]: item.description,
-                    [BudgetLineItemFields.AMOUNT]: parseFloat(item.amount),
+                  const newLineItem: BudgetLineItem = {
+                    id: crypto.randomUUID(), // Ensure a unique ID is generated
+                    prmtk_lineitemname: item.name,
+                    prmtk_category: item.category,
+                    prmtk_description: item.description,
+                    prmtk_amount: parseFloat(item.amount),
+                    justification: item.justification,
+                    action: "new",
                   };
-
-                  await callApi({
-                    url: `/_api/${TableName.BUDGETLINEITEMS}(${id})`,
-                    method: "PATCH",
-                    data: lineItemData,
-                  });
-
-                  toast({
-                    title: "Success",
-                    description: "Budget line item updated successfully.",
-                  });
-                } catch (error) {
-                  toast({
-                    title: "Error",
-                    description: "Failed to update budget line item.",
-                  });
-                } finally {
-                  setShowLoader(false);
-                }
-              }
-
-              setForm((prev) => ({
-                ...prev,
-                budgetLineItems: prev.budgetLineItems.map((li) =>
-                  li.id === id
-                    ? {
-                        ...li,
-                        prmtk_lineitemname: item.name,
-                        prmtk_category: item.category,
-                        prmtk_description: item.description,
-                        prmtk_amount: parseFloat(item.amount),
-                        action: "existing" as const,
-                      }
-                    : li,
-                ),
-              }));
+                  setForm((prev) => ({
+                    ...prev,
+                    budgetLineItems: [...prev.budgetLineItems, newLineItem],
+                  }));
                 }}
-            onRemoveBudgetLineItem={async (id) => {
-              if (!isNewResearch) {
-                const itemToRemove = form.budgetLineItems.find(
-                  (li) => li.id === id,
-                );
-                setShowLoader(true);
-                await callApi({
-                  url: `/_api/${TableName.BUDGETLINEITEMS}(${itemToRemove?.id})`,
-                  method: "DELETE",
-                });
-                setShowLoader(false);
-              }
-              setForm((prev) => ({
-                ...prev,
-                budgetLineItems: prev.budgetLineItems.filter(
-                  (li) => li.id !== id,
-                ),
-              }));
+                onEditBudgetLineItem={async (id, item) => {
+                  if (!isNewResearch) {
+                    setShowLoader(true);
+                    try {
+                      const lineItemData: Record<string, any> = {
+                        [BudgetLineItemFields.LINEITEMNAME]: item.name,
+                        [BudgetLineItemFields.CATEGORY]: item.category,
+                        [BudgetLineItemFields.DESCRIPTION]: item.description,
+                        [BudgetLineItemFields.AMOUNT]: parseFloat(item.amount),
+                      };
+
+                      await callApi({
+                        url: `/_api/${TableName.BUDGETLINEITEMS}(${id})`,
+                        method: "PATCH",
+                        data: lineItemData,
+                      });
+
+                      toast({
+                        title: "Success",
+                        description: "Budget line item updated successfully.",
+                      });
+                    } catch (error) {
+                      toast({
+                        title: "Error",
+                        description: "Failed to update budget line item.",
+                      });
+                    } finally {
+                      setShowLoader(false);
+                    }
+                  }
+
+                  setForm((prev) => ({
+                    ...prev,
+                    budgetLineItems: prev.budgetLineItems.map((li) =>
+                      li.id === id
+                        ? {
+                            ...li,
+                            prmtk_lineitemname: item.name,
+                            prmtk_category: item.category,
+                            prmtk_description: item.description,
+                            prmtk_amount: parseFloat(item.amount),
+                            action: "existing" as const,
+                          }
+                        : li,
+                    ),
+                  }));
                 }}
-            form={form}
-          />
+                onRemoveBudgetLineItem={async (id) => {
+                  if (!isNewResearch) {
+                    const itemToRemove = form.budgetLineItems.find(
+                      (li) => li.id === id,
+                    );
+                    setShowLoader(true);
+                    await callApi({
+                      url: `/_api/${TableName.BUDGETLINEITEMS}(${itemToRemove?.id})`,
+                      method: "DELETE",
+                    });
+                    setShowLoader(false);
+                  }
+                  setForm((prev) => ({
+                    ...prev,
+                    budgetLineItems: prev.budgetLineItems.filter(
+                      (li) => li.id !== id,
+                    ),
+                  }));
+                }}
+                form={form}
+              />
               <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
                 <DefaultButton
                   text="Submit Budget"
@@ -4509,7 +4470,7 @@ export default function FormResearch() {
         message={dialogMessage}
         onDismiss={() => {
           navigate("/research", { state: {} });
-                }}
+        }}
       />
       <ErrorDialog
         hidden={!showErrorDialog}

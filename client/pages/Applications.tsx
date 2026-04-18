@@ -67,11 +67,9 @@ export default function Applications() {
         method: "GET",
       });
       const list = res?.value ?? [];
-      console.log(list);
-      // console.log("Fetched applications:", list);
+
       setApps(list);
     } catch (err) {
-      console.error("Failed to load applications:", err);
       setError("Unable to load applications. Please try again later.");
       setApps([]);
     } finally {
@@ -91,58 +89,66 @@ export default function Applications() {
       statusCode !== undefined && statusCode !== null
         ? Number(statusCode)
         : null;
-    if (num !== null && APPLICATION_STATUS_LABELS[num as keyof typeof APPLICATION_STATUS_LABELS]) {
-      return APPLICATION_STATUS_LABELS[num as keyof typeof APPLICATION_STATUS_LABELS];
+    if (
+      num !== null &&
+      APPLICATION_STATUS_LABELS[num as keyof typeof APPLICATION_STATUS_LABELS]
+    ) {
+      return APPLICATION_STATUS_LABELS[
+        num as keyof typeof APPLICATION_STATUS_LABELS
+      ];
     }
     return (app[ApplicationKeys.STATUS_FORMATTED] as string) ?? "Unknown";
   };
 
   const mapStatusToColor = (status: string) => {
     const s = status.toLowerCase();
-    if (s.includes("awarded") || s.includes("approved")) return "bg-green-100 text-green-800 border-green-200";
+    if (s.includes("awarded") || s.includes("approved"))
+      return "bg-green-100 text-green-800 border-green-200";
     if (s.includes("rejected")) return "bg-red-100 text-red-800 border-red-200";
-    if (s.includes("disqualified")) return "bg-red-100 text-red-800 border-red-200";
-    if (s.includes("submitted")) return "bg-blue-100 text-blue-800 border-blue-200";
+    if (s.includes("disqualified"))
+      return "bg-red-100 text-red-800 border-red-200";
+    if (s.includes("submitted"))
+      return "bg-blue-100 text-blue-800 border-blue-200";
     if (s === "draft") return "bg-slate-100 text-slate-800 border-slate-200";
-    if (s.includes("return for updates")) return "bg-amber-100 text-amber-800 border-amber-200";
-    if (s.includes("shortlisted")) return "bg-emerald-100 text-emerald-800 border-emerald-200";
-    if (s.includes("pending review")) return "bg-amber-100 text-amber-800 border-amber-200";
-    if (s.includes("review completed")) return "bg-sky-100 text-sky-800 border-sky-200";
-    if (s.includes("active")) return "bg-green-100 text-green-800 border-green-200";
-    if (s.includes("archived")) return "bg-slate-100 text-slate-600 border-slate-200";
+    if (s.includes("return for updates"))
+      return "bg-amber-100 text-amber-800 border-amber-200";
+    if (s.includes("shortlisted"))
+      return "bg-emerald-100 text-emerald-800 border-emerald-200";
+    if (s.includes("pending review"))
+      return "bg-amber-100 text-amber-800 border-amber-200";
+    if (s.includes("review completed"))
+      return "bg-sky-100 text-sky-800 border-sky-200";
+    if (s.includes("active"))
+      return "bg-green-100 text-green-800 border-green-200";
+    if (s.includes("archived"))
+      return "bg-slate-100 text-slate-600 border-slate-200";
     return "bg-slate-100 text-slate-800 border-slate-200";
   };
 
   const onView = (item: any) => {
     const statusLabel = getStatusLabel(item);
-    navigate(
-      `/application/${item[ApplicationKeys.APPLICATIONID]}`,
-      {
-        state: {
-          applicationId: item[ApplicationKeys.APPLICATIONID],
-          grantCycleId: item[ApplicationKeys.GRANTCYCLE],
-          researchAreaId: item[ApplicationKeys.RESEARCHAREA],
-          item: item,
-          status: statusLabel,
-        },
+    navigate(`/application/${item[ApplicationKeys.APPLICATIONID]}`, {
+      state: {
+        applicationId: item[ApplicationKeys.APPLICATIONID],
+        grantCycleId: item[ApplicationKeys.GRANTCYCLE],
+        researchAreaId: item[ApplicationKeys.RESEARCHAREA],
+        item: item,
+        status: statusLabel,
       },
-    );
+    });
   };
 
   const onEdit = (item: any) => {
     const statusLabel = getStatusLabel(item);
-    navigate(
-      `/application/${item[ApplicationKeys.APPLICATIONID]}`,
-      {
-        state: {
-          applicationId: item[ApplicationKeys.APPLICATIONID],
-          grantCycleId: item[ApplicationKeys.GRANTCYCLE],
-          researchAreaId: item[ApplicationKeys.RESEARCHAREA],
-          item: item,
-          status: statusLabel,
-        },
+    navigate(`/application/${item[ApplicationKeys.APPLICATIONID]}`, {
+      state: {
+        applicationId: item[ApplicationKeys.APPLICATIONID],
+        grantCycleId: item[ApplicationKeys.GRANTCYCLE],
+        researchAreaId: item[ApplicationKeys.RESEARCHAREA],
+        item: item,
+        status: statusLabel,
       },
-    );
+    });
   };
 
   const ApplicationRow = ({
@@ -187,8 +193,13 @@ export default function Applications() {
               {status}
             </div>
             <IconButton
-              iconProps={{ iconName:  status.toLowerCase() === "draft" ||
-                  status.toLowerCase() === "return for updates" ?"Edit" : "View"}}
+              iconProps={{
+                iconName:
+                  status.toLowerCase() === "draft" ||
+                  status.toLowerCase() === "return for updates"
+                    ? "Edit"
+                    : "View",
+              }}
               title="Edit Application"
               onClick={() => {
                 if (
@@ -227,17 +238,16 @@ export default function Applications() {
               {researchArea}
             </p>
           </div>
-          {  status.toLowerCase() != "draft" &&
-          <div>
-            <p className="text-xs font-medium text-[#64748b] uppercase tracking-wide">
-              Submitted
-            </p>
-            <p className="text-sm text-[#1e293b] mt-1 font-medium">
-              {submittedDate}
-            </p>
-       
-          </div>
-             }
+          {status.toLowerCase() != "draft" && (
+            <div>
+              <p className="text-xs font-medium text-[#64748b] uppercase tracking-wide">
+                Submitted
+              </p>
+              <p className="text-sm text-[#1e293b] mt-1 font-medium">
+                {submittedDate}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -274,10 +284,7 @@ export default function Applications() {
 
         <SummaryCard
           number={applications
-            .filter(
-              (app) =>
-                getStatus(app).includes("reject"),
-            )
+            .filter((app) => getStatus(app).includes("reject"))
             .length.toString()}
           label="Rejected"
           link="Check all requests"
@@ -286,10 +293,7 @@ export default function Applications() {
 
         <SummaryCard
           number={applications
-            .filter(
-              (app) =>
-                getStatus(app).includes("approve"),
-            )
+            .filter((app) => getStatus(app).includes("approve"))
             .length.toString()}
           label="Approved"
           link="Check all requests"
@@ -368,9 +372,9 @@ export default function Applications() {
                     const submittedFormatted = app[
                       ApplicationKeys.SUBMISSIONDATE_FORMATTED
                     ] as string | undefined;
-                    const submittedRaw = app[
-                      ApplicationKeys.SUBMISSIONDATE
-                    ] as string | undefined;
+                    const submittedRaw = app[ApplicationKeys.SUBMISSIONDATE] as
+                      | string
+                      | undefined;
                     const submitted =
                       submittedFormatted ||
                       (submittedRaw

@@ -2,6 +2,15 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { handleDemo } from "./routes/demo";
+import { buildCorsOptions } from "./security/corsOptions";
+import {
+  clientErrorJson,
+  isProductionNodeEnv,
+} from "./security/clientSafeError";
+import {
+  authSessionRateLimit,
+  verificationTokenRateLimit,
+} from "./security/rateLimits";
 import {
   getBudgetHeadersByApplication,
   getBudgetHeader,
@@ -13,7 +22,21 @@ import {
   getBudgetSpendsByLineItem,
   upsertBudgetSpends,
 } from "./routes/budget";
-import { TableName } from "../client/constants/tables";
+import { handleAuthLogout, handleAuthSession } from "./routes/authSession";
+import { requireUser } from "./middleware/requireUser";
+import { requireUserUnlessPublicDataverseGet } from "./middleware/requireUserUnlessPublicDataverseGet";
+import { getVerificationTokenFallback, TOKENHTML_BASE_URL } from "./auth/env";
+import { isDataverseGuid } from "./auth/guid";
+import {
+  resolveImageEntitySetName,
+  isAllowedImageAttributeName,
+} from "./auth/dataverseImageAllowlist";
+import { dataverseProxyAllowlist } from "./middleware/dataverseProxyAllowlist";
+import {
+  filterScopedCollectionJson,
+  prepareProxyUserScope,
+} from "./security/dataverseProxyUserScope";
+import { verifyScopedSingleRecordAsync } from "./security/dataverseScopeVerify";
 // Server-side client credentials configuration (set these in your env)
 const AZURE_TENANT_ID = process.env.AZURE_TENANT_ID;
 const AZURE_CLIENT_ID = process.env.AZURE_CLIENT_ID;
@@ -25,10 +48,9 @@ const DATAVERSE_RESOURCE = process.env.DATAVERSE_RESOURCE;
 // DATAVERSE_BASE_URL: prefer explicit env var, otherwise derive from DATAVERSE_RESOURCE by stripping '/.default'
 const DATAVERSE_BASE_URL =
   process.env.DATAVERSE_BASE_URL ||
-  (DATAVERSE_RESOURCE ? DATAVERSE_RESOURCE.replace(/\/\.default\/?$/, "") : "https://eca.crm15.dynamics.com");
-// If true, forward the client's Authorization header instead of using server token
-const FORCE_FORWARD_CLIENT_AUTH = process.env.FORWARD_CLIENT_AUTH === "true";
-
+  (DATAVERSE_RESOURCE
+    ? DATAVERSE_RESOURCE.replace(/\/\.default\/?$/, "")
+    : "https://eca.crm15.dynamics.com");
 let cachedServerToken: string | null = null;
 let cachedServerTokenExpiry = 0;
 
@@ -38,8 +60,12 @@ async function acquireServerToken() {
       return cachedServerToken;
     }
 
-    if (!AZURE_TENANT_ID || !AZURE_CLIENT_ID || !AZURE_CLIENT_SECRET || !DATAVERSE_RESOURCE) {
-      console.log("[ServerToken] Missing Azure client credentials or DATAVERSE_RESOURCE; skipping server token acquisition");
+    if (
+      !AZURE_TENANT_ID ||
+      !AZURE_CLIENT_ID ||
+      !AZURE_CLIENT_SECRET ||
+      !DATAVERSE_RESOURCE
+    ) {
       return null;
     }
 
@@ -50,7 +76,6 @@ async function acquireServerToken() {
     params.append("grant_type", "client_credentials");
     params.append("scope", DATAVERSE_RESOURCE);
 
-    console.log("[ServerToken] Requesting client credentials token from AAD");
     const resp = await fetch(tokenUrl, {
       method: "POST",
       body: params,
@@ -59,7 +84,6 @@ async function acquireServerToken() {
 
     if (!resp.ok) {
       const txt = await resp.text();
-      console.error("[ServerToken] Token endpoint returned error:", resp.status, txt);
       return null;
     }
 
@@ -67,10 +91,8 @@ async function acquireServerToken() {
     cachedServerToken = body.access_token;
     const expiresIn = Number(body.expires_in) || 3600;
     cachedServerTokenExpiry = Date.now() + (expiresIn - 60) * 1000; // refresh 60s early
-    console.log("[ServerToken] Acquired token; expires in", expiresIn, "seconds");
     return cachedServerToken;
   } catch (err) {
-    console.error("[ServerToken] Error acquiring server token:", err);
     return null;
   }
 }
@@ -80,34 +102,8 @@ async function handleDataverseProxy(
   res: express.Response,
 ) {
   try {
-
-    
-    const path = req.url
-    const isTargetTable =
-      path.includes(TableName.NOTIFICATIONS) ||
-      path.includes(TableName.CONTACTS) ||
-      path.includes(TableName.APPLICATIONS) ||
-      path.includes(TableName.RESEARCHES);
-    
-      console.log(path);
-      const hasFilter= path.includes("filter");
-      const hasGuid= /\([0-9a-fA-F-]{36}\)/.test(req.url);
-      console.log("hasGuid" ,hasGuid);
-      
-    if (isTargetTable && req.method == "GET" && !hasGuid && !hasFilter) {
-      
-      console.log("yes");
-        res.json({});
-      
-    }
-
-    else{
     // Extract the API path (everything after the domain)
     let apiPath = req.path;
-          
-
-    console.log(`[Proxy] Original request path: ${req.path}`);
-    console.log(`[Proxy] Original request URL: ${req.url}`);
 
     // Translate incoming proxy paths to the target Dataverse/CRM API paths when needed.
     // e.g. /_api/contacts -> /api/data/v9.2/contacts
@@ -123,18 +119,13 @@ async function handleDataverseProxy(
       const queryPart = req.url.substring(req.url.indexOf("?"));
       // URL.search expects without the leading '?'
       fullUrl.search = queryPart;
-      console.log(`[Proxy] Query parameters added: ${queryPart}`);
     }
 
-    // Log the request for debugging
-    console.log(`[Proxy] ${req.method} ${req.path}`);
-    console.log(`[Proxy] Final target URL: ${fullUrl.toString()}`);
-    console.log(`[Proxy] Headers:`, {
-      authorization: req.headers.authorization ? "***" : "none",
-      requestverificationtoken: req.headers["__requestverificationtoken"]
-        ? "***"
-        : "none",
-    });
+    const scopePrep = await prepareProxyUserScope(req, fullUrl);
+    if (scopePrep.ok === false) {
+      return res.status(scopePrep.status).json(scopePrep.body);
+    }
+    const { scopeContext } = scopePrep;
 
     // Build headers — Dataverse Web API expects these on every request
     const fetchHeaders: HeadersInit = {
@@ -144,20 +135,27 @@ async function handleDataverseProxy(
       "If-None-Match": "null",
     };
 
-    // Authorization: prefer server token when available so Dataverse always gets a valid token and returns 200.
-    // Only fall back to client's Authorization when server token cannot be acquired.
+    // Dataverse requires the application token — never forward the user's session JWT.
     const serverToken = await acquireServerToken();
-    if (serverToken) {
-      fetchHeaders["Authorization"] = `Bearer ${serverToken}`;
-      console.log("[Proxy] Using server token for Dataverse request");
-    } else if (req.headers.authorization) {
-      console.log("[Proxy] No server token; forwarding client Authorization header");
-      fetchHeaders["Authorization"] = String(req.headers.authorization);
+    if (!serverToken) {
+      return res.status(503).json({
+        error: "Service unavailable",
+        message:
+          "Server Dataverse token is not configured or could not be acquired",
+      });
     }
+    fetchHeaders["Authorization"] = `Bearer ${serverToken}`;
+
     if (req.headers["__requestverificationtoken"]) {
       fetchHeaders["__RequestVerificationToken"] = String(
         req.headers["__requestverificationtoken"],
       );
+    }
+    if (req.user?.email) {
+      fetchHeaders["x-user-email"] = req.user.email;
+    }
+    if (req.user?.sub) {
+      fetchHeaders["x-user-id"] = req.user.sub;
     }
     if (req.headers["content-type"]) {
       fetchHeaders["Content-Type"] = String(req.headers["content-type"]);
@@ -177,22 +175,53 @@ async function handleDataverseProxy(
       credentials: "include",
     });
 
-    // Log the response status
-    console.log(`[Proxy] Response: ${response.status} ${response.statusText}`);
-
     // Get the response body
     const contentType = response.headers.get("content-type");
     let data: any;
 
     if (contentType?.includes("application/json")) {
       data = await response.json();
-    }
-    else if(contentType?.includes("application/octet-stream"))
-    {
-      data= await response.arrayBuffer();
-    }
-    else {
+    } else if (contentType?.includes("application/octet-stream")) {
+      data = await response.arrayBuffer();
+    } else {
       data = await response.text();
+    }
+
+    // Apply row scope to JSON payloads we actually return. Must run for the 401→200 coerce path too:
+    // otherwise integration-token 401 responses could skip filterScopedCollectionJson and leak rows.
+    const scopeEligible =
+      scopeContext &&
+      contentType?.includes("application/json") &&
+      req.method !== "HEAD" &&
+      typeof data === "object" &&
+      data !== null;
+
+    if (scopeEligible) {
+      const collection401Coerce =
+        response.status === 401 &&
+        Array.isArray((data as { value?: unknown }).value);
+      const applyRowScope = response.ok || collection401Coerce;
+
+      if (applyRowScope) {
+        if (scopeContext.singleRecord) {
+          if (response.ok) {
+            const allowed = await verifyScopedSingleRecordAsync(
+              data,
+              scopeContext.entitySet,
+              scopeContext.contactId,
+              scopeContext.recordKey,
+            );
+            if (!allowed) {
+              return res.status(403).json({
+                error: "Forbidden",
+                message: "Record is not accessible for this user",
+              });
+            }
+          }
+        } else {
+          data = filterScopedCollectionJson(data, scopeContext);
+        }
+      }
     }
 
     // If Dataverse returned 401 but sent a valid OData payload (e.g. value array), treat as success
@@ -204,9 +233,6 @@ async function handleDataverseProxy(
         ? 200
         : response.status;
     res.status(status);
-    if (status !== response.status) {
-      console.log("[Proxy] Normalized 401 with OData value to 200 for client");
-    }
 
     // Set response headers
     if (response.headers.get("content-type")) {
@@ -224,37 +250,26 @@ async function handleDataverseProxy(
 
     // Send response
     if (contentType?.includes("application/json")) {
-     
       res.json(data);
-    } 
-    else if(contentType?.includes("application/octet-stream")){
+    } else if (contentType?.includes("application/octet-stream")) {
       res.end(Buffer.from(data));
-    }
-    else {
+    } else {
       res.send(data);
     }
-  }
-  } catch (err: any) {
-    console.error(`[Proxy] Error on ${req.method} ${req.path}`);
-    console.error(`[Proxy] Target URL: ${DATAVERSE_BASE_URL + req.path}`);
-    console.error(`[Proxy] Error code:`, err?.code);
-    console.error(`[Proxy] Error message:`, err?.message);
-    console.error(`[Proxy] Full error:`, err);
-
-    const errorMessage = err?.message || String(err);
-    res.status(502).json({
-      error: "Proxy error",
-      details: errorMessage,
-      target: DATAVERSE_BASE_URL + req.path,
-    });
+  } catch (err: unknown) {
+    res.status(502).json(
+      clientErrorJson("Proxy error", err, {
+        target: DATAVERSE_BASE_URL + req.path,
+      }),
+    );
   }
 }
 
 export function createServer() {
   const app = express();
 
-  // Middleware
-  app.use(cors());
+  // Middleware — set CORS_ORIGINS (comma-separated) in production when UI and API differ by origin
+  app.use(cors(buildCorsOptions()));
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
@@ -263,126 +278,170 @@ export function createServer() {
     res.json({ status: "ok", message: "Server is running" });
   });
 
-  // Example API routes
-  app.get("/api/ping", (_req, res) => {
-    const ping = process.env.PING_MESSAGE ?? "ping";
-    res.json({ message: ping });
-  });
+  if (process.env.DISABLE_SAMPLE_API_ROUTES !== "true") {
+    app.get("/api/ping", (_req, res) => {
+      const ping = process.env.PING_MESSAGE ?? "ping";
+      res.json({ message: ping });
+    });
+    app.get("/api/demo", handleDemo);
+  }
 
-  app.get("/api/demo", handleDemo);
+  app.post("/api/auth/session", authSessionRateLimit, handleAuthSession);
+  app.post("/api/auth/logout", handleAuthLogout);
 
-  // Budget API (server-side Dataverse calls)
-  app.get("/api/budget/headers", getBudgetHeadersByApplication);
-  app.get("/api/budget/headers/:id", getBudgetHeader);
-  app.post("/api/budget/headers", createBudgetHeaderRoute);
-  app.get("/api/budget/line-items", getBudgetLineItems);
-  app.post("/api/budget/line-items", createBudgetLineItem);
-  app.patch("/api/budget/line-items/:id", updateBudgetLineItem);
-  app.delete("/api/budget/line-items/:id", deleteBudgetLineItem);
-  app.get("/api/budget/spends", getBudgetSpendsByLineItem);
-  app.post("/api/budget/spends/bulk", upsertBudgetSpends);
+  // Budget API (server-side Dataverse calls) — requires session JWT
+  const budgetRouter = express.Router();
+  budgetRouter.use(requireUser);
+  budgetRouter.get("/headers", getBudgetHeadersByApplication);
+  budgetRouter.get("/headers/:id", getBudgetHeader);
+  budgetRouter.post("/headers", createBudgetHeaderRoute);
+  budgetRouter.get("/line-items", getBudgetLineItems);
+  budgetRouter.post("/line-items", createBudgetLineItem);
+  budgetRouter.patch("/line-items/:id", updateBudgetLineItem);
+  budgetRouter.delete("/line-items/:id", deleteBudgetLineItem);
+  budgetRouter.get("/spends", getBudgetSpendsByLineItem);
+  budgetRouter.post("/spends/bulk", upsertBudgetSpends);
+  app.use("/api/budget", budgetRouter);
 
-  // Token endpoint - fetch verification token from Dataverse/Power Pages
-  app.get("/api/verification-token", async (_req, res) => {
-    // Set proper content type
-    res.setHeader("Content-Type", "application/json");
-
-    // Fallback token for when endpoint is unavailable
-    const FALLBACK_TOKEN = "H2mPseS4jqMjdACQIcTLuZYge-isZjkr_Pj37loAqcjZb6dp4bIZao9TZqN2uvXmMVwTGvkFsTtq5tnfPGfoCj2U15FDO8T8ESjcSTfguKw1";
-
-    try {
-      console.log("[TokenAPI] Fetching verification token from /_layout/tokenhtml");
-      console.log("[TokenAPI] DATAVERSE_BASE_URL:", DATAVERSE_BASE_URL);
-
-      if (!DATAVERSE_BASE_URL) {
-        console.warn("[TokenAPI] DATAVERSE_BASE_URL not configured, using fallback token");
-        return res.json({ token: FALLBACK_TOKEN, available: true, source: "fallback" });
-      }
-
-      // Construct the token URL
-      let tokenUrl: string;
+  /** Prefer POWER_PAGES / TOKENHTML_BASE_URL; CRM org host often returns HTML without a token for server fetch. */
+  function resolveTokenHtmlUrl(): string | null {
+    const raw = TOKENHTML_BASE_URL;
+    if (raw) {
       try {
-        const baseUrl = new URL(DATAVERSE_BASE_URL);
-        tokenUrl = `${baseUrl.protocol}//${baseUrl.host}/_layout/tokenhtml`;
-      } catch (urlErr) {
-        console.warn("[TokenAPI] Invalid DATAVERSE_BASE_URL, using fallback token:", urlErr);
-        return res.json({ token: FALLBACK_TOKEN, available: true, source: "fallback" });
-      }
-
-      console.log("[TokenAPI] Requesting:", tokenUrl);
-
-      const response = await fetch(tokenUrl, {
-        credentials: "include",
-        cache: "no-cache",
-      });
-
-      console.log(`[TokenAPI] Response status: ${response.status} ${response.statusText}`);
-
-      if (!response.ok) {
-        console.warn(`[TokenAPI] Request failed with status ${response.status}, using fallback token`);
-        return res.json({ token: FALLBACK_TOKEN, available: true, source: "fallback", status: response.status });
-      }
-
-      const text = await response.text();
-      console.log(`[TokenAPI] Response length: ${text.length} chars`);
-      console.log(`[TokenAPI] Response preview (first 500 chars):\n${text.substring(0, 500)}`);
-
-      // Extract token using multiple patterns to handle different HTML structures
-      let token: string | null = null;
-
-      // Pattern 1: <input name="__RequestVerificationToken" value="TOKEN_HERE" />
-      // Handles: value before or after name attribute
-      let match = text.match(/name=["']__RequestVerificationToken["'][^>]*value=["']([^"']+)/i);
-      if (match && match[1]) {
-        token = match[1];
-        console.log("[TokenAPI] Token matched with pattern 1 (name first)");
-      }
-
-      // Pattern 2: <input value="TOKEN_HERE" name="__RequestVerificationToken" />
-      // Handles: value attribute comes before name attribute
-      if (!token) {
-        match = text.match(/value=["']([^"']+)[^>]*name=["']__RequestVerificationToken["']/i);
-        if (match && match[1]) {
-          token = match[1];
-          console.log("[TokenAPI] Token matched with pattern 2 (value first)");
+        if (/\/tokenhtml/i.test(raw)) {
+          return raw.startsWith("http")
+            ? raw
+            : `https://${raw.replace(/^\/+/, "")}`;
         }
-      }
-
-      // Pattern 3: Look for __RequestVerificationToken=VALUE pattern (form data style)
-      if (!token) {
-        match = text.match(/__RequestVerificationToken["\s:=]*["']?([A-Za-z0-9_+/=\-]+)/);
-        if (match && match[1]) {
-          token = match[1];
-          console.log("[TokenAPI] Token matched with pattern 3 (form data style)");
-        }
-      }
-
-      if (token && token.length > 0) {
-        console.log(`[TokenAPI] ✓ Successfully extracted token (length: ${token.length})`);
-        console.log(`[TokenAPI] Token preview: ${token.substring(0, 30)}...`);
-        return res.json({ token, available: true, source: "fetched" });
-      } else {
-        console.warn("[TokenAPI] ✗ Token not found in HTML response, using fallback token");
-        console.warn("[TokenAPI] Response preview:\n", text.substring(0, 500));
-        return res.json({ token: FALLBACK_TOKEN, available: true, source: "fallback" });
-      }
-    } catch (err: any) {
-      console.error("[TokenAPI] Error fetching token:", err?.message || String(err));
-      console.log("[TokenAPI] Using fallback token due to error");
-      return res.json({ token: FALLBACK_TOKEN, available: true, source: "fallback", error: err?.message });
+        const u = new URL(raw.includes("://") ? raw : `https://${raw}`);
+        return `${u.origin}/_layout/tokenhtml`;
+      } catch (e) {}
     }
-  });
+    if (!DATAVERSE_BASE_URL) return null;
+    try {
+      const baseUrl = new URL(DATAVERSE_BASE_URL);
+      return `${baseUrl.protocol}//${baseUrl.host}/_layout/tokenhtml`;
+    } catch (e) {
+      return null;
+    }
+  }
 
+  function sendVerificationResult(
+    res: express.Response,
+    token: string | null,
+    source: string,
+    extra?: Record<string, unknown>,
+  ) {
+    if (token) {
+      return res.json({
+        token,
+        available: true,
+        source,
+        ...extra,
+      });
+    }
+    const fallbackToken = getVerificationTokenFallback();
+    if (fallbackToken) {
+      return res.json({
+        token: fallbackToken,
+        available: true,
+        source: "fallback",
+        ...extra,
+      });
+    }
+    return res.status(200).json({
+      token: null,
+      available: false,
+      source,
+      ...extra,
+    });
+  }
+
+  // Token endpoint - fetch verification token from Power Pages tokenhtml (authenticated)
+  app.get(
+    "/api/verification-token",
+    verificationTokenRateLimit,
+    requireUser,
+    async (_req, res) => {
+      res.setHeader("Content-Type", "application/json");
+
+      try {
+        const tokenUrl = resolveTokenHtmlUrl();
+        if (!tokenUrl) {
+          return sendVerificationResult(res, null, "no_base_url");
+        }
+
+        const response = await fetch(tokenUrl, {
+          credentials: "include",
+          cache: "no-cache",
+        });
+
+        if (!response.ok) {
+          return sendVerificationResult(res, null, "fetch_failed", {
+            status: response.status,
+          });
+        }
+
+        const text = await response.text();
+
+        let token: string | null = null;
+
+        let match = text.match(
+          /name=["']__RequestVerificationToken["'][^>]*value=["']([^"']+)/i,
+        );
+        if (match?.[1]) {
+          token = match[1];
+        }
+
+        if (!token) {
+          match = text.match(
+            /value=["']([^"']+)[^>]*name=["']__RequestVerificationToken["']/i,
+          );
+          if (match?.[1]) {
+            token = match[1];
+          }
+        }
+
+        if (!token) {
+          match = text.match(
+            /__RequestVerificationToken["\s:=]*["']?([A-Za-z0-9_+/=\-]+)/,
+          );
+          if (match?.[1]) {
+            token = match[1];
+          }
+        }
+
+        if (token && token.length > 0) {
+          return sendVerificationResult(res, token, "fetched");
+        }
+
+        return sendVerificationResult(res, null, "parse_failed");
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        return sendVerificationResult(
+          res,
+          null,
+          "exception",
+          isProductionNodeEnv() ? {} : { error: message },
+        );
+      }
+    },
+  );
+
+  // Public: thumbnails on the home page for anonymous users. Origin/entity/id are validated; Dataverse uses server token.
   app.get("/api/dataverse-image", async (req, res) => {
     const rawUrl = typeof req.query.url === "string" ? req.query.url : null;
-    const forceFullImage = String(req.query.full || "").toLowerCase() === "true";
+    const forceFullImage =
+      String(req.query.full || "").toLowerCase() === "true";
 
     if (!rawUrl) {
       return res.status(400).json({ error: "Missing image url" });
     }
 
     if (!DATAVERSE_BASE_URL) {
-      return res.status(500).json({ error: "DATAVERSE_BASE_URL is not configured" });
+      return res
+        .status(500)
+        .json({ error: "DATAVERSE_BASE_URL is not configured" });
     }
 
     try {
@@ -400,26 +459,38 @@ export function createServer() {
         return res.status(400).json({ error: "Missing image metadata" });
       }
 
-      const entitySetMap: Record<string, string> = {
-        prmtk_researcharea: "prmtk_researchareas",
-      };
-      const entitySetName = entitySetMap[entity] || `${entity}s`;
+      if (!isDataverseGuid(recordId)) {
+        return res.status(400).json({ error: "Invalid record id" });
+      }
+
+      if (!isAllowedImageAttributeName(attribute)) {
+        return res.status(400).json({ error: "Invalid attribute" });
+      }
+
+      const entitySetName = resolveImageEntitySetName(entity);
+      if (!entitySetName) {
+        return res
+          .status(403)
+          .json({ error: "Entity not allowed for image proxy" });
+      }
+
       const imagePath = `/api/data/v9.2/${entitySetName}(${recordId})/${attribute}/$value${forceFullImage ? "?size=full" : ""}`;
 
       const serverToken = await acquireServerToken();
       if (!serverToken) {
-        return res.status(503).json({ error: "Server-side Dataverse token unavailable" });
+        return res
+          .status(503)
+          .json({ error: "Server-side Dataverse token unavailable" });
       }
 
-      console.log("[DataverseImage] Fetching:", baseUrl.origin + imagePath);
       const response = await fetch(baseUrl.origin + imagePath, {
         headers: {
           Authorization: `Bearer ${serverToken}`,
-          Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+          Accept:
+            "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
         },
       });
 
-      console.log("[DataverseImage] Response:", response.status, response.statusText, response.headers.get("content-type"));
       res.status(response.status);
 
       const imageBuffer = Buffer.from(await response.arrayBuffer());
@@ -427,13 +498,19 @@ export function createServer() {
       const inferredContentType =
         contentType && contentType !== "application/octet-stream"
           ? contentType
-          : imageBuffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+          : imageBuffer
+                .subarray(0, 8)
+                .equals(
+                  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+                )
             ? "image/png"
             : imageBuffer.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]))
               ? "image/jpeg"
-              : imageBuffer.subarray(0, 6).toString("ascii") === "GIF87a" || imageBuffer.subarray(0, 6).toString("ascii") === "GIF89a"
+              : imageBuffer.subarray(0, 6).toString("ascii") === "GIF87a" ||
+                  imageBuffer.subarray(0, 6).toString("ascii") === "GIF89a"
                 ? "image/gif"
-                : imageBuffer.subarray(0, 4).toString("ascii") === "RIFF" && imageBuffer.subarray(8, 12).toString("ascii") === "WEBP"
+                : imageBuffer.subarray(0, 4).toString("ascii") === "RIFF" &&
+                    imageBuffer.subarray(8, 12).toString("ascii") === "WEBP"
                   ? "image/webp"
                   : "image/jpeg";
       if (inferredContentType) {
@@ -450,7 +527,6 @@ export function createServer() {
 
       return res.end(imageBuffer);
     } catch (err: any) {
-      console.error("[DataverseImage] Failed to proxy image:", err);
       return res.status(502).json({
         error: "Image proxy error",
         details: err?.message || String(err),
@@ -458,8 +534,13 @@ export function createServer() {
     }
   });
 
-  // Dataverse API proxy - forward all /_api and /_layout requests
-  app.all(/^\/((_api|_layout)\/)/, handleDataverseProxy);
+  // Dataverse API proxy — auth required except GET/HEAD on public entity sets (see publicDataverse.ts)
+  app.all(
+    /^\/((_api|_layout)\/)/,
+    requireUserUnlessPublicDataverseGet,
+    dataverseProxyAllowlist,
+    handleDataverseProxy,
+  );
 
   return app;
 }

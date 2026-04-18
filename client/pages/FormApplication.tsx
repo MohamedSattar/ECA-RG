@@ -1,6 +1,11 @@
 import * as React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useLocation, useSearchParams, useParams } from "react-router-dom";
+import {
+  useNavigate,
+  useLocation,
+  useSearchParams,
+  useParams,
+} from "react-router-dom";
 import Reveal from "@/motion/Reveal";
 import { useAuth } from "@/state/auth";
 import { toast } from "@/ui/use-toast";
@@ -16,7 +21,12 @@ import {
 import { Label } from "@fluentui/react/lib/Label";
 import { Dropdown, IDropdownOption } from "@fluentui/react/lib/Dropdown";
 import { BudgetCategorys } from "@/constants/options";
-import { APPLICATION_STATUS_LABELS, ContactFields, GrantCycleFields, ResearchKeys } from "@/constants";
+import {
+  APPLICATION_STATUS_LABELS,
+  ContactFields,
+  GrantCycleFields,
+  ResearchKeys,
+} from "@/constants";
 import {
   ApplicationKeys,
   ApplicationTeamMemberKeys,
@@ -74,7 +84,7 @@ interface FormState {
   generalFiles: { file: File; action: "new" | "existing" | "remove" }[];
   team: TeamMember[];
   type: "new" | "edit" | "view";
-  status:string;
+  status: string;
   applicationNumber?: string;
 }
 
@@ -92,7 +102,7 @@ const INITIAL_FORM_STATE: FormState = {
   grantCycle: null,
   researchArea: null,
   mainApplicant: "",
-  grantCycleDisplayValue:"",
+  grantCycleDisplayValue: "",
   researchAreaDisplayValue: "",
   mainApplicantDisplayValue: "",
   applicationFiles: [],
@@ -100,7 +110,7 @@ const INITIAL_FORM_STATE: FormState = {
   team: [],
   budgetHeaders: null,
   budgetLineItems: [],
-  status:"",
+  status: "",
   type: "new",
 };
 
@@ -209,12 +219,7 @@ const processFileUploads = async (
       const response = await triggerFlow(APIURL.FileUploadEndpoint, payload);
 
       if (response.success) {
-        // console.log(`Processed file ${file.file.name} successfully.`);
       } else {
-        console.error(
-          `Failed to process file ${file.file.name}. Error:`,
-          response.error,
-        );
       }
     });
 
@@ -236,12 +241,7 @@ const processFileUploads = async (
       const response = await triggerFlow(APIURL.FileUploadEndpoint, payload);
 
       if (response.success) {
-        // console.log(`Processed file ${file.file.name} successfully.`);
       } else {
-        console.error(
-          `Failed to process file ${file.file.name}. Error:`,
-          response.error,
-        );
       }
     });
 
@@ -285,7 +285,9 @@ const processBudgetData = async (
               },
             });
       if (res?.status >= 400) {
-        const msg = (res?.error?.message ?? res?.error?.details ?? res?.message) || "Budget request failed";
+        const msg =
+          (res?.error?.message ?? res?.error?.details ?? res?.message) ||
+          "Budget request failed";
         throw new Error(String(msg));
       }
       return res;
@@ -294,7 +296,10 @@ const processBudgetData = async (
   const removeLineItemPromises = budgetLineItems
     .filter((item) => item.action === "remove" && item.id)
     .map(async (item) => {
-      const res = await callApi({ url: `/api/budget/line-items/${item.id}`, method: "DELETE" });
+      const res = await callApi({
+        url: `/api/budget/line-items/${item.id}`,
+        method: "DELETE",
+      });
       if (res?.status >= 400) throw new Error("Budget delete failed");
       return res;
     });
@@ -492,8 +497,7 @@ export default function FormApplication() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
 
-  const applicationId =
-    id && id !== "new" ? id : undefined;
+  const applicationId = id && id !== "new" ? id : undefined;
   const grantCycleId = searchParams.get("grantCycleId") ?? "";
   const researchAreaId = searchParams.get("researchAreaId") ?? "";
   /** No id or `new` → new application; edit/view come from loaded record. */
@@ -508,7 +512,6 @@ export default function FormApplication() {
   const displayApplicationNumber =
     form.applicationNumber ?? applicationNumberFromQuery ?? "";
   const displayStatus = form.status || statusFromQuery || "";
-  // console.log(form);
 
   const [showGeneral, setShowGeneral] = useState(true);
   const [showTeam, setShowTeam] = useState(true);
@@ -531,12 +534,17 @@ export default function FormApplication() {
       statusCode !== undefined && statusCode !== null
         ? Number(statusCode)
         : null;
-    if (num !== null && APPLICATION_STATUS_LABELS[num as keyof typeof APPLICATION_STATUS_LABELS]) {
-      return APPLICATION_STATUS_LABELS[num as keyof typeof APPLICATION_STATUS_LABELS];
+    if (
+      num !== null &&
+      APPLICATION_STATUS_LABELS[num as keyof typeof APPLICATION_STATUS_LABELS]
+    ) {
+      return APPLICATION_STATUS_LABELS[
+        num as keyof typeof APPLICATION_STATUS_LABELS
+      ];
     }
     return (app[ApplicationKeys.STATUS_FORMATTED] as string) ?? "Unknown";
   };
-  
+
   const mapApplicationToForm = (
     app: any,
     files: any[],
@@ -547,7 +555,7 @@ export default function FormApplication() {
     researchArea: app[ApplicationKeys.RESEARCHAREA] || null,
     mainApplicant: app[ApplicationKeys.MAINAPPLICANT] || "",
     grantCycleDisplayValue: app?.prmtk_GrantCycle?.prmtk_cyclename,
-    researchAreaDisplayValue:app?.prmtk_ResearchArea?.prmtk_areaname,
+    researchAreaDisplayValue: app?.prmtk_ResearchArea?.prmtk_areaname,
     mainApplicantDisplayValue: app?.prmtk_MainApplicant?.fullname,
     submissionDate:
       app[ApplicationKeys.SUBMISSIONDATE_FORMATTED] || formatDate(new Date()),
@@ -604,8 +612,6 @@ export default function FormApplication() {
         APIURL.FileGetEndpoint,
         { Library: "Applications", Folder: applicationNumber },
       );
-
-      // console.log("Fetched application files:", applicationFiles);
       return (
         applicationFiles?.data?.map((f: any) => ({
           file: getFile(f),
@@ -613,11 +619,9 @@ export default function FormApplication() {
         })) || []
       );
     } catch (error) {
-      console.error("Failed to load application files:", error);
       return [];
     }
   };
-     
 
   const loadApplicationDetails = useCallback(
     async (applicationId: string) => {
@@ -627,7 +631,6 @@ export default function FormApplication() {
         const currentUserContactId = user?.contact?.[ContactFields.CONTACTID];
 
         if (!currentUserContactId) {
-          console.error("No contact ID found for current user");
           toast({
             title: "Error",
             description: "User authentication required.",
@@ -660,10 +663,10 @@ export default function FormApplication() {
         }));
 
         // Bind budget details for this application (use app's budget header lookup when present)
-        const budgetHeaderIdFromApp = app[ApplicationKeys.BUDGETHEADER] ?? app._prmtk_budgetheader_value;
+        const budgetHeaderIdFromApp =
+          app[ApplicationKeys.BUDGETHEADER] ?? app._prmtk_budgetheader_value;
         await loadBudgetDetails(applicationId, budgetHeaderIdFromApp);
       } catch (error) {
-        console.error("Failed to load application details:", error);
         // setDialogMessage(
         //   error instanceof Error
         //     ? error.message
@@ -693,7 +696,6 @@ export default function FormApplication() {
         const workflow = res.value.filter(
           (item) => item._prmtk_applicationid_value === applicationId,
         );
-        console.log(workflow);
 
         // Sort by creation date (newest first)
         const sortedWorkflow = workflow.sort((a, b) => {
@@ -705,7 +707,6 @@ export default function FormApplication() {
         setWorkflowHistory(sortedWorkflow);
         setShowWorkflowDialog(true);
       } catch (error) {
-        console.error("Failed to load history:", error);
         toast({
           title: "Error",
           description: "Unable to load history. Please try again.",
@@ -721,9 +722,7 @@ export default function FormApplication() {
   const loadTeamMemberRoles = useCallback(async () => {
     try {
       setTeamMemberRoles(TeamMemberRoles.APPLICATION as any);
-    } catch (error) {
-      console.error("Failed to load team member roles:", error);
-    }
+    } catch (error) {}
   }, []);
 
   // Helper to map budget line items
@@ -737,7 +736,7 @@ export default function FormApplication() {
       prmtk_amount: parseFloat(item[BudgetLineItemFields.AMOUNT] || "0"),
       prmtk_category: item[BudgetLineItemFields.CATEGORY] || "",
       action: "existing" as const,
-      justification:item["prmtk_justification"] || ""
+      justification: item["prmtk_justification"] || "",
     }));
   };
 
@@ -767,9 +766,10 @@ export default function FormApplication() {
           url: `/api/budget/headers/${budgetHeaderIdFromApp}`,
           method: "GET",
         });
-        budgetData = headerRes && headerRes[BudgetHeaderFields.BUDGETHEADERID] != null
-          ? headerRes
-          : headerRes?.value?.[0];
+        budgetData =
+          headerRes && headerRes[BudgetHeaderFields.BUDGETHEADERID] != null
+            ? headerRes
+            : headerRes?.value?.[0];
         budgetHeaderId = budgetHeaderIdFromApp;
       }
 
@@ -778,9 +778,12 @@ export default function FormApplication() {
           url: `/api/budget/headers?applicationId=${applicationId}`,
           method: "GET",
         });
-        const raw = res?.value ?? (Array.isArray(res) ? res : res?.d?.results ?? res?.results);
+        const raw =
+          res?.value ??
+          (Array.isArray(res) ? res : (res?.d?.results ?? res?.results));
         budgetData = Array.isArray(raw) ? raw[0] : raw;
-        budgetHeaderId = budgetData?.[BudgetHeaderFields.BUDGETHEADERID] ?? null;
+        budgetHeaderId =
+          budgetData?.[BudgetHeaderFields.BUDGETHEADERID] ?? null;
       }
 
       if (!budgetData || !budgetHeaderId) return;
@@ -789,7 +792,9 @@ export default function FormApplication() {
         url: `/api/budget/line-items?budgetHeaderId=${budgetHeaderId}`,
         method: "GET",
       });
-      const rawLineItems = res2?.value ?? (Array.isArray(res2) ? res2 : res2?.d?.results ?? res2?.results);
+      const rawLineItems =
+        res2?.value ??
+        (Array.isArray(res2) ? res2 : (res2?.d?.results ?? res2?.results));
       const filteredArray = Array.isArray(rawLineItems) ? rawLineItems : [];
 
       const budgetHeader = mapBudgetHeader(budgetData);
@@ -800,9 +805,7 @@ export default function FormApplication() {
         budgetHeaders: budgetHeader,
         budgetLineItems: budgetLineItems,
       }));
-    } catch (error) {
-      console.error("Failed to load budget details:", error);
-    }
+    } catch (error) {}
   };
 
   // Check for existing application on mount (for new forms); then load when id exists
@@ -840,7 +843,6 @@ export default function FormApplication() {
             );
           }
         } catch (error) {
-          console.error("Failed to check for existing application:", error);
         } finally {
           setShowLoader(false);
         }
@@ -848,9 +850,7 @@ export default function FormApplication() {
     };
 
     run();
-  }, [
-    applicationId
-  ]);
+  }, [applicationId]);
 
   useEffect(() => {
     if (user?.contact?.[ContactKeys.FULLNAME]) {
@@ -858,7 +858,6 @@ export default function FormApplication() {
         ...prev,
         mainApplicant: user.contact[ContactKeys.FULLNAME],
       }));
-      // console.log(form.mainApplicant);
     }
   }, [user]);
 
@@ -1079,7 +1078,6 @@ export default function FormApplication() {
         return true;
       }
     } catch (err) {
-      console.error("Failed to load applications:", err);
     } finally {
       setShowLoader(false);
     }
@@ -1124,8 +1122,6 @@ export default function FormApplication() {
   const submit = async (status: string) => {
     setShowLoader(true);
     try {
-      // console.log("Submitting application:", form, "state:", state);
-
       // Create or update application
       const applicationData = {
         [ApplicationKeys.APPLICATIONTITLE]: form.title,
@@ -1159,10 +1155,9 @@ export default function FormApplication() {
         throw new Error("Failed to submit application.");
       }
 
-      const applicationIdForm =
-        !isNewApplication
-          ? applicationId
-          : res?.headers?.get("OData-EntityId")?.match(/\(([^)]+)\)/)?.[1];
+      const applicationIdForm = !isNewApplication
+        ? applicationId
+        : res?.headers?.get("OData-EntityId")?.match(/\(([^)]+)\)/)?.[1];
       if (!applicationIdForm) {
         throw new Error("Failed to retrieve application ID.");
       }
@@ -1177,9 +1172,6 @@ export default function FormApplication() {
       const matchingApp = resApps?.value?.find(
         (app: any) => app.prmtk_applicationid === applicationIdForm,
       );
-      // console.log(matchingApp, "matchingApp");
-      // console.log(applicationIdForm, "applicationIdForm");
-      // console.log(resApps, "resApps");
 
       if (matchingApp) {
         const budgetHeaderId = matchingApp._prmtk_budgetheader_value;
@@ -1191,14 +1183,19 @@ export default function FormApplication() {
             url: `/api/budget/headers/${budgetHeaderId}`,
             method: "GET",
           });
-          const budgetData = budgetHeaderRes && budgetHeaderRes[BudgetHeaderFields.BUDGETHEADERID] != null
-            ? budgetHeaderRes
-            : budgetHeaderRes?.value?.[0];
+          const budgetData =
+            budgetHeaderRes &&
+            budgetHeaderRes[BudgetHeaderFields.BUDGETHEADERID] != null
+              ? budgetHeaderRes
+              : budgetHeaderRes?.value?.[0];
           if (budgetData) {
             headerForProcess = mapBudgetHeader(budgetData);
           }
         } else if (form.budgetLineItems.length > 0) {
-          const newHeaderId = await createBudgetHeader(applicationIdForm, callApi);
+          const newHeaderId = await createBudgetHeader(
+            applicationIdForm,
+            callApi,
+          );
           headerForProcess = {
             id: newHeaderId,
             name: "Application Budget",
@@ -1220,7 +1217,11 @@ export default function FormApplication() {
 
         // Persist budget line items (add / edit / delete) when we have a header
         if (headerForProcess) {
-          await processBudgetData(headerForProcess, form.budgetLineItems, callApi);
+          await processBudgetData(
+            headerForProcess,
+            form.budgetLineItems,
+            callApi,
+          );
         }
 
         await processFileUploads(
@@ -1238,16 +1239,14 @@ export default function FormApplication() {
       // Call handleBudgetUpdate after processing other data
       toast({
         title: "Success",
-        description:
-          !isNewApplication
-            ? "Application updated successfully."
-            : "Application submitted successfully.",
+        description: !isNewApplication
+          ? "Application updated successfully."
+          : "Application submitted successfully.",
       });
       if (status === "Submitted") {
         navigate(`/applications`, { replace: true });
       }
     } catch (error) {
-      console.error("Submission error:", error);
       toast({
         title: "Error",
         description: "Submission failed. Please try again.",
@@ -1265,7 +1264,6 @@ export default function FormApplication() {
   //       url: `/_api/${TableName.BUDGETHEADERS}?$filter=${BudgetHeaderFields.APPLICATION} eq ${id}`,
   //       method: "GET",
   //     });
-  //     console.log(budgetHeaderResponse);
   //     const existingBudgetHeader = budgetHeaderResponse?.value?.[0];
 
   //     if (!existingBudgetHeader) {
@@ -1292,7 +1290,6 @@ export default function FormApplication() {
   //       description: "Budget updated successfully.",
   //     });
   //   } catch (error) {
-  //     console.error("Failed to update budget:", error);
   //     toast({
   //       title: "Error",
   //       description: "Failed to update budget. Please try again.",
@@ -1304,7 +1301,6 @@ export default function FormApplication() {
   return (
     <>
       <section className="relative overflow-hidden bg-[#1D2054]">
-         
         <Reveal>
           <div className="container py-4 md:py-4 grid gap-10 md:grid-cols-2 items-center">
             <div className="max-w-2xl flex flex-col gap-4">
@@ -1342,7 +1338,6 @@ export default function FormApplication() {
       </section>
       <section className="bg-white">
         <div className="container py-4">
-          
           {form.type !== "view" && (
             <div className="flex justify-end gap-4">
               <button
@@ -1372,119 +1367,112 @@ export default function FormApplication() {
             </div>
           )}
 
+          <Reveal>
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm mt-5">
+              {/* Header */}
+              <div className="border-b border-slate-100 bg-slate-50 px-5 py-4">
+                <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+                  Application
+                </p>
+                <h1 className="mt-1 text-xl font-bold text-slate-900 md:text-2xl">
+                  Proposal for Research -{` ${form.researchAreaDisplayValue} `}
+                  By
+                  {` ${form.mainApplicantDisplayValue}`}
+                </h1>
+              </div>
 
-<Reveal>
-                  <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm mt-5">
-                    {/* Header */}
-                    <div className="border-b border-slate-100 bg-slate-50 px-5 py-4">
-                      <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-                        Application
+              {/* Overview + Team: 8 cols | 4 cols */}
+              {(form.type !== "new" || form.team.length > 0) && (
+                <div className="grid grid-cols-1 lg:grid-cols-12">
+                  {form.type !== "new" && (
+                    <div className="border-b border-slate-100 px-5 py-4 lg:col-span-8 lg:border-b-0 lg:border-r lg:py-5">
+                      <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        Overview
                       </p>
-                      <h1 className="mt-1 text-xl font-bold text-slate-900 md:text-2xl">
-                        Proposal for Research - 
-                        {
-                        ` ${form.researchAreaDisplayValue} `
-                        }
-                        By 
-                        {
-                          ` ${form.mainApplicantDisplayValue}`
-                        }
-                          
-                      </h1>
-                     
-                    </div>
-        
-                    {/* Overview + Team: 8 cols | 4 cols */}
-                    {(form.type !== "new" || form.team.length > 0) && (
-                      <div className="grid grid-cols-1 lg:grid-cols-12">
-                        {form.type !== "new" && (
-                          <div className="border-b border-slate-100 px-5 py-4 lg:col-span-8 lg:border-b-0 lg:border-r lg:py-5">
-                            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                              Overview
-                            </p>
-                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                              {[
-                              
-                                {
-                                  label: "Grant Cycle",
-                                  value: form.grantCycleDisplayValue ?? "—",
-                                  iconName: "Page",
-                                },
-                                {
-                                  label: "Research Area",
-                                  value: form.researchAreaDisplayValue ?? "—",
-                                  iconName: "FolderSearch",
-                                },
-                                {
-                                  label: "Main Applicant Name",
-                                  value: form.mainApplicantDisplayValue ?? "—",
-                                  iconName: "Contact",
-                                },
-                                  {
-                                  label: "Lead Institute",
-                                  value:  "—",
-                                  iconName: "Contact",
-                                },
-                              ].map(({ label, value, iconName }) => (
-                                <div
-                                  key={label}
-                                  className="flex items-start gap-2.5 rounded-md border border-slate-100 bg-slate-50/50 px-3 py-2"
-                                >
-                                  <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-600">
-                                    <Icon
-                                      iconName={iconName}
-                                      styles={{ root: { fontSize: 14 } }}
-                                    />
-                                  </div>
-                                  <div className="min-w-0 flex-1">
-                                    <span className="text-xs text-slate-500">
-                                      {label}
-                                    </span>
-                                    <span className="mt-0.5 block text-sm font-medium text-slate-800">
-                                      {value}
-                                    </span>
-                                  </div>
-                                </div>
-                              ))}
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        {[
+                          {
+                            label: "Grant Cycle",
+                            value: form.grantCycleDisplayValue ?? "—",
+                            iconName: "Page",
+                          },
+                          {
+                            label: "Research Area",
+                            value: form.researchAreaDisplayValue ?? "—",
+                            iconName: "FolderSearch",
+                          },
+                          {
+                            label: "Main Applicant Name",
+                            value: form.mainApplicantDisplayValue ?? "—",
+                            iconName: "Contact",
+                          },
+                          {
+                            label: "Lead Institute",
+                            value: "—",
+                            iconName: "Contact",
+                          },
+                        ].map(({ label, value, iconName }) => (
+                          <div
+                            key={label}
+                            className="flex items-start gap-2.5 rounded-md border border-slate-100 bg-slate-50/50 px-3 py-2"
+                          >
+                            <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-600">
+                              <Icon
+                                iconName={iconName}
+                                styles={{ root: { fontSize: 14 } }}
+                              />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className="text-xs text-slate-500">
+                                {label}
+                              </span>
+                              <span className="mt-0.5 block text-sm font-medium text-slate-800">
+                                {value}
+                              </span>
                             </div>
                           </div>
-                        )}
-                        {form.team.length > 0 && (
-                          <div className="px-5 py-4 lg:col-span-4 lg:py-5">
-                            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                              Team members
-                            </p>
-                            <ul className="space-y-2">
-                              {form.team.map((member) => (
-                                <li
-                                  key={member.id}
-                                  className="flex items-center gap-3 rounded-md border border-slate-100 bg-slate-50/50 px-3 py-2"
-                                >
-                                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-600">
-                                    <Icon
-                                      iconName="Contact"
-                                      styles={{ root: { fontSize: 16 } }}
-                                    />
-                                  </div>
-                                  <div className="min-w-0 flex-1">
-                                    <p className="truncate text-sm font-medium text-slate-900">
-                                      {member.name || "—"}
-                                    </p>
-                                    <p className="truncate text-xs text-slate-500">
-                                      {teamMemberRoles.find(
-                                        (r) => String(r.key) === String(member.role),
-                                      )?.text ?? member.role ?? "—"}
-                                    </p>
-                                  </div>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
+                        ))}
                       </div>
-                    )}
-                  </div>
-                </Reveal>
+                    </div>
+                  )}
+                  {form.team.length > 0 && (
+                    <div className="px-5 py-4 lg:col-span-4 lg:py-5">
+                      <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        Team members
+                      </p>
+                      <ul className="space-y-2">
+                        {form.team.map((member) => (
+                          <li
+                            key={member.id}
+                            className="flex items-center gap-3 rounded-md border border-slate-100 bg-slate-50/50 px-3 py-2"
+                          >
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-600">
+                              <Icon
+                                iconName="Contact"
+                                styles={{ root: { fontSize: 16 } }}
+                              />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-medium text-slate-900">
+                                {member.name || "—"}
+                              </p>
+                              <p className="truncate text-xs text-slate-500">
+                                {teamMemberRoles.find(
+                                  (r) => String(r.key) === String(member.role),
+                                )?.text ??
+                                  member.role ??
+                                  "—"}
+                              </p>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </Reveal>
 
           {/* General Information Section */}
           <div className="mt-8 rounded-xl border bg-white p-6">
@@ -1575,7 +1563,14 @@ export default function FormApplication() {
           )} */}
           <BudgetSection
             key={`budget-${form.budgetLineItems?.length ?? 0}-${form.budgetHeaders?.id ?? "none"}`}
-            budgetHeader={form.budgetHeaders ?? { id: "", name: "Budget", totalBudget: 0, action: "existing" }}
+            budgetHeader={
+              form.budgetHeaders ?? {
+                id: "",
+                name: "Budget",
+                totalBudget: 0,
+                action: "existing",
+              }
+            }
             budgetLineItem={form.budgetLineItems}
             budgetCategories={BudgetCategorys}
             formType="Application"
@@ -1593,11 +1588,15 @@ export default function FormApplication() {
                       prmtk_description: item.description,
                       prmtk_amount: parseFloat(item.amount),
                       prmtk_category: item.category,
-                      prmtk_justification:item.justification
+                      prmtk_justification: item.justification,
                     },
                   })) as { headers?: Headers; status?: number };
                   if (res?.status >= 400) {
-                    toast({ title: "Error", description: "Failed to add budget line item.", variant: "destructive" });
+                    toast({
+                      title: "Error",
+                      description: "Failed to add budget line item.",
+                      variant: "destructive",
+                    });
                     return;
                   }
                   const entityId = res?.headers?.get?.("OData-EntityId");
@@ -1609,10 +1608,8 @@ export default function FormApplication() {
                     prmtk_category: item.category,
                     prmtk_description: item.description,
                     prmtk_amount: parseFloat(item.amount),
-                    justification:item.justification,
+                    justification: item.justification,
                     action: "existing",
-                    
-                    
                   };
                   setForm((prev) => ({
                     ...prev,
@@ -1628,9 +1625,8 @@ export default function FormApplication() {
                   prmtk_category: item.category,
                   prmtk_description: item.description,
                   prmtk_amount: parseFloat(item.amount),
-                  justification:item.justification,
-                  action: "new"
-                  
+                  justification: item.justification,
+                  action: "new",
                 };
                 setForm((prev) => ({
                   ...prev,
@@ -1645,7 +1641,7 @@ export default function FormApplication() {
                 prmtk_description: item.description,
                 prmtk_amount: parseFloat(item.amount),
                 prmtk_category: item.category,
-                prmtk_justification:item.justification
+                prmtk_justification: item.justification,
               };
               if (existing?.action === "existing" && id) {
                 setShowLoader(true);
@@ -1656,7 +1652,11 @@ export default function FormApplication() {
                     data: payload,
                   });
                   if ((res as any)?.status >= 400) {
-                    toast({ title: "Error", description: "Failed to update budget line item.", variant: "destructive" });
+                    toast({
+                      title: "Error",
+                      description: "Failed to update budget line item.",
+                      variant: "destructive",
+                    });
                     return;
                   }
                 } finally {
@@ -1666,12 +1666,16 @@ export default function FormApplication() {
               setForm((prev) => ({
                 ...prev,
                 budgetLineItems: prev.budgetLineItems.map((li) =>
-                  li.id === id ? { ...li, ...payload, action: "existing" as const } : li,
+                  li.id === id
+                    ? { ...li, ...payload, action: "existing" as const }
+                    : li,
                 ),
               }));
             }}
             onRemoveBudgetLineItem={async (id) => {
-              const itemToRemove = form.budgetLineItems.find((li) => li.id === id);
+              const itemToRemove = form.budgetLineItems.find(
+                (li) => li.id === id,
+              );
               const isExistingItem = itemToRemove?.action === "existing";
               if (!isNewApplication && isExistingItem && itemToRemove?.id) {
                 setShowLoader(true);
@@ -1686,7 +1690,9 @@ export default function FormApplication() {
               }
               setForm((prev) => ({
                 ...prev,
-                budgetLineItems: prev.budgetLineItems.filter((li) => li.id !== id),
+                budgetLineItems: prev.budgetLineItems.filter(
+                  (li) => li.id !== id,
+                ),
               }));
             }}
             form={form}
@@ -1726,28 +1732,26 @@ export default function FormApplication() {
           />
           {/* )} */}
 
-          <Reveal className="mt-8 flex gap-5 justify-end">           
-
-              {form.type !== "view" && (
-                <>
-                  <button
-                    onClick={() => handleSubmitClick("Draft")}
-                    disabled={showLoader}
-                    className="px-4 py-1 border border-[#7BAAA3] text-[#7BAAA3] rounded text-sm hover:bg-[#7BAAA3]/10 transition w-[9rem]"
-                  >
-                    <Icon iconName="SingleBookmark" />
-                    SAVE DRAFT
-                  </button>
-                  <PrimaryButton
-                    onClick={() => handleSubmitClick("Submitted")}
-                    disabled={!canSubmit || showLoader}
-                    styles={popupInputStyles.researchPrimaryButton}
-                  >
-                    {showLoader ? "Submitting..." : "Submit Application"}
-                  </PrimaryButton>
-                </>
-              )}
-           
+          <Reveal className="mt-8 flex gap-5 justify-end">
+            {form.type !== "view" && (
+              <>
+                <button
+                  onClick={() => handleSubmitClick("Draft")}
+                  disabled={showLoader}
+                  className="px-4 py-1 border border-[#7BAAA3] text-[#7BAAA3] rounded text-sm hover:bg-[#7BAAA3]/10 transition w-[9rem]"
+                >
+                  <Icon iconName="SingleBookmark" />
+                  SAVE DRAFT
+                </button>
+                <PrimaryButton
+                  onClick={() => handleSubmitClick("Submitted")}
+                  disabled={!canSubmit || showLoader}
+                  styles={popupInputStyles.researchPrimaryButton}
+                >
+                  {showLoader ? "Submitting..." : "Submit Application"}
+                </PrimaryButton>
+              </>
+            )}
           </Reveal>
         </div>
         <SuccessDialog
@@ -1782,8 +1786,12 @@ export default function FormApplication() {
                 Are you sure you want to submit this application?
               </p>
               <p className="mt-2 text-red-600 font-semibold text-base">
-                ⚠️ Your application must be complete including all sections and attachments before submission. You will not be able to make changes after submission.
-                The Proposal will be reviewed and you will be notified of the outcome. Please ensure all information is accurate and all required documents are attached before confirming submission.
+                ⚠️ Your application must be complete including all sections and
+                attachments before submission. You will not be able to make
+                changes after submission. The Proposal will be reviewed and you
+                will be notified of the outcome. Please ensure all information
+                is accurate and all required documents are attached before
+                confirming submission.
               </p>
             </div>
             <div className="flex justify-end gap-3">

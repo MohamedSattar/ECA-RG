@@ -38,7 +38,9 @@ export default function GrantDetail() {
   const select = `${ApplicationKeys.APPLICATIONID},${ApplicationKeys.APPLICATIONTITLE},${ApplicationKeys.SUBMISSIONDATE_FORMATTED},
   ${ApplicationKeys.RESEARCHAREA_FORMATTED},${ApplicationKeys.GRANTCYCLE_FORMATTED},${ApplicationKeys.STATUS_FORMATTED}`;
   // Filter requires GUIDs to be quoted in OData
-  const filter = currentUserId ? `${ApplicationKeys.MAINAPPLICANT} eq '${currentUserId}'` : "";
+  const filter = currentUserId
+    ? `${ApplicationKeys.MAINAPPLICANT} eq '${currentUserId}'`
+    : "";
   const currentUserApplicationURL = filter
     ? `/_api/${TableName.APPLICATIONS}?$select=*&$filter=${filter}`
     : `/_api/${TableName.APPLICATIONS}?$select=*`;
@@ -53,57 +55,51 @@ export default function GrantDetail() {
     try {
       const url = `/_api/${TableName.RESEARCHAREAS}(${id})?$expand=prmtk_GrantCycle`;
       const res = await callApi<any>({ url, method: "GET" });
-      console.log("Fetched research area:", res);
       setResearchArea(res);
     } catch (err) {
-      console.error("Failed to load research area:", err);
       setError("Unable to load research area details. Please try again later.");
     }
   };
 
   function formatDate(date: Date): string {
-  if(!date)
-    return ""
- return new Date(date).toLocaleDateString("en-GB", {
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
-}
-const getYMD=(start:string, end:string) =>{
-  let startDate = new Date(start);
-  let endDate = new Date(end);
-
-  let years = endDate.getFullYear() - startDate.getFullYear();
-  let months = endDate.getMonth() - startDate.getMonth();
-  let days = endDate.getDate() - startDate.getDate();
-
-  // Adjust days
-  if (days < 0) {
-    months--;
-    const prevMonth = new Date(
-      endDate.getFullYear(),
-      endDate.getMonth(),
-      0
-    ).getDate();
-    days += prevMonth;
+    if (!date) return "";
+    return new Date(date).toLocaleDateString("en-GB", {
+      weekday: "long",
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
   }
+  const getYMD = (start: string, end: string) => {
+    let startDate = new Date(start);
+    let endDate = new Date(end);
 
-  // Adjust months
-  if (months < 0) {
-    years--;
-    months += 12;
-  }
-  let returnValue=""
-  if(years>0)
-    returnValue+=`${years} year(s) `
-  if(months>0)
-    returnValue+=`${months} month(s) `
-  if(days>0)
-    returnValue+=`${days} day(s) `
-  return returnValue
-}
+    let years = endDate.getFullYear() - startDate.getFullYear();
+    let months = endDate.getMonth() - startDate.getMonth();
+    let days = endDate.getDate() - startDate.getDate();
+
+    // Adjust days
+    if (days < 0) {
+      months--;
+      const prevMonth = new Date(
+        endDate.getFullYear(),
+        endDate.getMonth(),
+        0,
+      ).getDate();
+      days += prevMonth;
+    }
+
+    // Adjust months
+    if (months < 0) {
+      years--;
+      months += 12;
+    }
+    let returnValue = "";
+    if (years > 0) returnValue += `${years} year(s) `;
+    if (months > 0) returnValue += `${months} month(s) `;
+    if (days > 0) returnValue += `${days} day(s) `;
+    return returnValue;
+  };
 
   const loadGrantCycles = async () => {
     if (!id) return;
@@ -113,11 +109,8 @@ const getYMD=(start:string, end:string) =>{
       const url = `/_api/${TableName.GRANTCYCLES}?$select=*&$expand=prmtk_researchareas&$filter=prmtk_researchareas/any(r: r/prmtk_researchareaid eq ${id})`;
       const res = await callApi<{ value: any[] }>({ url, method: "GET" });
       const cycles = res?.value ?? [];
-      console.log("Fetched grant cycles for research area:", cycles);
       setGrantCycles(cycles);
-    } catch (err) {
-      console.error("Failed to load grant cycles:", err);
-    }
+    } catch (err) {}
   };
 
   const loadGrantTemplate = async () => {
@@ -125,14 +118,11 @@ const getYMD=(start:string, end:string) =>{
       const url = `/_api/prmtk_granttemplates`;
       const res = await callApi<{ value: any[] }>({ url, method: "GET" });
       const templates = res?.value ?? [];
-      console.log("Fetched grant templates:", templates);
       // Use the first template or filter by grant cycle if needed
       if (templates.length > 0) {
         setGrantTemplate(templates[0]);
       }
-    } catch (err) {
-      console.error("Failed to load grant template:", err);
-    }
+    } catch (err) {}
   };
 
   const loadApps = async () => {
@@ -150,10 +140,8 @@ const getYMD=(start:string, end:string) =>{
         method: "GET",
       });
       const list = res?.value ?? [];
-      console.log("Fetched applications:", list);
       setApps(list);
     } catch (err) {
-      console.error("Failed to load applications:", err);
       setError("Unable to load applications. Please try again later.");
       setApps([]);
     } finally {
@@ -168,53 +156,51 @@ const getYMD=(start:string, end:string) =>{
   const applications = useMemo(() => apps || [], [apps]);
 
   // Function to download template file
-const downloadTemplate = async (fieldName: string, fileName: string) => {
-  if (!grantTemplate) {
-    toast.error("Grant template not loaded");
-    return;
-  }
-
-  try {
-    const grantTemplateId = grantTemplate.prmtk_granttemplateid;
-
-    const url = `/_api/prmtk_granttemplates(${grantTemplateId})/${fieldName}/$value`;
-
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Accept": "application/octet-stream",
-        "If-None-Match": ""        
-      },
-      cache: "no-store"
-    });
-
-    if (!response.ok) {
-      throw new Error("Download failed");
+  const downloadTemplate = async (fieldName: string, fileName: string) => {
+    if (!grantTemplate) {
+      toast.error("Grant template not loaded");
+      return;
     }
 
-    //const blob = await response.blob();
-    const buffer = await response.arrayBuffer();
+    try {
+      const grantTemplateId = grantTemplate.prmtk_granttemplateid;
 
-// ✅ Force correct PDF type
-const blob = new Blob([buffer], { type:  "application/octet-stream"});
+      const url = `/_api/prmtk_granttemplates(${grantTemplateId})/${fieldName}/$value`;
 
-    const downloadUrl = window.URL.createObjectURL(blob);
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Accept: "application/octet-stream",
+          "If-None-Match": "",
+        },
+        cache: "no-store",
+      });
 
-    const a = document.createElement("a");
-    a.href = downloadUrl;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.appendChild(a);
+      if (!response.ok) {
+        throw new Error("Download failed");
+      }
 
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(downloadUrl);
+      //const blob = await response.blob();
+      const buffer = await response.arrayBuffer();
 
-  } catch (err) {
-    console.error("Failed to download template:", err);
-    toast.error("Failed to download file. Please try again.");
-  }
-};
+      // ✅ Force correct PDF type
+      const blob = new Blob([buffer], { type: "application/octet-stream" });
+
+      const downloadUrl = window.URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.appendChild(a);
+
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (err) {
+      toast.error("Failed to download file. Please try again.");
+    }
+  };
 
   const handleApplyForGrant = async () => {
     if (!user?.contact?.[ContactKeys.CONTACTID]) {
@@ -253,9 +239,7 @@ const blob = new Blob([buffer], { type:  "application/octet-stream"});
       if (existingApplication) {
         // Navigate to view/edit the existing application
         toast.success("Redirecting to your application...");
-        navigate(
-          `/application/${existingApplication.prmtk_applicationid}`,
-        );
+        navigate(`/application/${existingApplication.prmtk_applicationid}`);
       } else {
         // Create a new draft application
         const applicationData = {
@@ -294,7 +278,6 @@ const blob = new Blob([buffer], { type:  "application/octet-stream"});
         navigate(`/application/${applicationId}`);
       }
     } catch (error) {
-      console.error("Error handling grant application:", error);
       toast.error(
         "Failed to create or retrieve application. Please try again.",
       );
@@ -396,9 +379,9 @@ const blob = new Blob([buffer], { type:  "application/octet-stream"});
                 </span>
                 <span className="text-sm font-medium">
                   Deadline:{" "}
-                  {formatDate(researchArea?.prmtk_GrantCycle?.[
-                    GrantCycleKeys.ENDDATE
-                  ] )}
+                  {formatDate(
+                    researchArea?.prmtk_GrantCycle?.[GrantCycleKeys.ENDDATE],
+                  )}
                 </span>
                 {/* Apply Button */}
               </div>
@@ -474,7 +457,6 @@ const blob = new Blob([buffer], { type:  "application/octet-stream"});
                     </section>
 
                     {/* Research Focus Areas */}
-                  
 
                     {/* Important Note */}
                     <div className="bg-red-50 border borderLeftthink bg-light p-4 rounded-lg text-sm text-[#391400] mt-8">
@@ -576,33 +558,46 @@ const blob = new Blob([buffer], { type:  "application/octet-stream"});
                 <h3 className="text-lg font-semibold mb-3">Key Information</h3>
 
                 <div className="bg-[#92CBE8] p-6 rounded-xl space-y-3">
-                  
                   <InfoRow
                     label="Duration:"
                     value={
-                      researchArea?.prmtk_GrantCycle?.[GrantCycleKeys.STARTDATE] &&
+                      researchArea?.prmtk_GrantCycle?.[
+                        GrantCycleKeys.STARTDATE
+                      ] &&
                       researchArea?.prmtk_GrantCycle?.[GrantCycleKeys.ENDDATE]
-                      ?
-                      getYMD(researchArea?.prmtk_GrantCycle?.[GrantCycleKeys.STARTDATE],researchArea?.prmtk_GrantCycle?.[GrantCycleKeys.ENDDATE])
-                    :""
+                        ? getYMD(
+                            researchArea?.prmtk_GrantCycle?.[
+                              GrantCycleKeys.STARTDATE
+                            ],
+                            researchArea?.prmtk_GrantCycle?.[
+                              GrantCycleKeys.ENDDATE
+                            ],
+                          )
+                        : ""
                     }
                   />
                   <InfoRow
                     label="Application Opens:"
                     value={
-                      researchArea?.prmtk_GrantCycle?.[
-                        GrantCycleKeys.STARTDATE]?formatDate(researchArea?.prmtk_GrantCycle?.[
-                        GrantCycleKeys.STARTDATE
-                      ]):""
+                      researchArea?.prmtk_GrantCycle?.[GrantCycleKeys.STARTDATE]
+                        ? formatDate(
+                            researchArea?.prmtk_GrantCycle?.[
+                              GrantCycleKeys.STARTDATE
+                            ],
+                          )
+                        : ""
                     }
                   />
                   <InfoRow
                     label="Application Deadline:"
                     value={
-                      researchArea?.prmtk_GrantCycle?.[
-                        GrantCycleKeys.ENDDATE ] ? formatDate(researchArea?.prmtk_GrantCycle?.[
-                        GrantCycleKeys.ENDDATE 
-                      ]) :""
+                      researchArea?.prmtk_GrantCycle?.[GrantCycleKeys.ENDDATE]
+                        ? formatDate(
+                            researchArea?.prmtk_GrantCycle?.[
+                              GrantCycleKeys.ENDDATE
+                            ],
+                          )
+                        : ""
                     }
                   />
                   {/* <InfoRow
@@ -689,12 +684,22 @@ const blob = new Blob([buffer], { type:  "application/octet-stream"});
               {/* Contact Box */}
               <div className="bg-white-100 border-8 border-yellow-300 p-4 rounded-xl">
                 <h3 className="font-semibold mb-5">Need Help?</h3>
-                 <p className="mt-1 text-sm text-slate-500">
-                <p className="font-medium mb-3">    If you have other question regarding research, grants or other opportunities at ECA please contact  ECA Research Team</p>
-              </p>
-                <p className="text-sm mb-1">📧 <a href="mailto:Research@eca.gov.ae" className="text-blue-500 hover:underline">
-                  Research@eca.gov.ae
-                </a></p>
+                <p className="mt-1 text-sm text-slate-500">
+                  <p className="font-medium mb-3">
+                    {" "}
+                    If you have other question regarding research, grants or
+                    other opportunities at ECA please contact ECA Research Team
+                  </p>
+                </p>
+                <p className="text-sm mb-1">
+                  📧{" "}
+                  <a
+                    href="mailto:Research@eca.gov.ae"
+                    className="text-blue-500 hover:underline"
+                  >
+                    Research@eca.gov.ae
+                  </a>
+                </p>
               </div>
             </div>
           </div>

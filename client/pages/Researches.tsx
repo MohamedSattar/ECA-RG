@@ -64,7 +64,6 @@ export default function Researches() {
         method: "GET",
       });
       const list = res?.value ?? [];
-      console.log("Fetched researches:", list);
       setResearches(list);
 
       // Build lookup maps for Application Reference, Research Area and Principal Investigator
@@ -88,17 +87,14 @@ export default function Researches() {
         const id = app[ApplicationKeys.APPLICATIONID] as string | undefined;
         if (id) {
           appMap[id] =
-            (app[ApplicationKeys.APPLICATIONTITLE] as string | undefined) ??
-            "";
+            (app[ApplicationKeys.APPLICATIONTITLE] as string | undefined) ?? "";
         }
       }
       setApplicationMap(appMap);
 
       const areaMap: Record<string, string> = {};
       for (const area of areasRes?.value ?? []) {
-        const id = area[ResearchAreaKeys.RESEARCHAREAID] as
-          | string
-          | undefined;
+        const id = area[ResearchAreaKeys.RESEARCHAREAID] as string | undefined;
         if (id) {
           areaMap[id] =
             (area[ResearchAreaKeys.AREANAME] as string | undefined) ?? "";
@@ -116,7 +112,6 @@ export default function Researches() {
       }
       setPiMap(principalMap);
     } catch (err) {
-      console.error("Failed to load applications:", err);
       setError("Unable to load applications. Please try again later.");
       setResearches([]);
     } finally {
@@ -141,7 +136,6 @@ export default function Researches() {
       },
     });
   };
-
 
   return (
     <>
@@ -228,7 +222,7 @@ export default function Researches() {
                               (item[ResearchKeys.STATUSCODE] as number) === 1
                                 ? "Active"
                                 : (item[ResearchKeys.STATUSCODE] as number) ===
-                                  0
+                                    0
                                   ? "Inactive"
                                   : undefined
                             }

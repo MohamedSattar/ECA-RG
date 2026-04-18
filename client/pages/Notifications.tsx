@@ -33,7 +33,6 @@ export default function Notifications() {
         const currentUserContactId = user?.contact?.[ContactKeys.CONTACTID];
 
         if (!currentUserContactId) {
-          console.error("No contact ID found for current user");
           setNotifications([]);
           setLoading(false);
           return;
@@ -46,8 +45,6 @@ export default function Notifications() {
           url,
           method: "GET",
         });
-
-        console.log("Notifications API Response:", response);
 
         // Map the API response
         const apiNotifications = response?.value || [];
@@ -79,14 +76,8 @@ export default function Notifications() {
           };
         });
 
-        console.log(
-          "Filtered Notifications Count:",
-          mappedNotifications.length,
-        );
-
         setNotifications(mappedNotifications);
       } catch (error) {
-        console.error("Failed to load notifications:", error);
         setNotifications([]);
       } finally {
         setLoading(false);
@@ -106,13 +97,13 @@ export default function Notifications() {
   const handleReadAll = async () => {
     // Get only unread notifications
     const unreadNotifications = notifications.filter((n) => !n.isRead);
-    
+
     if (unreadNotifications.length === 0) {
       return; // Nothing to update
     }
-    
+
     setMarkingAllRead(true);
-    
+
     try {
       // Update all unread notifications in parallel
       await Promise.all(
@@ -125,47 +116,43 @@ export default function Notifications() {
               prmtk_seen: true,
             },
           });
-        })
+        }),
       );
-      
+
       // Update local state - mark all as read
       setNotifications(notifications.map((n) => ({ ...n, isRead: true })));
     } catch (error) {
-      console.error("Failed to mark all as read:", error);
     } finally {
       setMarkingAllRead(false);
     }
   };
 
-
-
   const handleMarkAsRead = async (id: string) => {
     // Find the notification
     setLoading(true);
     const notification = notifications.find((n) => n.id === id);
-    
+
     // Only update if it's unread
     if (!notification || notification.isRead) {
       return;
     }
-    
+
     try {
       // Update the notification in Dataverse
       const url = `/_api/${TableName.NOTIFICATIONS}(${id})`;
       await callApi({
         url,
         method: "PATCH",
-        data:{
-            prmtk_seen: true,
-        }
+        data: {
+          prmtk_seen: true,
+        },
       });
-      
+
       // Update local state
       setNotifications(
-        notifications.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+        notifications.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
       );
     } catch (error) {
-      console.error("Failed to mark notification as read:", error);
     } finally {
       setLoading(false);
     }
@@ -174,7 +161,6 @@ export default function Notifications() {
   const handleDelete = (id: string) => {
     setNotifications(notifications.filter((n) => n.id !== id));
   };
-
 
   return (
     <>
@@ -192,7 +178,6 @@ export default function Notifications() {
 
             {/* Hero Collage */}
             <div className="relative flex justify-center md:justify-end">
-
               <img
                 src="/images/notfication.png"
                 alt="Notifications Illustration"
@@ -244,7 +229,6 @@ export default function Notifications() {
                       : "bg-[#FAE7DD] "
                   }`}
                 >
-                    
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 grid grid-cols-3 gap-4">
                       <div className="flex items-center justify-center gap-2 text-center">

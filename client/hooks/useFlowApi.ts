@@ -21,7 +21,7 @@ export interface FlowResponse<T = any> {
  */
 export function useFlowApi() {
   const callFlow = async <T = any>(
-    options: FlowApiOptions
+    options: FlowApiOptions,
   ): Promise<FlowResponse<T>> => {
     try {
       const headers: Record<string, string> = {
@@ -49,10 +49,10 @@ export function useFlowApi() {
       // Parse response
       let responseData: T | undefined;
       const contentType = response.headers.get("content-type");
-      
+
       if (contentType && contentType.includes("application/json")) {
         responseData = await response.json();
-        console
+        console;
       } else {
         const text = await response.text();
         responseData = text as unknown as T;
@@ -73,8 +73,6 @@ export function useFlowApi() {
         status: response.status,
       };
     } catch (error) {
-      console.error("Flow API Error:", error);
-      
       if (error instanceof Error) {
         if (error.name === "AbortError") {
           return {
@@ -104,7 +102,7 @@ export function useFlowApi() {
   const triggerFlow = async <TRequest = any, TResponse = any>(
     flowUrl: string,
     payload: TRequest,
-    timeout: number = 30000
+    timeout: number = 30000,
   ): Promise<FlowResponse<TResponse>> => {
     return callFlow<TResponse>({
       method: "POST",
@@ -125,14 +123,14 @@ export function useFlowApi() {
       pollingInterval?: number;
       maxAttempts?: number;
       statusUrl?: string;
-    }
+    },
   ): Promise<FlowResponse<TResponse>> => {
     const pollingInterval = options?.pollingInterval || 2000;
     const maxAttempts = options?.maxAttempts || 30;
-    
+
     // Trigger the flow
     const initialResponse = await triggerFlow<TRequest, any>(flowUrl, payload);
-    
+
     if (!initialResponse.success) {
       return initialResponse;
     }
@@ -140,10 +138,10 @@ export function useFlowApi() {
     // If status URL is provided, poll for completion
     if (options?.statusUrl) {
       let attempts = 0;
-      
+
       while (attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, pollingInterval));
-        
+        await new Promise((resolve) => setTimeout(resolve, pollingInterval));
+
         const statusResponse = await callFlow<TResponse>({
           method: "GET",
           url: options.statusUrl,
@@ -171,7 +169,7 @@ export function useFlowApi() {
       triggerFlow,
       triggerFlowWithPolling,
     }),
-    []
+    [],
   );
 }
 

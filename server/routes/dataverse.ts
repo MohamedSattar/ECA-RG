@@ -53,12 +53,9 @@ export const handleDataverseProxy: RequestHandler = async (req, res) => {
 
     if (contentType?.includes("application/json")) {
       data = await response.json();
-    } 
-    else if(contentType?.includes("application/octet-stream"))
-    {
-      data= await response.arrayBuffer();
-    }
-    else {
+    } else if (contentType?.includes("application/octet-stream")) {
+      data = await response.arrayBuffer();
+    } else {
       data = await response.text();
     }
 
@@ -79,15 +76,12 @@ export const handleDataverseProxy: RequestHandler = async (req, res) => {
     // Send response
     if (contentType?.includes("application/json")) {
       res.json(data);
-    } 
-    else if(contentType?.includes("application/octet-stream")){
+    } else if (contentType?.includes("application/octet-stream")) {
       res.end(Buffer.from(data));
-    }
-    else {
+    } else {
       res.send(data);
     }
   } catch (err) {
-    console.error("Dataverse proxy error:", err);
     res.status(502).json({ error: "Proxy error", details: String(err) });
   }
 };

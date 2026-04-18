@@ -15,8 +15,8 @@ export const processReportFileUploads = async (
   user: any,
 ): Promise<void> => {
   // Pad month with leading zero if needed (e.g., 1 -> 01)
-  const paddedMonth = reportMonth.padStart(2, '0');
-  
+  const paddedMonth = reportMonth.padStart(2, "0");
+
   // Create folder path: researchNumber/Status Reports/Year-Month
   const folderPath = `${researchNumber}/Status Reports/${reportYear}-${paddedMonth}`;
 
@@ -37,12 +37,7 @@ export const processReportFileUploads = async (
       const response = await triggerFlow(APIURL.FileUploadEndpoint, payload);
 
       if (response.success) {
-        // console.log(`Uploaded file ${file.file.name} successfully to ${folderPath}.`);
       } else {
-        console.error(
-          `Failed to upload file ${file.file.name}. Error:`,
-          response.error,
-        );
         throw new Error(`Failed to upload ${file.file.name}`);
       }
     });
@@ -63,9 +58,9 @@ export const processDisseminationFileUploads = async (
   user: any,
 ): Promise<void> => {
   // Sanitize values for folder path (remove invalid characters)
-  const sanitizedDate = submissionDate.replace(/[<>:"/\\|?*]/g, '-');
-  const sanitizedBudget = budgetNeeded.replace(/[<>:"/\\|?*]/g, '-');
-  
+  const sanitizedDate = submissionDate.replace(/[<>:"/\\|?*]/g, "-");
+  const sanitizedBudget = budgetNeeded.replace(/[<>:"/\\|?*]/g, "-");
+
   // Create folder path: researchNumber/Dissemination Requests/Date-Budget
   const folderPath = `${researchNumber}/Dissemination Requests/${sanitizedDate}-${sanitizedBudget}`;
 
@@ -86,12 +81,7 @@ export const processDisseminationFileUploads = async (
       const response = await triggerFlow(APIURL.FileUploadEndpoint, payload);
 
       if (response.success) {
-        // console.log(`Uploaded file ${file.file.name} successfully to ${folderPath}.`);
       } else {
-        console.error(
-          `Failed to upload file ${file.file.name}. Error:`,
-          response.error,
-        );
         throw new Error(`Failed to upload ${file.file.name}`);
       }
     });
@@ -112,9 +102,15 @@ export const processDeliverableFileUploads = async (
   user: any,
 ): Promise<void> => {
   // Sanitize names for folder path (remove invalid characters)
-  const sanitizedDeliverableName = deliverableName.replace(/[<>:"/\\|?*]/g, '-');
-  const sanitizedDeliverableType = deliverableType.replace(/[<>:"/\\|?*]/g, '-');
-  
+  const sanitizedDeliverableName = deliverableName.replace(
+    /[<>:"/\\|?*]/g,
+    "-",
+  );
+  const sanitizedDeliverableType = deliverableType.replace(
+    /[<>:"/\\|?*]/g,
+    "-",
+  );
+
   // Create folder path: researchNumber/Deliverables/DeliverableName-DeliverableType
   const folderPath = `${researchNumber}/Deliverables/${sanitizedDeliverableName}-${sanitizedDeliverableType}`;
 
@@ -135,12 +131,7 @@ export const processDeliverableFileUploads = async (
       const response = await triggerFlow(APIURL.FileUploadEndpoint, payload);
 
       if (response.success) {
-        // console.log(`Uploaded file ${file.file.name} successfully to ${folderPath}.`);
       } else {
-        console.error(
-          `Failed to upload file ${file.file.name}. Error:`,
-          response.error,
-        );
         throw new Error(`Failed to upload ${file.file.name}`);
       }
     });
@@ -195,7 +186,11 @@ export function normalizeGetFilesResponse(body: unknown): NormalizedFileItem[] {
   let arr: unknown[] = [];
   if (Array.isArray(body)) {
     arr = body;
-  } else if (typeof body === "object" && "data" in body && Array.isArray((body as { data: unknown[] }).data)) {
+  } else if (
+    typeof body === "object" &&
+    "data" in body &&
+    Array.isArray((body as { data: unknown[] }).data)
+  ) {
     arr = (body as { data: unknown[] }).data;
   } else if (
     typeof body === "object" &&
@@ -207,15 +202,24 @@ export function normalizeGetFilesResponse(body: unknown): NormalizedFileItem[] {
   } else {
     return [];
   }
-  return arr.map((item: any) => {
-    const fileName =
-      item?.fileName ?? item?.FileName ?? item?.Name ?? item?.name ?? "";
-    const contentType =
-      item?.contentType ?? item?.ContentType ?? item?.type ?? "application/octet-stream";
-    const base64 =
-      item?.base64 ?? item?.Base64 ?? item?.contentBytes ?? item?.Content ?? "";
-    return { fileName, contentType, base64 };
-  }).filter((n) => n.fileName && n.base64);
+  return arr
+    .map((item: any) => {
+      const fileName =
+        item?.fileName ?? item?.FileName ?? item?.Name ?? item?.name ?? "";
+      const contentType =
+        item?.contentType ??
+        item?.ContentType ??
+        item?.type ??
+        "application/octet-stream";
+      const base64 =
+        item?.base64 ??
+        item?.Base64 ??
+        item?.contentBytes ??
+        item?.Content ??
+        "";
+      return { fileName, contentType, base64 };
+    })
+    .filter((n) => n.fileName && n.base64);
 }
 
 /**
@@ -251,9 +255,15 @@ export const loadDeliverableFiles = async (
 
   try {
     // Sanitize names for folder path (remove invalid characters)
-    const sanitizedDeliverableName = deliverableName.replace(/[<>:"/\\|?*]/g, '-');
-    const sanitizedDeliverableType = deliverableType.replace(/[<>:"/\\|?*]/g, '-');
-    
+    const sanitizedDeliverableName = deliverableName.replace(
+      /[<>:"/\\|?*]/g,
+      "-",
+    );
+    const sanitizedDeliverableType = deliverableType.replace(
+      /[<>:"/\\|?*]/g,
+      "-",
+    );
+
     const folderPath = `${researchNumber}/Deliverables/${sanitizedDeliverableName}-${sanitizedDeliverableType}`;
 
     const response = await triggerFlow(APIURL.FileGetEndpoint, {
@@ -271,7 +281,6 @@ export const loadDeliverableFiles = async (
 
     return [];
   } catch (error) {
-    console.error("Failed to load deliverable files:", error);
     return [];
   }
 };
@@ -292,9 +301,9 @@ export const loadDisseminationFiles = async (
 
   try {
     // Sanitize values for folder path (remove invalid characters)
-    const sanitizedDate = submissionDate.replace(/[<>:"/\\|?*]/g, '-');
-    const sanitizedBudget = budgetNeeded.replace(/[<>:"/\\|?*]/g, '-');
-    
+    const sanitizedDate = submissionDate.replace(/[<>:"/\\|?*]/g, "-");
+    const sanitizedBudget = budgetNeeded.replace(/[<>:"/\\|?*]/g, "-");
+
     const folderPath = `${researchNumber}/Dissemination Requests/${sanitizedDate}-${sanitizedBudget}`;
 
     const response = await triggerFlow(APIURL.FileGetEndpoint, {
@@ -312,7 +321,6 @@ export const loadDisseminationFiles = async (
 
     return [];
   } catch (error) {
-    console.error("Failed to load dissemination files:", error);
     return [];
   }
 };
@@ -413,7 +421,6 @@ export const loadDisseminationActivityFiles = async (
 
     return [];
   } catch (error) {
-    console.error("Failed to load dissemination activity files:", error);
     return [];
   }
 };
@@ -453,7 +460,6 @@ export const loadResearchActivityFiles = async (
 
     return [];
   } catch (error) {
-    console.error("Failed to load research activity files:", error);
     return [];
   }
 };
@@ -474,8 +480,8 @@ export const loadReportFiles = async (
 
   try {
     // Pad month with leading zero if needed (e.g., 1 -> 01)
-    const paddedMonth = reportMonth.padStart(2, '0');
-    
+    const paddedMonth = reportMonth.padStart(2, "0");
+
     const folderPath = `${researchNumber}/Status Reports/${reportYear}-${paddedMonth}`;
 
     const response = await triggerFlow(APIURL.FileGetEndpoint, {
@@ -493,7 +499,6 @@ export const loadReportFiles = async (
 
     return [];
   } catch (error) {
-    console.error("Failed to load report files:", error);
     return [];
   }
 };

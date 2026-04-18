@@ -63,14 +63,15 @@ export default function FormApplication() {
     try {
       // Fetch application data
       // Call the local proxy so the server can attach the server-side token and avoid CORS issues.
-      const prefer = 'odata.include-annotations="OData.Community.Display.V1.FormattedValue"';
+      const prefer =
+        'odata.include-annotations="OData.Community.Display.V1.FormattedValue"';
       let res = await callApi<{ value: any[]; status?: number }>({
         url: `/_api/${TableName.CONTACTS}?$select=*&$filter=${ContactKeys.EMAILADDRESS1} eq '${user.email}'&$expand=parentcustomerid_account($select=name)`,
         method: "GET",
-        headers: { 
+        headers: {
           "Cache-Control": "no-cache",
-          "Prefer": prefer 
-        }
+          Prefer: prefer,
+        },
       });
 
       const app = res?.value?.[0];
@@ -91,7 +92,6 @@ export default function FormApplication() {
         Institute: app?.parentcustomerid_account?.name || "",
       }));
     } catch (error) {
-      console.error("Failed to load application details:", error);
       // setDialogMessage(
       //     error instanceof Error
       //         ? error.message
@@ -118,16 +118,8 @@ export default function FormApplication() {
         throw new Error("Contact ID not found. Please refresh the page.");
       }
 
-      console.log("[Profile] Updating contact:", form.contactId);
-      console.log("[Profile] Update data:", {
-        firstName: form.firstName,
-        lastName: form.lastName,
-        mobilePhone: form.mobilePhone,
-      });
-
       // Format the API URL - Contact ID in parentheses without quotes
       const apiUrl = `/_api/${TableName.CONTACTS}(${form.contactId})`;
-      console.log("[Profile] API URL:", apiUrl);
 
       let res = await callApi({
         url: apiUrl,
@@ -139,32 +131,23 @@ export default function FormApplication() {
         },
       });
 
-      console.log("[Profile] API Response:", res);
-      console.log("[Profile] Response status:", res?.status);
-      console.log("[Profile] Full response object:", JSON.stringify(res));
-
       // For PATCH requests to Dataverse, we expect 204 (No Content) or 200 (OK)
       // If status is present and not 204/200, it's an error
       if (res?.status) {
         if (res.status === 204 || res.status === 200) {
-          console.log("[Profile] Update successful with status:", res.status);
         } else {
-          console.error("[Profile] API Error - Status:", res.status);
           const errorDetail =
             typeof res === "object" ? JSON.stringify(res) : res;
           throw new Error(`API Error ${res.status}: ${errorDetail}`);
         }
       } else {
-        console.warn("[Profile] No status in response, but no error thrown");
       }
 
-      console.log("[Profile] Profile updated successfully");
       toast({
         title: "Success",
         description: "Profile updated successfully!",
       });
     } catch (error) {
-      console.error("Failed to update profile:", error);
       const errorMessage =
         error instanceof Error
           ? error.message

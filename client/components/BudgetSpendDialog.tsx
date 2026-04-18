@@ -84,24 +84,24 @@ export const BudgetSpendDialog: React.FC<BudgetSpendDialogProps> = ({
         }
 
         const baseRows: SpendRow[] = value.map((v: any) => {
-            const rawMonth =
-              v.prmtk_reportingmonth ??
-              v.prmtk_month ??
-              v["prmtk_reportingmonth"] ??
-              v["prmtk_month"];
+          const rawMonth =
+            v.prmtk_reportingmonth ??
+            v.prmtk_month ??
+            v["prmtk_reportingmonth"] ??
+            v["prmtk_month"];
 
-            const rawYear =
-              v.prmtk_reportingyear ??
-              v.prmtk_year ??
-              v["prmtk_reportingyear"] ??
-              v["prmtk_year"];
+          const rawYear =
+            v.prmtk_reportingyear ??
+            v.prmtk_year ??
+            v["prmtk_reportingyear"] ??
+            v["prmtk_year"];
 
-            const rawAmount =
-              v.prmtk_spent ??
-              v.prmtk_amount ??
-              v.prmtk_budgetspent ??
-              v["prmtk_spent"] ??
-              v["prmtk_budgetspent"];
+          const rawAmount =
+            v.prmtk_spent ??
+            v.prmtk_amount ??
+            v.prmtk_budgetspent ??
+            v["prmtk_spent"] ??
+            v["prmtk_budgetspent"];
 
           return {
             id:
@@ -116,7 +116,6 @@ export const BudgetSpendDialog: React.FC<BudgetSpendDialogProps> = ({
 
         setRows(baseRows);
       } catch (err) {
-        console.error("Failed to load budget spends:", err);
         toast({
           title: "Error",
           description: "Failed to load spend details.",
@@ -168,15 +167,13 @@ export const BudgetSpendDialog: React.FC<BudgetSpendDialogProps> = ({
       }))
       .filter(
         (r) =>
-          r.month !== "" || r.year !== "" || (r.amount && !isNaN(Number(r.amount))),
+          r.month !== "" ||
+          r.year !== "" ||
+          (r.amount && !isNaN(Number(r.amount))),
       );
 
     const invalid = cleaned.find(
-      (r) =>
-        !r.month ||
-        !r.year ||
-        r.amount === "" ||
-        isNaN(Number(r.amount)),
+      (r) => !r.month || !r.year || r.amount === "" || isNaN(Number(r.amount)),
     );
 
     if (invalid) {
@@ -195,7 +192,7 @@ export const BudgetSpendDialog: React.FC<BudgetSpendDialogProps> = ({
         url: "/api/budget/spends/bulk",
         method: "POST",
         data: {
-            budgetLineItemId: lineItem.id,
+          budgetLineItemId: lineItem.id,
           spends: cleaned.map((r) => ({
             id: r.id,
             month: r.month,
@@ -222,7 +219,6 @@ export const BudgetSpendDialog: React.FC<BudgetSpendDialogProps> = ({
 
       onClose();
     } catch (err) {
-      console.error("Failed to save budget spends:", err);
       toast({
         title: "Error",
         description: "Failed to update spend details.",
@@ -236,12 +232,13 @@ export const BudgetSpendDialog: React.FC<BudgetSpendDialogProps> = ({
   if (!lineItem) return null;
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && !saving && onClose()}>
+    <Dialog
+      open={open}
+      onOpenChange={(isOpen) => !isOpen && !saving && onClose()}
+    >
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className={HEADING_TEXT}>
-            Edit Budget Spend
-          </DialogTitle>
+          <DialogTitle className={HEADING_TEXT}>Edit Budget Spend</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-5">
@@ -288,12 +285,8 @@ export const BudgetSpendDialog: React.FC<BudgetSpendDialogProps> = ({
               <table className="min-w-full text-sm">
                 <thead className="bg-[#1D2054] text-white">
                   <tr>
-                    <th className="px-4 py-2 text-left font-semibold">
-                      Month
-                    </th>
-                    <th className="px-4 py-2 text-left font-semibold">
-                      Year
-                    </th>
+                    <th className="px-4 py-2 text-left font-semibold">Month</th>
+                    <th className="px-4 py-2 text-left font-semibold">Year</th>
                     <th className="px-4 py-2 text-left font-semibold">
                       Spent (AED)
                     </th>
@@ -309,7 +302,8 @@ export const BudgetSpendDialog: React.FC<BudgetSpendDialogProps> = ({
                     >
                       <td className="px-4 py-2 align-middle">
                         <span className="text-sm text-slate-800">
-                          {MONTH_OPTIONS.find((m) => m.key === row.month)?.text ||
+                          {MONTH_OPTIONS.find((m) => m.key === row.month)
+                            ?.text ||
                             row.month ||
                             "-"}
                         </span>
@@ -379,4 +373,3 @@ export const BudgetSpendDialog: React.FC<BudgetSpendDialogProps> = ({
     </Dialog>
   );
 };
-

@@ -13,8 +13,6 @@ const __dirname = path.dirname(__filename);
 // Path to your built SPA folder relative to this file
 const distPath = path.resolve(__dirname, "../spa");
 
-console.log(`📂 Serving static files from: ${distPath}`);
-
 // Serve static files from SPA build folder
 app.use(express.static(distPath));
 
@@ -27,28 +25,23 @@ app.use((req, res, next) => {
   const indexFile = path.join(distPath, "index.html");
 
   // Optional: verify index.html exists to catch deployment errors
-  import('fs').then(fs => {
-    if (!fs.existsSync(indexFile)) {
-      console.error(`❌ index.html not found at ${indexFile}`);
-      return res.status(500).send("SPA index.html not found");
-    }
-    res.sendFile(indexFile);
-  }).catch(err => {
-    console.error("❌ Error checking index.html:", err);
-    res.status(500).send("Internal Server Error");
-  });
+  import("fs")
+    .then((fs) => {
+      if (!fs.existsSync(indexFile)) {
+        return res.status(500).send("SPA index.html not found");
+      }
+      res.sendFile(indexFile);
+    })
+    .catch((err) => {
+      res.status(500).send("Internal Server Error");
+    });
 });
 
-app.listen(port, () => {
-  console.log(`🚀 Server running on port ${port}`);
-  console.log(`📱 Frontend URL: http://localhost:${port}`);
-  console.log(`🔧 API endpoint: http://localhost:${port}/api`);
-});
+app.listen(port);
 
 // Graceful shutdown handling
-["SIGTERM", "SIGINT"].forEach(sig => {
+["SIGTERM", "SIGINT"].forEach((sig) => {
   process.on(sig, () => {
-    console.log(`🛑 Received ${sig}, shutting down gracefully...`);
     process.exit(0);
   });
 });
