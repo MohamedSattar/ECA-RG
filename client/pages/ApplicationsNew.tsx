@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import Reveal from "@/motion/Reveal";
 import { useDataverseApi } from "@/hooks/useDataverseApi";
 import { ApplicationKeys, ContactKeys, TableName } from "@/constants/index";
-import { useAuth } from "@/state/auth";
+import { useAuth } from "@/state/useAuth";
 import { OverlayLoader } from "@/components/Loader";
 import { IconButton } from "@fluentui/react";
 import { popupInputStyles } from "@/styles/popupInputStyles";
@@ -62,10 +62,10 @@ export default function ApplicationsNew() {
     try {
       const res = await callApi<{value:any}>({ url: currentUserApplicationURL, method: "GET" });
       const list = res?.value ?? [];
-      console.log("Fetched applications:", list);
+      
       setApps(list);
     } catch (err) {
-      console.error("Failed to load applications:", err);
+      
       setError("Unable to load applications. Please try again later.");
       setApps([]);
     } finally {

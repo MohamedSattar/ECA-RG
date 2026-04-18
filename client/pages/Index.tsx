@@ -1,11 +1,10 @@
 import { useEffect, useState, useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { ChevronDown, User } from "lucide-react";
 import Reveal from "@/motion/Reveal";
 import { useDataverseApi } from "@/hooks/useDataverseApi";
 import { formatDate, normalizeImageUrl } from "@/lib/utils";
 import {
-  ApplicationFields,
   ApplicationKeys,
   ContactKeys,
   ExpandRelations,
@@ -19,7 +18,7 @@ import {
   TextField,
   ButtonType,
 } from "@fluentui/react";
-import { useAuth } from "@/state/auth";
+import { useAuth } from "@/state/useAuth";
 import { toast } from "sonner";
 import { daysLeft, formatAedMillion } from "@/services/utility";
 import { FaChalkboardTeacher, FaPhoneAlt } from "react-icons/fa";
@@ -301,7 +300,10 @@ const SupportSection = () => {
           <p className="text-[#D4DAEA] text-sm mb-4">
             Ask for Help from our experts research Grant team
           </p>
-          <a href="#" className="text-[#FF623D] font-semibold hover:underline">
+          <a
+            href="mailto:Research@eca.gov.ae"
+            className="text-[#FF623D] font-semibold hover:underline"
+          >
             Contact us
           </a>
         </div>
@@ -392,7 +394,6 @@ const ThreeSteps = () => {
 export default function Index() {
   const { callApi } = useDataverseApi();
   const [grant, setGrant] = useState<any | null>(null);
-  const [applications, setApplications] = useState<any[] | null>(null);
   const [grantTemplate, setGrantTemplate] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -431,7 +432,7 @@ export default function Index() {
         setGrantTemplate(templates[0]);
       }
     } catch (err) {
-      console.error("Failed to load grant template:", err);
+      
       // Gracefully continue - FAQ is optional
     }
   };
@@ -443,22 +444,16 @@ export default function Index() {
       const select = `*,${GrantCycleKeys.ISPUBLISHED},${GrantCycleKeys.STATUS},${GrantCycleKeys.STARTDATE},${GrantCycleKeys.ENDDATE}`;
       const filter = `${GrantCycleKeys.ISPUBLISHED} eq true and ${GrantCycleKeys.STATUS} eq 2 and ${GrantCycleKeys.STARTDATE} lt '${getTodayDateString()}' and ${GrantCycleKeys.ENDDATE} gt '${getTodayDateString()}'`;
       const orderby = `${GrantCycleKeys.STARTDATE} asc`;
-      const expand = `${ExpandRelations.RESEARCH_AREAS},${ExpandRelations.APPLICATIONS}`;
+      const expand = ExpandRelations.RESEARCH_AREAS;
       const url = `/_api/${TableName.GRANTCYCLES}?$select=${select}&$expand=${expand}&$filter=${filter}&$orderby=${orderby}&$top=1`;
 
       const data = await callApi<{ value: any[] }>({ url });
       setGrant(data?.value?.[0] ?? null);
 
-      const applicationUrl = `/_api/${TableName.APPLICATIONS}?$select=*&$filter=${ApplicationFields.GRANTCYCLE} eq '${data?.value?.[0]?.[GrantCycleKeys.GRANTCYCLEID]}'`;
-
-      const dataApp = await callApi<{ value: any[] }>({ url: applicationUrl });
-      setApplications(dataApp?.value ?? null);
-      console.log("Loaded applications for grant cycle:", dataApp?.value);
-
       // Load grant template for FAQ
       await loadGrantTemplate();
     } catch (err) {
-      console.error("Failed to load grants:", err);
+      
       setError("Unable to load grant information. Please try again later.");
     } finally {
       setLoading(false);
@@ -559,7 +554,7 @@ export default function Index() {
         navigate(`/application/${applicationId}`);
       }
     } catch (error) {
-      console.error("Error handling grant application:", error);
+      
       toast.error("Failed to process application. Please try again.");
     } finally {
       setIsCreatingApplication(false);
@@ -604,7 +599,7 @@ export default function Index() {
               <div className="mt-8 flex flex-col sm:flex-row gap-3">
                 {/*<PrimaryButton
                   onClick={() => {
-                    console.log("Navigating to apply for research area:", grant?.[GrantCycleKeys.GRANTCYCLEID]);
+                    
 
                     navigate("/application", {
                       state: {
@@ -625,7 +620,7 @@ export default function Index() {
                         // Error is already handled and logged in auth.tsx
                         // Only log here if it's an unexpected error
                         if (error?.errorCode !== "user_cancelled") {
-                          console.error("Sign up failed:", error);
+                          
                         }
                       }
                     }}
@@ -773,12 +768,12 @@ export default function Index() {
               Empowering university faculty to drive innovation in early
               childhood development through research excellence
             </p>
-            <Link
-              to="/application"
+            <a
+              href="mailto:Research@eca.gov.ae"
               className="mt-6 inline-flex items-center text-brown font-semibold hover:underline"
             >
               Contact Us
-            </Link>
+            </a>
           </div>
           <div className="rounded-xl border border-color-orange overflow-hidden">
             {grantTemplate?.prmtk_faq ? (

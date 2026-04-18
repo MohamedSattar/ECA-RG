@@ -27,9 +27,10 @@
     "@azure/msal-browser": "^4.26.2",
     "@azure/msal-react": "^3.0.22",
     "@fluentui/react": "^8.125.2",
-    "dotenv": "^17.3.1",
     "cors": "^2.8.5",
+    "dotenv": "^17.3.1",
     "express": "^5.1.0",
+    "express-rate-limit": "^8.3.2",
     "i18next": "^25.8.0",
     "i18next-browser-languagedetector": "^8.2.0",
     "office-ui-fabric-core": "^11.1.0",
@@ -107,7 +108,7 @@
     "tsx": "^4.20.3",
     "typescript": "^5.9.2",
     "vaul": "^1.1.2",
-    "vite": "^7.1.2",
+    "vite": "^7.3.2",
     "vitest": "^3.2.4"
   },
   "packageManager": "pnpm@10.14.0+sha512.ad27a79641b49c3e481a16a805baa71817a04bbe06a38d17e60e2eaee83f6a146c6a688125f5792e48dd5ba30e7da52a5cda4c3992b9ccf333f9ce223af84748"

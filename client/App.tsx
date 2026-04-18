@@ -14,7 +14,8 @@ import { MsalProvider } from "@azure/msal-react";
 import { msalConfig } from "./state/azureConfig";
 import { PublicClientApplication } from "@azure/msal-browser";
 import React, { lazy, Suspense } from "react";
-import { AuthProvider, useAuth } from "./state/auth";
+import { AuthProvider } from "./state/auth";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ThemeProvider } from "@fluentui/react";
 import myTheme from "./styles/flunetUITheme";
 import ApplicationsNew from "./pages/ApplicationsNew";
@@ -41,20 +42,6 @@ const Notifications = lazy(() => import("./pages/Notifications"));
 const queryClient = new QueryClient();
 
 const pca = new PublicClientApplication(msalConfig);
-
-const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
-  const { isAuthed, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="loader">Loading...</div>
-      </div>
-    );
-  }
-
-  return isAuthed ? children : <Login />;
-};
 
 const App = () => (
   <MsalProvider instance={pca}>

@@ -39,7 +39,7 @@ export const getBudgetHeadersByApplication: RequestHandler = async (req, res) =>
     if (typeof data === "object") res.json(data);
     else res.send(data);
   } catch (err) {
-    console.error("[Budget] getBudgetHeadersByApplication error:", err);
+    
     res.status(502).json({ error: "Budget API error", details: String(err) });
   }
 };
@@ -67,7 +67,7 @@ export const getBudgetHeader: RequestHandler = async (req, res) => {
     if (typeof data === "object") res.json(data);
     else res.send(data);
   } catch (err) {
-    console.error("[Budget] getBudgetHeader error:", err);
+    
     res.status(502).json({ error: "Budget API error", details: String(err) });
   }
 };
@@ -101,7 +101,7 @@ export const createBudgetHeader: RequestHandler = async (req, res) => {
     if (typeof data === "object") res.json(data);
     else res.send(data);
   } catch (err) {
-    console.error("[Budget] createBudgetHeader error:", err);
+    
     res.status(502).json({ error: "Budget API error", details: String(err) });
   }
 };
@@ -128,7 +128,7 @@ export const getBudgetLineItems: RequestHandler = async (req, res) => {
     if (typeof data === "object") res.json(data);
     else res.send(data);
   } catch (err) {
-    console.error("[Budget] getBudgetLineItems error:", err);
+    
     res.status(502).json({ error: "Budget API error", details: String(err) });
   }
 };
@@ -164,7 +164,7 @@ export const createBudgetLineItem: RequestHandler = async (req, res) => {
     if (typeof data === "object") res.json(data);
     else res.send(data);
   } catch (err) {
-    console.error("[Budget] createBudgetLineItem error:", err);
+    
     res.status(502).json({ error: "Budget API error", details: String(err) });
   }
 };
@@ -194,7 +194,7 @@ export const updateBudgetLineItem: RequestHandler = async (req, res) => {
     if (typeof data === "object") res.json(data);
     else res.send(data);
   } catch (err) {
-    console.error("[Budget] updateBudgetLineItem error:", err);
+    
     res.status(502).json({ error: "Budget API error", details: String(err) });
   }
 };
@@ -215,7 +215,7 @@ export const deleteBudgetLineItem: RequestHandler = async (req, res) => {
     if (text) res.send(text);
     else res.end();
   } catch (err) {
-    console.error("[Budget] deleteBudgetLineItem error:", err);
+    
     res.status(502).json({ error: "Budget API error", details: String(err) });
   }
 };
@@ -249,7 +249,7 @@ export const getBudgetSpendsByLineItem: RequestHandler = async (req, res) => {
     }
     else res.send(data);
   } catch (err) {
-    console.error("[Budget] getBudgetSpendsByLineItem error:", err);
+    
     res.status(502).json({ error: "Budget API error", details: String(err) });
   }
 };
@@ -344,7 +344,7 @@ export const upsertBudgetSpends: RequestHandler = async (req, res) => {
 
     res.status(200).json({ value: rows, totalSpend });
   } catch (err) {
-    console.error("[Budget] upsertBudgetSpends error:", err);
+    
     res.status(502).json({ error: "Budget API error", details: String(err) });
   }
 };

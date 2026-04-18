@@ -62,7 +62,7 @@ function expressPlugin(): Plugin {
 
       server.watcher.on("change", (filePath) => {
         if (filePath.includes(`${path.sep}server${path.sep}`)) {
-          console.log(`[Vite] Server file changed — reloading Express app`);
+          
           // Invalidate the module cache entry so createServer() re-evaluates
           Object.keys(require.cache ?? {}).forEach((key) => {
             if (key.includes(`${path.sep}server${path.sep}`)) {
@@ -71,17 +71,17 @@ function expressPlugin(): Plugin {
           });
           try {
             expressApp = createServer();
-            console.log("[Vite] Express app reloaded successfully");
+            
           } catch (err) {
-            console.error("[Vite] Failed to reload Express app:", err);
+            
           }
         }
       });
 
       // Add middleware to handle proxy routes FIRST (before Vite's fallback)
       server.middlewares.use((req, res, next) => {
-        if (req.url?.startsWith("/_api") || req.url?.startsWith("/_layout") || req.url?.startsWith("/api/")) {
-          console.log(`[Vite] Proxying to Express: ${req.method} ${req.url}`);
+        if (req.url?.startsWith("/_api") || req.url?.startsWith("/api/")) {
+          
           expressApp(req as any, res as any, next);
         } else {
           next();

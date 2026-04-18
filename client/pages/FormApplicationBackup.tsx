@@ -2,7 +2,7 @@ import * as React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import Reveal from "@/motion/Reveal";
-import { useAuth } from "@/state/auth";
+import { useAuth } from "@/state/useAuth";
 import { toast } from "@/ui/use-toast";
 import { LookupPicker } from "@/components/LookupPicker";
 import { TeamMemberSection } from "@/components/TeamMemberSection";
@@ -208,12 +208,9 @@ const processFileUploads = async (
       const response = await triggerFlow(APIURL.FileUploadEndpoint, payload);
 
       if (response.success) {
-        // console.log(`Processed file ${file.file.name} successfully.`);
+        // 
       } else {
-        console.error(
-          `Failed to process file ${file.file.name}. Error:`,
-          response.error,
-        );
+        
       }
     });
 
@@ -235,12 +232,9 @@ const processFileUploads = async (
       const response = await triggerFlow(APIURL.FileUploadEndpoint, payload);
 
       if (response.success) {
-        // console.log(`Processed file ${file.file.name} successfully.`);
+        // 
       } else {
-        console.error(
-          `Failed to process file ${file.file.name}. Error:`,
-          response.error,
-        );
+        
       }
     });
 
@@ -501,7 +495,7 @@ export default function FormApplication() {
     ...INITIAL_FORM_STATE,
     submissionDate: formatDate(new Date()),
   }));
-  // console.log(form);
+  // 
 
   const [showGeneral, setShowGeneral] = useState(true);
   const [showTeam, setShowTeam] = useState(true);
@@ -597,7 +591,7 @@ export default function FormApplication() {
         { Library: "Applications", Folder: applicationNumber },
       );
 
-      // console.log("Fetched application files:", applicationFiles);
+      // 
       return (
         applicationFiles?.data?.map((f: any) => ({
           file: getFile(f),
@@ -605,7 +599,7 @@ export default function FormApplication() {
         })) || []
       );
     } catch (error) {
-      console.error("Failed to load application files:", error);
+      
       return [];
     }
   };
@@ -619,7 +613,7 @@ export default function FormApplication() {
         const currentUserContactId = user?.contact?.[ContactFields.CONTACTID];
 
         if (!currentUserContactId) {
-          console.error("No contact ID found for current user");
+          
           toast({
             title: "Error",
             description: "User authentication required.",
@@ -675,7 +669,7 @@ export default function FormApplication() {
         const budgetHeaderIdFromApp = app[ApplicationKeys.BUDGETHEADER] ?? app._prmtk_budgetheader_value;
         await loadBudgetDetails(applicationId, budgetHeaderIdFromApp);
       } catch (error) {
-        console.error("Failed to load application details:", error);
+        
         // setDialogMessage(
         //   error instanceof Error
         //     ? error.message
@@ -705,7 +699,7 @@ export default function FormApplication() {
         const workflow = res.value.filter(
           (item) => item._prmtk_applicationid_value === applicationId,
         );
-        console.log(workflow);
+        
 
         // Sort by creation date (newest first)
         const sortedWorkflow = workflow.sort((a, b) => {
@@ -717,7 +711,7 @@ export default function FormApplication() {
         setWorkflowHistory(sortedWorkflow);
         setShowWorkflowDialog(true);
       } catch (error) {
-        console.error("Failed to load history:", error);
+        
         toast({
           title: "Error",
           description: "Unable to load history. Please try again.",
@@ -734,7 +728,7 @@ export default function FormApplication() {
     try {
       setTeamMemberRoles(TeamMemberRoles.APPLICATION as any);
     } catch (error) {
-      console.error("Failed to load team member roles:", error);
+      
     }
   }, []);
 
@@ -813,7 +807,7 @@ export default function FormApplication() {
         budgetLineItems: budgetLineItems,
       }));
     } catch (error) {
-      console.error("Failed to load budget details:", error);
+      
     }
   };
 
@@ -852,7 +846,7 @@ export default function FormApplication() {
             );
           }
         } catch (error) {
-          console.error("Failed to check for existing application:", error);
+          
         } finally {
           setShowLoader(false);
         }
@@ -879,7 +873,7 @@ export default function FormApplication() {
         ...prev,
         mainApplicant: user.contact[ContactKeys.FULLNAME],
       }));
-      // console.log(form.mainApplicant);
+      // 
     }
   }, [user]);
 
@@ -1100,7 +1094,7 @@ export default function FormApplication() {
         return true;
       }
     } catch (err) {
-      console.error("Failed to load applications:", err);
+      
     } finally {
       setShowLoader(false);
     }
@@ -1145,7 +1139,7 @@ export default function FormApplication() {
   const submit = async (status: string) => {
     setShowLoader(true);
     try {
-      // console.log("Submitting application:", form, "state:", state);
+      // 
 
       // Create or update application
       const applicationData = {
@@ -1198,9 +1192,9 @@ export default function FormApplication() {
       const matchingApp = resApps?.value?.find(
         (app: any) => app.prmtk_applicationid === applicationIdForm,
       );
-      // console.log(matchingApp, "matchingApp");
-      // console.log(applicationIdForm, "applicationIdForm");
-      // console.log(resApps, "resApps");
+      // 
+      // 
+      // 
 
       if (matchingApp) {
         const budgetHeaderId = matchingApp._prmtk_budgetheader_value;
@@ -1268,7 +1262,7 @@ export default function FormApplication() {
         navigate(`/applications`, { replace: true });
       }
     } catch (error) {
-      console.error("Submission error:", error);
+      
       toast({
         title: "Error",
         description: "Submission failed. Please try again.",
@@ -1286,7 +1280,7 @@ export default function FormApplication() {
   //       url: `/_api/${TableName.BUDGETHEADERS}?$filter=${BudgetHeaderFields.APPLICATION} eq ${id}`,
   //       method: "GET",
   //     });
-  //     console.log(budgetHeaderResponse);
+  //     
   //     const existingBudgetHeader = budgetHeaderResponse?.value?.[0];
 
   //     if (!existingBudgetHeader) {
@@ -1313,7 +1307,7 @@ export default function FormApplication() {
   //       description: "Budget updated successfully.",
   //     });
   //   } catch (error) {
-  //     console.error("Failed to update budget:", error);
+  //     
   //     toast({
   //       title: "Error",
   //       description: "Failed to update budget. Please try again.",

@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { PrimaryButton, DefaultButton } from "@fluentui/react/lib/Button";
+import { IDropdownOption } from "@fluentui/react/lib/Dropdown";
 import { TextField } from "@fluentui/react/lib/TextField";
 import { Label } from "@fluentui/react/lib/Label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/ui/dialog";
@@ -22,6 +23,8 @@ interface BudgetSpendDialogProps {
   open: boolean;
   onClose: () => void;
   lineItem: BudgetLineItem | null;
+  /** Same keys as BudgetSection category dropdown — maps option-set value to label. */
+  budgetCategories?: IDropdownOption[];
   onSaved?: (summary: { totalSpend: number; remainingBudget: number }) => void;
 }
 
@@ -44,6 +47,7 @@ export const BudgetSpendDialog: React.FC<BudgetSpendDialogProps> = ({
   open,
   onClose,
   lineItem,
+  budgetCategories = [],
   onSaved,
 }) => {
   const { callApi } = useDataverseApi();
@@ -116,7 +120,7 @@ export const BudgetSpendDialog: React.FC<BudgetSpendDialogProps> = ({
 
         setRows(baseRows);
       } catch (err) {
-        console.error("Failed to load budget spends:", err);
+        
         toast({
           title: "Error",
           description: "Failed to load spend details.",
@@ -222,7 +226,7 @@ export const BudgetSpendDialog: React.FC<BudgetSpendDialogProps> = ({
 
       onClose();
     } catch (err) {
-      console.error("Failed to save budget spends:", err);
+      
       toast({
         title: "Error",
         description: "Failed to update spend details.",
@@ -234,6 +238,11 @@ export const BudgetSpendDialog: React.FC<BudgetSpendDialogProps> = ({
   };
 
   if (!lineItem) return null;
+
+  const categoryLabel =
+    budgetCategories.find(
+      (c) => String(c.key) === String(lineItem.prmtk_category),
+    )?.text ?? lineItem.prmtk_category;
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && !saving && onClose()}>
@@ -259,7 +268,7 @@ export const BudgetSpendDialog: React.FC<BudgetSpendDialogProps> = ({
                 Category
               </p>
               <p className="mt-0.5 font-medium text-slate-900">
-                {lineItem.prmtk_category}
+                {categoryLabel}
               </p>
             </div>
             <div>

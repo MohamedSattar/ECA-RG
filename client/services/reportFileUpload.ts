@@ -37,12 +37,9 @@ export const processReportFileUploads = async (
       const response = await triggerFlow(APIURL.FileUploadEndpoint, payload);
 
       if (response.success) {
-        // console.log(`Uploaded file ${file.file.name} successfully to ${folderPath}.`);
+        // 
       } else {
-        console.error(
-          `Failed to upload file ${file.file.name}. Error:`,
-          response.error,
-        );
+        
         throw new Error(`Failed to upload ${file.file.name}`);
       }
     });
@@ -86,12 +83,9 @@ export const processDisseminationFileUploads = async (
       const response = await triggerFlow(APIURL.FileUploadEndpoint, payload);
 
       if (response.success) {
-        // console.log(`Uploaded file ${file.file.name} successfully to ${folderPath}.`);
+        // 
       } else {
-        console.error(
-          `Failed to upload file ${file.file.name}. Error:`,
-          response.error,
-        );
+        
         throw new Error(`Failed to upload ${file.file.name}`);
       }
     });
@@ -135,12 +129,9 @@ export const processDeliverableFileUploads = async (
       const response = await triggerFlow(APIURL.FileUploadEndpoint, payload);
 
       if (response.success) {
-        // console.log(`Uploaded file ${file.file.name} successfully to ${folderPath}.`);
+        // 
       } else {
-        console.error(
-          `Failed to upload file ${file.file.name}. Error:`,
-          response.error,
-        );
+        
         throw new Error(`Failed to upload ${file.file.name}`);
       }
     });
@@ -271,7 +262,7 @@ export const loadDeliverableFiles = async (
 
     return [];
   } catch (error) {
-    console.error("Failed to load deliverable files:", error);
+    
     return [];
   }
 };
@@ -312,7 +303,7 @@ export const loadDisseminationFiles = async (
 
     return [];
   } catch (error) {
-    console.error("Failed to load dissemination files:", error);
+    
     return [];
   }
 };
@@ -413,7 +404,7 @@ export const loadDisseminationActivityFiles = async (
 
     return [];
   } catch (error) {
-    console.error("Failed to load dissemination activity files:", error);
+    
     return [];
   }
 };
@@ -453,7 +444,7 @@ export const loadResearchActivityFiles = async (
 
     return [];
   } catch (error) {
-    console.error("Failed to load research activity files:", error);
+    
     return [];
   }
 };
@@ -493,7 +484,7 @@ export const loadReportFiles = async (
 
     return [];
   } catch (error) {
-    console.error("Failed to load report files:", error);
+    
     return [];
   }
 };

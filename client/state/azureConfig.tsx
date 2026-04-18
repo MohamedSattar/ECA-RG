@@ -29,6 +29,7 @@ export const msalConfig = {
       ? B2C_KNOWN_AUTHORITIES
       : ["ecab2cdev.b2clogin.com"],
     redirectUri: REGISTERED_REDIRECT_URI,
+    postLogoutRedirectUri: REGISTERED_REDIRECT_URI,
     //navigateToLoginRequestUrl: true,
   },
   cache: {

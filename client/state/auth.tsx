@@ -1,38 +1,20 @@
-// AuthProvider.tsx
 import {
-  createContext,
   PropsWithChildren,
-  useContext,
   useEffect,
   useMemo,
   useState,
 } from "react";
 
-import { useMsal, useIsAuthenticated } from "@azure/msal-react";
-import type { AccountInfo } from "@azure/msal-browser";
-import { InteractionStatus } from "@azure/msal-browser";
-import { loginRequest, signupRequest } from "./azureConfig";
+import { useMsal } from "@azure/msal-react";
+import { loginRequest } from "./azureConfig";
 import { useDataverseApi } from "@/hooks/useDataverseApi";
 import { ContactKeys, TableName } from "@/constants";
 import { toast } from "sonner";
-
-interface UserProfile {
-  name: string;
-  email: string;
-  adxUserId?: string;
-  contact: any | null;
-}
-
-interface AuthContextShape {
-  isAuthed: boolean;
-  user: UserProfile | null;
-  login: (isSignup?: boolean) => void;
-  logout: () => void;
-  isLoading: boolean;
-  isLoggingIn?: boolean;
-}
-
-const AuthContext = createContext<AuthContextShape | null>(null);
+import {
+  AuthContext,
+  type AuthContextShape,
+  type UserProfile,
+} from "./authContext";
 
 const STORAGE_KEY = "auth.loggedIn";
 const USER_KEY = "auth.user";
@@ -47,8 +29,7 @@ const authStorage = {
     try {
       const stored = localStorage.getItem(USER_KEY);
       return stored ? JSON.parse(stored) : null;
-    } catch (error) {
-      console.error("Failed to parse stored user:", error);
+    } catch {
       return null;
     }
   },
@@ -57,8 +38,8 @@ const authStorage = {
     try {
       localStorage.setItem(STORAGE_KEY, "true");
       localStorage.setItem(USER_KEY, JSON.stringify(user));
-    } catch (error) {
-      console.error("Failed to store user:", error);
+    } catch {
+      /* ignore storage errors */
     }
   },
 
@@ -84,32 +65,29 @@ async function getCurrentUserContact(
   if (!email) return null;
 
   try {
-    const filter = `${ContactKeys.EMAILADDRESS1} eq '${email}'`;
-    const response = await callApi<{ value: any[] }>({
-      url: `/_api/${TableName.CONTACTS}?$filter=${filter}`,
+    const safeEmail = email.replace(/'/g, "''");
+    const filter = `${ContactKeys.EMAILADDRESS1} eq '${safeEmail}'`;
+    const listUrl = `/_api/${TableName.CONTACTS}?$filter=${filter}`;
+
+    let listResponse = await callApi<{ value: any[] }>({
+      url: listUrl,
       method: "GET",
     });
 
-    if(response?.value?.length ==0)
-    {
-      const data={
-        emailaddress1:email
-      }
-      const resp = await callApi<{ value: any[] }>({
-      url: `/_api/${TableName.CONTACTS}?$filter=${filter}`,
-      method: "POST",
-      data
-    });
-    const response = await callApi<{ value: any[] }>({
-      url: `/_api/${TableName.CONTACTS}?$filter=${filter}`,
-      method: "GET",
-    });
-    return response?.value?.length ? response.value[0] : null;
+    if (!listResponse?.value?.length) {
+      await callApi({
+        url: `/_api/${TableName.CONTACTS}`,
+        method: "POST",
+        data: { [ContactKeys.EMAILADDRESS1]: email },
+      });
+      listResponse = await callApi<{ value: any[] }>({
+        url: listUrl,
+        method: "GET",
+      });
     }
 
-    return response?.value?.length ? response.value[0] : null;
-  } catch (error) {
-    console.error("Error fetching user contact:", error);
+    return listResponse?.value?.length ? listResponse.value[0] : null;
+  } catch {
     return null;
   }
 }
@@ -131,16 +109,14 @@ async function fetchAndStoreSessionToken(idToken: string): Promise<void> {
       body: JSON.stringify({ idToken }),
     });
     if (!res.ok) {
-      console.warn("[Session] Could not obtain session token:", res.status);
       return;
     }
     const data = await res.json();
     if (data.sessionToken) {
       localStorage.setItem(SESSION_TOKEN_KEY, data.sessionToken);
-      console.log("[Session] Session token stored");
     }
-  } catch (err) {
-    console.warn("[Session] Session token request failed:", err);
+  } catch {
+    /* session bootstrap optional */
   }
 }
 
@@ -191,36 +167,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [isInteractionInProgress, setIsInteractionInProgress] = useState(false);
 
   /* -----------------------------------------------
-     HANDLE REDIRECT LOGIN
-  ------------------------------------------------ */
-
-  const handleRedirect = async () => {
-    setIsLoading(true);
-
-    try {
-      const response = await instance.handleRedirectPromise();
-      const accounts = response
-        ? [response.account]
-        : instance.getAllAccounts();
-
-      if (accounts?.length && accounts[0]) {
-        const loggedUser = await createUserProfile(accounts[0], callApi);
-        authStorage.setUser(loggedUser);
-
-        setUser(loggedUser);
-        setAuthed(true);
-      } else {
-        clearAuthState(setAuthed, setUser);
-      }
-    } catch (error) {
-      console.error("Error handling redirect:", error);
-      clearAuthState(setAuthed, setUser);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  /* -----------------------------------------------
      INIT AUTH ON MOUNT
   ------------------------------------------------ */
 
@@ -242,19 +188,24 @@ export function AuthProvider({ children }: PropsWithChildren) {
               account: accounts[0],
             });
             await fetchAndStoreSessionToken(tokenResp.idToken);
-          } catch (tokenErr) {
-            console.warn("[Session] Could not acquire idToken for session bootstrap:", tokenErr);
+          } catch {
+            /* idToken optional for session */
           }
 
           const loggedUser = await createUserProfile(accounts[0], callApi);
           authStorage.setUser(loggedUser);
           setUser(loggedUser);
           setAuthed(true);
+
+          // User just returned from B2C redirect — send them to home (clean URL, not e.g. /login).
+          if (response && typeof window !== "undefined") {
+            window.location.replace(`${window.location.origin}/`);
+            return;
+          }
         } else {
           clearAuthState(setAuthed, setUser);
         }
-      } catch (e) {
-        console.error("Redirect handling failed", e);
+      } catch {
         clearAuthState(setAuthed, setUser);
       } finally {
         setIsLoading(false);
@@ -279,16 +230,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
         try {
           // Prevent concurrent login attempts
           if (isInteractionInProgress) {
-            console.warn(
-              "[Auth] Login already in progress, ignoring duplicate request",
-            );
+            
             return;
           }
 
           setIsInteractionInProgress(true);
         
 
-          console.log("[Auth] Using redirect flow for authentication");
+          
 
           // Use redirect for all environments
           await instance.loginRedirect(loginRequest);
@@ -296,29 +245,26 @@ export function AuthProvider({ children }: PropsWithChildren) {
         } catch (error: any) {
           // Handle specific MSAL errors
           if (error?.errorCode === "user_cancelled") {
-            console.log("[Auth] User cancelled the login request");
+            
             // Don't show error toast or re-throw for user cancellation - it's normal behavior
           } else if (error?.errorCode === "endpoints_resolution_error") {
-            console.error(
-              "[Auth] Azure B2C endpoint resolution failed. Check authority configuration.",
-              error,
-            );
+            
             toast.error(
               "Authentication service unavailable. Please try again later.",
             );
             throw error;
           } else if (error?.errorCode === "network_error") {
-            console.error("[Auth] Network error during authentication", error);
+            
             toast.error("Network error. Please check your connection.");
             throw error;
           } else if (error?.errorCode === "interaction_in_progress") {
-            console.error("[Auth] Interaction already in progress", error);
+            
             toast.error(
               "An authentication request is already in progress. Please wait.",
             );
             throw error;
           } else {
-            console.error("[Auth] Login error:", error);
+            
             toast.error("Authentication failed. Please try again.");
             throw error;
           }
@@ -329,31 +275,24 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       logout: async () => {
         try {
-          console.log("[Auth] Logging out...");
-          clearAuthState(setAuthed, setUser);
-          // Use redirect for logout
-          await instance.logoutRedirect();
-          console.log("[Auth] Logout successful");
-          toast.success("You have been logged out.");
-        } catch (error) {
-          console.error("Logout error:", error);
           clearAuthState(setAuthed, setUser);
           toast.success("You have been logged out.");
+          const home =
+            typeof window !== "undefined"
+              ? `${window.location.origin}/`
+              : "/";
+          await instance.logoutRedirect({ postLogoutRedirectUri: home });
+        } catch {
+          clearAuthState(setAuthed, setUser);
+          toast.success("You have been logged out.");
+          if (typeof window !== "undefined") {
+            window.location.replace(`${window.location.origin}/`);
+          }
         }
       },
     }),
-    [isAuthed, user, isLoading, instance],
+    [isAuthed, user, isLoading, isInteractionInProgress, instance, callApi],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-/* -------------------------------------------------------
-   HOOK
-------------------------------------------------------- */
-
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
-  return ctx;
 }

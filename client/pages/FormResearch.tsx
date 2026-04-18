@@ -7,7 +7,7 @@ import {
   Outlet,
 } from "react-router-dom";
 import Reveal from "@/motion/Reveal";
-import { useAuth } from "@/state/auth";
+import { useAuth } from "@/state/useAuth";
 import { toast } from "@/ui/use-toast";
 import {
   WorkforceDevelopmentSection,
@@ -423,12 +423,9 @@ const processFileUploads = async (
       const response = await triggerFlow(APIURL.FileUploadEndpoint, payload);
 
       if (response.success) {
-        // console.log(`Processed file ${file.file.name} successfully.`);
+        // 
       } else {
-        console.error(
-          `Failed to process file ${file.file.name}. Error:`,
-          response.error,
-        );
+        
       }
     });
 
@@ -443,7 +440,7 @@ const processBudgetData = async (
   callApi: (options: any) => Promise<any>,
 ): Promise<void> => {
   if (!budgetHeader) {
-    // console.log("No budget header to process");
+    // 
     return;
   }
 
@@ -751,8 +748,8 @@ export default function FormResearch() {
   const researchAreaId = searchParams.get("researchId") || "";
   /** No research id in URL → create new research; otherwise load by id (edit/view from API status). */
   const isNewResearch = !researchAreaId;
-  // console.log("FormResearch state:", form);
-  // console.log("Current state:", state);
+  // 
+  // 
 
   // Helper to map budget line items (without spends)
   const mapBudgetLineItems = (items: any[]): BudgetLineItem[] => {
@@ -865,7 +862,7 @@ export default function FormResearch() {
         budgetLineItems: budgetLineItems,
       }));
     } catch (error) {
-      console.error("Failed to load budget details:", error);
+      
       // Don't throw error - budget is optional
     }
   };
@@ -885,7 +882,7 @@ export default function FormResearch() {
 
       const status = (res2 as { status?: number }).status;
       if (status != null && status >= 400) {
-        console.error("Failed to load status reports:", res2);
+        
         return;
       }
 
@@ -959,7 +956,7 @@ export default function FormResearch() {
         reportItems: reportsWithFiles,
       }));
     } catch (error) {
-      console.error("Failed to load reporting details:", error);
+      
     }
   };
 
@@ -1022,7 +1019,7 @@ export default function FormResearch() {
         disseminationRequests: requestsWithFiles,
       }));
     } catch (error) {
-      console.error("Failed to load dissemination requests:", error);
+      
     }
   };
   */
@@ -1079,7 +1076,7 @@ export default function FormResearch() {
       setForm((prev) => ({ ...prev, disseminationActivities: listWithFiles }));
       return listWithFiles;
     } catch (error) {
-      console.error("Failed to load dissemination activities:", error);
+      
       return [];
     }
   };
@@ -1151,7 +1148,7 @@ export default function FormResearch() {
         deliverables: deliverablesWithFiles,
       }));
     } catch (error) {
-      console.error("Failed to load deliverables:", error);
+      
       // Don't throw error - deliverables are optional
     }
   };
@@ -1170,7 +1167,7 @@ export default function FormResearch() {
       });
 
       const filteredMembers = res.value || [];
-      // console.log(filteredMembers, "filteredMembers");
+      // 
 
       const teamMembers: TeamMember[] = filteredMembers.map((tm: any) => ({
         id: tm[ResearchTeamMemberKeys.RESEARCHTEAMMEMBERID],
@@ -1186,7 +1183,7 @@ export default function FormResearch() {
         team: teamMembers,
       }));
     } catch (error) {
-      console.error("Failed to load team members:", error);
+      
       // Don't throw error - team members are optional
     }
   };
@@ -1211,7 +1208,7 @@ export default function FormResearch() {
       }));
       setForm((prev) => ({ ...prev, workforceDevelopments: items }));
     } catch (error) {
-      console.error("Failed to load workforce developments:", error);
+      
     }
   };
 
@@ -1235,7 +1232,7 @@ export default function FormResearch() {
       }));
       setForm((prev) => ({ ...prev, manuscripts: items }));
     } catch (error) {
-      console.error("Failed to load manuscripts:", error);
+      
     }
   };
 
@@ -1293,7 +1290,7 @@ export default function FormResearch() {
       setForm((prev) => ({ ...prev, researchActivities: listWithFiles }));
       return listWithFiles;
     } catch (error) {
-      console.error("Failed to load research activities:", error);
+      
       return [];
     }
   };
@@ -1313,7 +1310,7 @@ export default function FormResearch() {
         const currentUserContactId = user?.contact?.[ContactFields.CONTACTID];
 
         if (!currentUserContactId) {
-          console.error("No contact ID found for current user");
+          
           toast({
             title: "Error",
             description: "User authentication required.",
@@ -1331,7 +1328,7 @@ export default function FormResearch() {
 
         const research = res?.value?.[0];
         if (!research) {
-          console.warn("No research found with ID:", researchId);
+          
           return;
         }
 
@@ -1385,7 +1382,7 @@ export default function FormResearch() {
           principalInvestigatorName: pi?.fullname ?? undefined,
         }));
       } catch (error) {
-        console.error("Failed to load research details:", error);
+        
         toast({
           title: "Error",
           description: "Unable to load research details. Please try again.",
@@ -1400,7 +1397,7 @@ export default function FormResearch() {
   const loadApplicationFiles = async (
     researchNumber: string,
   ): Promise<any[]> => {
-    // console.log("ReasearchNumber", researchNumber);
+    // 
     if (!researchNumber) return [];
 
     try {
@@ -1419,7 +1416,7 @@ export default function FormResearch() {
         action: "existing" as const,
       }));
     } catch (error) {
-      console.error("Failed to load application files:", error);
+      
       return [];
     }
   };
@@ -1429,7 +1426,7 @@ export default function FormResearch() {
     try {
       setTeamMemberRoles(TeamMemberRoles.APPLICATION as any);
     } catch (error) {
-      console.error("Failed to load team member roles:", error);
+      
     }
   }, []);
 
@@ -1511,7 +1508,7 @@ export default function FormResearch() {
           await loadBudgetByVersion(versions[0].id);
         }
       } catch (error) {
-        console.error("Failed to load budget versions:", error);
+        
       }
     },
     [callApi],
@@ -1552,7 +1549,7 @@ export default function FormResearch() {
           selectedBudgetVersion: budgetHeaderId,
         }));
       } catch (error) {
-        console.error("Failed to load budget by version:", error);
+        
       }
     },
     [callApi],
@@ -1606,7 +1603,7 @@ export default function FormResearch() {
       await loadBudgetVersions(researchAreaId);
       await loadBudgetByVersion(newBudgetHeaderId);
     } catch (error) {
-      console.error("Failed to clone budget:", error);
+      
       toast({
         title: "Error",
         description: "Failed to create new budget version.",
@@ -1660,7 +1657,7 @@ export default function FormResearch() {
         await loadBudgetVersions(researchAreaId);
       }
     } catch (error) {
-      console.error("Failed to submit budget:", error);
+      
       toast({
         title: "Error",
         description: "Failed to submit budget version.",
@@ -1770,7 +1767,7 @@ export default function FormResearch() {
             description: "Emirati Workforce Development added successfully.",
           });
         } catch (error) {
-          console.error("Failed to add workforce development:", error);
+          
           toast({
             title: "Error",
             description:
@@ -1822,7 +1819,7 @@ export default function FormResearch() {
             description: "Record removed successfully.",
           });
         } catch (error) {
-          console.error("Failed to remove workforce development:", error);
+          
           toast({
             title: "Error",
             description: "Failed to remove record.",
@@ -1901,7 +1898,7 @@ export default function FormResearch() {
             description: "Record updated successfully.",
           });
         } catch (error) {
-          console.error("Failed to update workforce development:", error);
+          
           toast({
             title: "Error",
             description:
@@ -1971,7 +1968,7 @@ export default function FormResearch() {
             description: "Manuscript / Journal publication added successfully.",
           });
         } catch (error) {
-          console.error("Failed to add manuscript:", error);
+          
           toast({
             title: "Error",
             description:
@@ -2020,7 +2017,7 @@ export default function FormResearch() {
             description: "Record removed successfully.",
           });
         } catch (error) {
-          console.error("Failed to remove manuscript:", error);
+          
           toast({
             title: "Error",
             description: "Failed to remove record.",
@@ -2093,7 +2090,7 @@ export default function FormResearch() {
             description: "Record updated successfully.",
           });
         } catch (error) {
-          console.error("Failed to update manuscript:", error);
+          
           toast({
             title: "Error",
             description:
@@ -2331,7 +2328,7 @@ export default function FormResearch() {
                   Folder: folder,
                 });
               } catch (err) {
-                console.error(`Failed to delete file ${f.file.name}:`, err);
+                
               }
             }
           }
@@ -2602,7 +2599,7 @@ export default function FormResearch() {
                 user,
               );
             } catch (fileError) {
-              console.error("File upload error:", fileError);
+              
               toast({
                 title: "Warning",
                 description: "Report added but some files failed to upload.",
@@ -2713,10 +2710,7 @@ export default function FormResearch() {
                   Folder: `${form.researchNumber}/Status Reports/${item.prmtk_reportingyear}-${paddedMonth}`,
                 });
               } catch (error) {
-                console.error(
-                  `Failed to delete file ${fileToDelete.file.name}:`,
-                  error,
-                );
+                
               }
             }
           }
@@ -2787,7 +2781,7 @@ export default function FormResearch() {
                 user,
               );
             } catch (fileError) {
-              console.error("File upload error:", fileError);
+              
               toast({
                 title: "Warning",
                 description: "Report updated but some files failed to upload.",
@@ -2902,7 +2896,7 @@ export default function FormResearch() {
                 user,
               );
             } catch (fileError) {
-              console.error("File upload error:", fileError);
+              
               toast({
                 title: "Warning",
                 description: "Request added but some files failed to upload.",
@@ -3015,10 +3009,7 @@ export default function FormResearch() {
                     Folder: `${form.researchNumber}/Dissemination Requests/${sanitizedDate}-${sanitizedBudget}`,
                   });
                 } catch (error) {
-                  console.error(
-                    `Failed to delete file ${fileToDelete.file.name}:`,
-                    error,
-                  );
+                  
                 }
               }
             }
@@ -3059,7 +3050,7 @@ export default function FormResearch() {
                   user,
                 );
               } catch (fileError) {
-                console.error("File upload error:", fileError);
+                
                 toast({
                   title: "Warning",
                   description:
@@ -3115,7 +3106,7 @@ export default function FormResearch() {
           Folder: folder,
         });
       } catch (error) {
-        console.error(`Failed to delete file ${fileName}:`, error);
+        
         throw error;
       }
     },
@@ -3148,7 +3139,7 @@ export default function FormResearch() {
 
         await Promise.all(uploadPromises);
       } catch (error) {
-        console.error(`Failed to upload files:`, error);
+        
         throw error;
       }
     },
@@ -3310,7 +3301,7 @@ export default function FormResearch() {
               try {
                 await handleDeleteFile(f.file.name, folder);
               } catch (err) {
-                console.error(`Failed to delete file ${f.file.name}:`, err);
+                
               }
             }
           }
@@ -3499,7 +3490,7 @@ export default function FormResearch() {
                 user,
               );
             } catch (fileError) {
-              console.error("File upload error:", fileError);
+              
               toast({
                 title: "Warning",
                 description:
@@ -3524,7 +3515,7 @@ export default function FormResearch() {
           }));
         }
       } catch (error) {
-        console.error("Error adding deliverable:", error);
+        
         toast({
           title: "Error",
           description: "Failed to add deliverable.",
@@ -3696,10 +3687,7 @@ export default function FormResearch() {
                 Folder: `${form.researchNumber}/Deliverables/${sanitizedDeliverableName}-${sanitizedDeliverableType}`,
               });
             } catch (error) {
-              console.error(
-                `Failed to delete file ${fileToDelete.file.name}:`,
-                error,
-              );
+              
             }
           }
         }
@@ -3739,7 +3727,7 @@ export default function FormResearch() {
           ),
         }));
       } catch (error) {
-        console.error("Error editing deliverable:", error);
+        
         toast({
           title: "Error",
           description: "Failed to update deliverable.",
@@ -3770,7 +3758,7 @@ export default function FormResearch() {
 
     setShowLoader(true);
     try {
-      // console.log("Submitting research:", form, "state:", state);
+      // 
 
       // Create or update research
       const researchData = {
@@ -3815,7 +3803,7 @@ export default function FormResearch() {
         throw new Error("Unable to retrieve research ID.");
       }
 
-      // console.log("Research saved with ID:", researchId);
+      // 
 
       // Get research number for file uploads
       const researchNumber = await getResearchNumber(
@@ -3870,7 +3858,7 @@ export default function FormResearch() {
             : "Research submitted successfully.",
       });
     } catch (error) {
-      console.error("Submission error:", error);
+      
       toast({
         title: "Error",
         description:
@@ -4537,6 +4525,7 @@ export default function FormResearch() {
           open={spendDialogOpen}
           onClose={handleCloseSpendDialog}
           lineItem={selectedSpendLineItem}
+          budgetCategories={BudgetCategorys}
           onSaved={({ totalSpend, remainingBudget }) => {
             setForm((prev) => ({
               ...prev,

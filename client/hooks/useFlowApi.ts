@@ -73,7 +73,7 @@ export function useFlowApi() {
         status: response.status,
       };
     } catch (error) {
-      console.error("Flow API Error:", error);
+      
       
       if (error instanceof Error) {
         if (error.name === "AbortError") {

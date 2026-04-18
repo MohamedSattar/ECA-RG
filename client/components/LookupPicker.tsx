@@ -90,7 +90,7 @@ export const LookupPicker: React.FC<LookupPickerProps> = ({
         });
         return data.map(toTag);
       } catch (err) {
-        console.error("Error fetching lookup data:", err);
+        
         return [];
       } finally {
         setLoading(false);
@@ -143,7 +143,7 @@ export const LookupPicker: React.FC<LookupPickerProps> = ({
     // Default selection when cascade and default requested
     useEffect(() => {
       if (isDefaultSelected && cascadeValue && selected.length === 0) {
-        // console.log("first");
+        // 
         fetchData("").then((items) => {
           if (items.length > 0) {
             handleChange([items[0]]);

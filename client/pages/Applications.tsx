@@ -11,7 +11,7 @@ import {
   ResearchAreaFields,
   TableName,
 } from "@/constants/index";
-import { useAuth } from "@/state/auth";
+import { useAuth } from "@/state/useAuth";
 import { OverlayLoader } from "@/components/Loader";
 import { IconButton } from "@fluentui/react";
 import { popupInputStyles } from "@/styles/popupInputStyles";
@@ -73,11 +73,11 @@ export default function Applications() {
         method: "GET",
       });
       const list = res?.value ?? [];
-      console.log(list);
-      // console.log("Fetched applications:", list);
+      
+      // 
       setApps(list);
     } catch (err) {
-      console.error("Failed to load applications:", err);
+      
       setError("Unable to load applications. Please try again later.");
       setApps([]);
     } finally {

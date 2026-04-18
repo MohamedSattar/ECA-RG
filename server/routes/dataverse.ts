@@ -24,11 +24,6 @@ export const handleDataverseProxy: RequestHandler = async (req, res) => {
     if (req.headers.authorization) {
       fetchHeaders["Authorization"] = String(req.headers.authorization);
     }
-    if (req.headers["__requestverificationtoken"]) {
-      fetchHeaders["__RequestVerificationToken"] = String(
-        req.headers["__requestverificationtoken"],
-      );
-    }
     if (req.headers["content-type"]) {
       fetchHeaders["Content-Type"] = String(req.headers["content-type"]);
     }
@@ -87,7 +82,7 @@ export const handleDataverseProxy: RequestHandler = async (req, res) => {
       res.send(data);
     }
   } catch (err) {
-    console.error("Dataverse proxy error:", err);
+    
     res.status(502).json({ error: "Proxy error", details: String(err) });
   }
 };
