@@ -1,21 +1,10 @@
 import { RequestHandler } from "express";
 import { dataverseFetch } from "../dataverseClient";
-import {
-  applicationOwnedByContact,
-  budgetHeaderOwnedByContact,
-  budgetLineItemOwnedByContact,
-} from "../budgetOwnership";
 
 const BUDGETHEADERS = "prmtk_budgetheaders";
 const BUDGETLINEITEMS = "prmtk_budgetlineitems";
 const BUDGETSPENDS = "prmtk_budgetspends";
 const APPLICATIONS = "prmtk_applications";
-
-function paramId(req: { params: { id?: string | string[] } }): string | undefined {
-  const v = req.params.id;
-  if (Array.isArray(v)) return v[0];
-  return v;
-}
 
 /** GET /api/budget/headers?applicationId=xxx - list headers by application */
 export const getBudgetHeadersByApplication: RequestHandler = async (req, res) => {
@@ -23,10 +12,6 @@ export const getBudgetHeadersByApplication: RequestHandler = async (req, res) =>
     const applicationId = req.query.applicationId as string;
     if (!applicationId) {
       return res.status(400).json({ error: "applicationId required" });
-    }
-    const contactId = req.sessionClaims?.contactId;
-    if (!contactId || !(await applicationOwnedByContact(applicationId, contactId))) {
-      return res.status(403).json({ error: "Forbidden" });
     }
     const select = "prmtk_budgetheaderid,prmtk_budgetname,_prmtk_application_value,prmtk_totalbudget,prmtk_versionnumber,prmtk_status,prmtk_justification";
     const path = `/${BUDGETHEADERS}?$filter=_prmtk_application_value eq ${applicationId}&$select=${select}`;
@@ -47,12 +32,8 @@ export const getBudgetHeadersByApplication: RequestHandler = async (req, res) =>
 /** GET /api/budget/headers/:id - single header */
 export const getBudgetHeader: RequestHandler = async (req, res) => {
   try {
-    const id = paramId(req);
+    const id = req.params.id;
     if (!id) return res.status(400).json({ error: "Header id required" });
-    const contactId = req.sessionClaims?.contactId;
-    if (!contactId || !(await budgetHeaderOwnedByContact(id, contactId))) {
-      return res.status(403).json({ error: "Forbidden" });
-    }
     const select = "prmtk_budgetheaderid,prmtk_budgetname,_prmtk_application_value,prmtk_totalbudget,prmtk_versionnumber,prmtk_status";
     const path = `/${BUDGETHEADERS}(${id})?$select=${select}`;
     const response = await dataverseFetch("GET", path);
@@ -78,10 +59,6 @@ export const createBudgetHeader: RequestHandler = async (req, res) => {
     const { applicationId, budgetName, totalBudget } = req.body;
     if (!applicationId) {
       return res.status(400).json({ error: "applicationId required" });
-    }
-    const contactId = req.sessionClaims?.contactId;
-    if (!contactId || !(await applicationOwnedByContact(applicationId, contactId))) {
-      return res.status(403).json({ error: "Forbidden" });
     }
     const body = {
       prmtk_budgetname: budgetName ?? "Application Budget",
@@ -113,10 +90,6 @@ export const getBudgetLineItems: RequestHandler = async (req, res) => {
     if (!budgetHeaderId) {
       return res.status(400).json({ error: "budgetHeaderId required" });
     }
-    const contactId = req.sessionClaims?.contactId;
-    if (!contactId || !(await budgetHeaderOwnedByContact(budgetHeaderId, contactId))) {
-      return res.status(403).json({ error: "Forbidden" });
-    }
     const select = "prmtk_budgetlineitemid,prmtk_lineitemname,prmtk_category,prmtk_description,prmtk_amount,_prmtk_budgetheader_value,prmtk_justification";
     const path = `/${BUDGETLINEITEMS}?$filter=_prmtk_budgetheader_value eq ${budgetHeaderId}&$select=${select}`;
     const response = await dataverseFetch("GET", path);
@@ -139,10 +112,6 @@ export const createBudgetLineItem: RequestHandler = async (req, res) => {
     const { budgetHeaderId, prmtk_lineitemname, prmtk_description, prmtk_amount, prmtk_category } = req.body;
     if (!budgetHeaderId) {
       return res.status(400).json({ error: "budgetHeaderId required" });
-    }
-    const contactId = req.sessionClaims?.contactId;
-    if (!contactId || !(await budgetHeaderOwnedByContact(budgetHeaderId, contactId))) {
-      return res.status(403).json({ error: "Forbidden" });
     }
     const body: Record<string, unknown> = {
       prmtk_lineitemname: prmtk_lineitemname ?? "",
@@ -172,12 +141,8 @@ export const createBudgetLineItem: RequestHandler = async (req, res) => {
 /** PATCH /api/budget/line-items/:id */
 export const updateBudgetLineItem: RequestHandler = async (req, res) => {
   try {
-    const id = paramId(req);
+    const id = req.params.id;
     if (!id) return res.status(400).json({ error: "Line item id required" });
-    const contactId = req.sessionClaims?.contactId;
-    if (!contactId || !(await budgetLineItemOwnedByContact(id, contactId))) {
-      return res.status(403).json({ error: "Forbidden" });
-    }
     const { prmtk_lineitemname, prmtk_description, prmtk_amount, prmtk_category } = req.body;
     const body: Record<string, unknown> = {};
     if (prmtk_lineitemname !== undefined) body.prmtk_lineitemname = prmtk_lineitemname;
@@ -202,12 +167,8 @@ export const updateBudgetLineItem: RequestHandler = async (req, res) => {
 /** DELETE /api/budget/line-items/:id */
 export const deleteBudgetLineItem: RequestHandler = async (req, res) => {
   try {
-    const id = paramId(req);
+    const id = req.params.id;
     if (!id) return res.status(400).json({ error: "Line item id required" });
-    const contactId = req.sessionClaims?.contactId;
-    if (!contactId || !(await budgetLineItemOwnedByContact(id, contactId))) {
-      return res.status(403).json({ error: "Forbidden" });
-    }
     const path = `/${BUDGETLINEITEMS}(${id})`;
     const response = await dataverseFetch("DELETE", path);
     res.status(response.status);
@@ -226,10 +187,6 @@ export const getBudgetSpendsByLineItem: RequestHandler = async (req, res) => {
     const budgetLineItemId = req.query.budgetLineItemId as string;
     if (!budgetLineItemId) {
       return res.status(400).json({ error: "budgetLineItemId required" });
-    }
-    const contactId = req.sessionClaims?.contactId;
-    if (!contactId || !(await budgetLineItemOwnedByContact(budgetLineItemId, contactId))) {
-      return res.status(403).json({ error: "Forbidden" });
     }
 
     // Filter by the correct lookup field on prmtk_budgetspends:
@@ -271,11 +228,6 @@ export const upsertBudgetSpends: RequestHandler = async (req, res) => {
     }
     if (!Array.isArray(spends)) {
       return res.status(400).json({ error: "spends array required" });
-    }
-
-    const contactId = req.sessionClaims?.contactId;
-    if (!contactId || !(await budgetLineItemOwnedByContact(budgetLineItemId, contactId))) {
-      return res.status(403).json({ error: "Forbidden" });
     }
 
     // Fetch existing spends for this line item so we can delete missing ones.
