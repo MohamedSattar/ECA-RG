@@ -33,7 +33,7 @@ export const handleAuthSession: RequestHandler = async (req, res) => {
     try {
       contactId = await lookupContactIdByEmail(email);
     } catch (e) {
-      console.warn("[AuthSession] Contact lookup failed:", e);
+      
     }
 
     const sessionToken = signSessionToken(
@@ -48,7 +48,7 @@ export const handleAuthSession: RequestHandler = async (req, res) => {
     return res.json({ sessionToken, contactId });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("[AuthSession]", msg);
+    
     return res.status(401).json({ error: "Invalid id_token", details: msg });
   }
 };

@@ -11,7 +11,7 @@ import {
   ResearchAreaKeys,
   GrantCycleKeys,
 } from "@/constants/index";
-import { useAuth } from "@/state/auth";
+import { useAuth } from "@/state/useAuth";
 import { OverlayLoader } from "@/components/Loader";
 import { Icon, IconButton } from "@fluentui/react";
 import WorkflowTimeline from "@/components/WorkFlowHistory";
@@ -53,10 +53,10 @@ export default function GrantDetail() {
     try {
       const url = `/_api/${TableName.RESEARCHAREAS}(${id})?$expand=prmtk_GrantCycle`;
       const res = await callApi<any>({ url, method: "GET" });
-      console.log("Fetched research area:", res);
+      
       setResearchArea(res);
     } catch (err) {
-      console.error("Failed to load research area:", err);
+      
       setError("Unable to load research area details. Please try again later.");
     }
   };
@@ -113,10 +113,10 @@ const getYMD=(start:string, end:string) =>{
       const url = `/_api/${TableName.GRANTCYCLES}?$select=*&$expand=prmtk_researchareas&$filter=prmtk_researchareas/any(r: r/prmtk_researchareaid eq ${id})`;
       const res = await callApi<{ value: any[] }>({ url, method: "GET" });
       const cycles = res?.value ?? [];
-      console.log("Fetched grant cycles for research area:", cycles);
+      
       setGrantCycles(cycles);
     } catch (err) {
-      console.error("Failed to load grant cycles:", err);
+      
     }
   };
 
@@ -125,13 +125,13 @@ const getYMD=(start:string, end:string) =>{
       const url = `/_api/prmtk_granttemplates`;
       const res = await callApi<{ value: any[] }>({ url, method: "GET" });
       const templates = res?.value ?? [];
-      console.log("Fetched grant templates:", templates);
+      
       // Use the first template or filter by grant cycle if needed
       if (templates.length > 0) {
         setGrantTemplate(templates[0]);
       }
     } catch (err) {
-      console.error("Failed to load grant template:", err);
+      
     }
   };
 
@@ -150,10 +150,10 @@ const getYMD=(start:string, end:string) =>{
         method: "GET",
       });
       const list = res?.value ?? [];
-      console.log("Fetched applications:", list);
+      
       setApps(list);
     } catch (err) {
-      console.error("Failed to load applications:", err);
+      
       setError("Unable to load applications. Please try again later.");
       setApps([]);
     } finally {
@@ -211,7 +211,7 @@ const blob = new Blob([buffer], { type:  "application/octet-stream"});
     window.URL.revokeObjectURL(downloadUrl);
 
   } catch (err) {
-    console.error("Failed to download template:", err);
+    
     toast.error("Failed to download file. Please try again.");
   }
 };
@@ -294,7 +294,7 @@ const blob = new Blob([buffer], { type:  "application/octet-stream"});
         navigate(`/application/${applicationId}`);
       }
     } catch (error) {
-      console.error("Error handling grant application:", error);
+      
       toast.error(
         "Failed to create or retrieve application. Please try again.",
       );

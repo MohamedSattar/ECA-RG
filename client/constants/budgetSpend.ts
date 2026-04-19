@@ -12,11 +12,11 @@ export const BudgetSpendFields = {
   MONTH: "prmtk_month",
   YEAR: "prmtk_year",
 
-  // Lookups (values)
-  BUDGETLINEITEM: "_prmtk_budgetlineitem_value",
+  // Lookups (values) — Web API uses _prmtk_lineitem_value (see server/routes/budget.ts).
+  BUDGETLINEITEM: "_prmtk_lineitem_value",
 
   // Lookups (OData binding)
-  BUDGETLINEITEM_ID: "prmtk_BudgetLineItem@odata.bind",
+  BUDGETLINEITEM_ID: "prmtk_LineItem@odata.bind",
 
   // System
   CREATEDON: "createdon",

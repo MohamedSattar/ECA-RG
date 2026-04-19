@@ -6,7 +6,7 @@ import { Loader, OverlayLoader } from "@/components/Loader";
 import { Mail, CheckCheck, Trash2 } from "lucide-react";
 import { useDataverseApi } from "@/hooks/useDataverseApi";
 import { TableName, ContactKeys } from "@/constants";
-import { useAuth } from "@/state/auth";
+import { useAuth } from "@/state/useAuth";
 
 interface Notification {
   id: string;
@@ -33,7 +33,7 @@ export default function Notifications() {
         const currentUserContactId = user?.contact?.[ContactKeys.CONTACTID];
 
         if (!currentUserContactId) {
-          console.error("No contact ID found for current user");
+          
           setNotifications([]);
           setLoading(false);
           return;
@@ -47,7 +47,7 @@ export default function Notifications() {
           method: "GET",
         });
 
-        console.log("Notifications API Response:", response);
+        
 
         // Map the API response
         const apiNotifications = response?.value || [];
@@ -79,14 +79,11 @@ export default function Notifications() {
           };
         });
 
-        console.log(
-          "Filtered Notifications Count:",
-          mappedNotifications.length,
-        );
+        
 
         setNotifications(mappedNotifications);
       } catch (error) {
-        console.error("Failed to load notifications:", error);
+        
         setNotifications([]);
       } finally {
         setLoading(false);
@@ -131,7 +128,7 @@ export default function Notifications() {
       // Update local state - mark all as read
       setNotifications(notifications.map((n) => ({ ...n, isRead: true })));
     } catch (error) {
-      console.error("Failed to mark all as read:", error);
+      
     } finally {
       setMarkingAllRead(false);
     }
@@ -165,7 +162,7 @@ export default function Notifications() {
         notifications.map((n) => (n.id === id ? { ...n, isRead: true } : n))
       );
     } catch (error) {
-      console.error("Failed to mark notification as read:", error);
+      
     } finally {
       setLoading(false);
     }

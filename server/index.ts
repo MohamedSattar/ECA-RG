@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import { rateLimiterMiddleware } from "./middleware/rateLimiter";
 import { handleDemo } from "./routes/demo";
 import { handleAuthSession } from "./routes/authSession";
 import {
@@ -29,6 +30,7 @@ export function createServer() {
   const app = express();
 
   app.use(cors());
+  app.use(rateLimiterMiddleware());
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
@@ -54,16 +56,6 @@ export function createServer() {
   app.delete("/api/budget/line-items/:id", loadSession, requireContactSession, deleteBudgetLineItem);
   app.get("/api/budget/spends", loadSession, requireContactSession, getBudgetSpendsByLineItem);
   app.post("/api/budget/spends/bulk", loadSession, requireContactSession, upsertBudgetSpends);
-
-  const BYPASS_TOKEN =
-    "H2mPseS4jqMjdACQIcTLuZYge-isZjkr_Pj37loAqcjZb6dp4bIZao9TZqN2uvXmMVwTGvkFsTtq5tnfPGfoCj2U15FDO8T8ESjcSTfguKw1";
-
-  // Power Pages token is no longer used — all Dataverse calls go through the server
-  // proxy which uses client-credentials Bearer auth. Return a stable bypass token so
-  // the client-side token-fetch logic never blocks API calls.
-  app.get("/api/verification-token", (_req, res) => {
-    res.json({ token: BYPASS_TOKEN, available: true, source: "bypass" });
-  });
 
   app.get("/api/dataverse-image", loadSession, async (req, res) => {
     const rawUrl = typeof req.query.url === "string" ? req.query.url : null;
@@ -159,7 +151,7 @@ export function createServer() {
       return res.end(imageBuffer);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error("[DataverseImage] Failed to proxy image:", err);
+      
       return res.status(502).json({
         error: "Image proxy error",
         details: msg,
@@ -167,7 +159,8 @@ export function createServer() {
     }
   });
 
-  app.all(/^\/((_api|_layout)\/)/, (req, res) => {
+  // Only `/_api/*` is proxied with row-level policy. `/_layout/*` is not forwarded (would bypass parseUnderscoreApiPath / filters).
+  app.all(/^\/_api\//, (req, res) => {
     void runDataverseProxy(req, res);
   });
 

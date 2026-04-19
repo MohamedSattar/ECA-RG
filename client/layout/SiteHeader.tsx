@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { useAuth } from "@/state/auth";
+import { useAuth } from "@/state/useAuth";
 import { ContactFields, TableName } from "@/constants";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -40,7 +40,7 @@ export function SiteHeader() {
           const currentUserContactId = user?.contact?.[ContactFields.CONTACTID];
 
           if (!currentUserContactId) {
-            console.error("No contact ID found for current user");
+            
             return;
           }
 
@@ -60,7 +60,7 @@ export function SiteHeader() {
 
           setUnreadCount(unreadNotifications.length);
         } catch (error) {
-          console.error("Error fetching notifications:", error);
+          
         }
       }
     };
@@ -124,7 +124,7 @@ export function SiteHeader() {
                     // Error is already handled and logged in auth.tsx
                     // Only log here if it's an unexpected error
                     if (error?.errorCode !== "user_cancelled") {
-                      console.error("Login failed:", error);
+                      
                     }
                   }
                 }}
@@ -145,7 +145,7 @@ export function SiteHeader() {
                     // Error is already handled and logged in auth.tsx
                     // Only log here if it's an unexpected error
                     if (error?.errorCode !== "user_cancelled") {
-                      console.error("Sign up failed:", error);
+                      
                     }
                   }
                 }}

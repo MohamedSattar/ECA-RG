@@ -8,7 +8,7 @@ import {
   ResearchKeys,
   TableName,
 } from "@/constants/index";
-import { useAuth } from "@/state/auth";
+import { useAuth } from "@/state/useAuth";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { IconButton } from "@fluentui/react/lib/Button";
 import { popupInputStyles } from "@/styles/popupInputStyles";
@@ -64,7 +64,7 @@ export default function Researches() {
         method: "GET",
       });
       const list = res?.value ?? [];
-      console.log("Fetched researches:", list);
+      
       setResearches(list);
 
       const appIds = new Set<string>();
@@ -130,7 +130,7 @@ export default function Researches() {
       }
       setPiMap(principalMap);
     } catch (err) {
-      console.error("Failed to load applications:", err);
+      
       setError("Unable to load applications. Please try again later.");
       setResearches([]);
     } finally {

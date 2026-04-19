@@ -39,8 +39,11 @@ VITE_FILE_DOWNLOAD_ENDPOINT=https://d2b51a037ca4edf98f016454711544.54.environmen
 # NEVER use this token in production—it has a short lifetime and is committed to git
 VITE_B2C_AUTHORITY=https://ecab2cdev.b2clogin.com/tfp/20204571-3776-41c1-8358-b82ae0114e6e/b2c_1a_rg_dev_susi/v2.0/
 VITE_B2C_KNOWN_AUTHORITIES=ecab2cdev.b2clogin.com
-
 # Server-only: B2C policy URL and MSAL app id (must match VITE_B2C_CLIENT_ID) for POST /api/auth/session + proxy session JWT
 B2C_AUTHORITY=https://ecab2cdev.b2clogin.com/tfp/20204571-3776-41c1-8358-b82ae0114e6e/b2c_1a_rg_dev_susi/v2.0/
 B2C_CLIENT_ID=1dc49cf1-aa12-4bfb-bf9e-60ff6df8475e
-SESSION_HMAC_SECRET=dev-local-only-replace-with-openssl-rand-base64-48-in-production
+SESSION_HMAC_SECRET=/gmVpFgaRI49E35NsIO6PkhvOwfNf7PRAEgWBl1clqGAA1GGdCGuo+q9nfoXYnro
+# API rate limiting (Express). RATE_LIMIT_ENABLED=false disables the limiter.
+RATE_LIMIT_WINDOW_MS=60000
+RATE_LIMIT_MAX=200
+RATE_LIMIT_SKIP_HEALTH=true 

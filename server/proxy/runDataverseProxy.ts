@@ -3,14 +3,15 @@ import { getDataverseToken } from "../dataverseClient";
 import { verifySessionToken, type SessionClaims } from "../auth/sessionJwt";
 import {
   PUBLIC_ENTITY_SETS,
-  PRIVATE_MERGE_ENTITY_SETS,
   parseUnderscoreApiPath,
   mergeMandatoryFilter,
-  mandatoryFilterForPrivateEntity,
-  privateRecordAllowed,
+  rowFilterForEntity,
   sanitizeODataFilterBeforeMerge,
+  extractBudgetSpendLineItemGuidFromFilter,
+  type RowFilterResult,
 } from "./dataversePolicy";
 import { assertCanAccessPrivateRecord } from "./ownershipPreflight";
+import { budgetLineItemOwnedByContact } from "../budgetOwnership";
 import { getSessionHmacSecret } from "../sessionSecret";
 const DATAVERSE_BASE_URL =
   process.env.DATAVERSE_BASE_URL ||
@@ -71,6 +72,29 @@ function assertSafePrivateMutationBody(
   return null;
 }
 
+async function assertBudgetSpendCreateAllowed(
+  session: SessionClaims,
+  body: unknown,
+): Promise<string | null> {
+  if (typeof body !== "object" || body === null) return "Invalid body";
+  const b = body as Record<string, unknown>;
+  const bind =
+    (typeof b["prmtk_LineItem@odata.bind"] === "string" && b["prmtk_LineItem@odata.bind"]) ||
+    (typeof b["prmtk_BudgetLineItem@odata.bind"] === "string" &&
+      b["prmtk_BudgetLineItem@odata.bind"]);
+  if (typeof bind !== "string" || !bind.trim()) {
+    return "Budget spend create must bind a line item (prmtk_LineItem@odata.bind)";
+  }
+  const m = bind.match(/prmtk_budgetlineitems\(([0-9a-fA-F-]{36})\)/i);
+  if (!m) return "Invalid line item binding URL";
+  const guid = m[1];
+  const cid = session.contactId;
+  if (!cid) return "Missing contact for budget spend create";
+  const ok = await budgetLineItemOwnedByContact(guid, cid);
+  if (!ok) return "Forbidden";
+  return null;
+}
+
 export async function runDataverseProxy(
   req: express.Request,
   res: express.Response,
@@ -106,6 +130,18 @@ export async function runDataverseProxy(
       }
     }
 
+    let rowFilter: RowFilterResult | null = null;
+    if (parsed && needsSession && session) {
+      rowFilter = rowFilterForEntity(parsed.entitySetLc, session);
+      if (rowFilter.kind === "deny") {
+        return deny(
+          res,
+          403,
+          "This resource is not available through the API proxy.",
+        );
+      }
+    }
+
     let targetPath = targetPathFromReq(apiPath);
     const fullUrl = new URL(DATAVERSE_BASE_URL + targetPath);
 
@@ -121,11 +157,26 @@ export async function runDataverseProxy(
       }
     }
 
-    if (parsed && session && PRIVATE_MERGE_ENTITY_SETS.has(parsed.entitySetLc)) {
-      const mandatory = mandatoryFilterForPrivateEntity(parsed.entitySetLc, session);
-      if (mandatory === null) {
-        return deny(res, 403, "Insufficient identity to access this resource");
+    if (
+      parsed &&
+      session &&
+      (rowFilter?.kind === "merge" || rowFilter?.kind === "budget_spends_scoped") &&
+      parsed.recordId &&
+      (req.method === "GET" || req.method === "HEAD")
+    ) {
+      const ok = await assertCanAccessPrivateRecord(
+        parsed.entitySet,
+        parsed.entitySetLc,
+        parsed.recordId,
+        session,
+      );
+      if (!ok) {
+        return deny(res, 404, "Not found");
       }
+    }
+
+    if (parsed && session && rowFilter?.kind === "merge") {
+      const mandatory = rowFilter.mandatory;
 
       if (req.method === "GET" && !parsed.recordId) {
         const existingRaw = fullUrl.searchParams.get("$filter") || undefined;
@@ -159,6 +210,63 @@ export async function runDataverseProxy(
           return deny(res, 403, err);
         }
       }
+    } else if (parsed && session && rowFilter?.kind === "budget_spends_scoped") {
+      if ((req.method === "GET" || req.method === "HEAD") && !parsed.recordId) {
+        const existingRaw = fullUrl.searchParams.get("$filter") || undefined;
+        const existing = sanitizeODataFilterBeforeMerge(existingRaw);
+        if (!existing) {
+          return deny(
+            res,
+            400,
+            "prmtk_budgetspends requires $filter including _prmtk_lineitem_value eq <budget line item id>",
+          );
+        }
+        const li = extractBudgetSpendLineItemGuidFromFilter(existing);
+        if (li.kind === "none") {
+          return deny(
+            res,
+            400,
+            "prmtk_budgetspends queries must filter by _prmtk_lineitem_value eq <guid>.",
+          );
+        }
+        if (li.kind === "ambiguous") {
+          return deny(
+            res,
+            400,
+            "prmtk_budgetspends filter must not reference multiple different line items.",
+          );
+        }
+        const cid = session.contactId;
+        if (!cid) {
+          return deny(res, 403, "Missing contact for budget spend query");
+        }
+        const allowed = await budgetLineItemOwnedByContact(li.guid, cid);
+        if (!allowed) {
+          return deny(res, 404, "Not found");
+        }
+        fullUrl.searchParams.set("$filter", existing);
+      } else if (
+        (req.method === "PATCH" ||
+          req.method === "DELETE" ||
+          req.method === "PUT" ||
+          req.method === "MERGE") &&
+        parsed.recordId
+      ) {
+        const ok = await assertCanAccessPrivateRecord(
+          parsed.entitySet,
+          parsed.entitySetLc,
+          parsed.recordId,
+          session,
+        );
+        if (!ok) {
+          return deny(res, 404, "Not found");
+        }
+      } else if (req.method === "POST") {
+        const err = await assertBudgetSpendCreateAllowed(session, req.body);
+        if (err) {
+          return deny(res, 403, err);
+        }
+      }
     }
 
     const fetchHeaders: HeadersInit = {
@@ -173,15 +281,10 @@ export async function runDataverseProxy(
       fetchHeaders["Authorization"] = `Bearer ${serverToken}`;
     } else if (FORCE_FORWARD_CLIENT_AUTH && req.headers.authorization) {
       fetchHeaders["Authorization"] = String(req.headers.authorization);
-    } else if (req.headers.authorization) {
-      fetchHeaders["Authorization"] = String(req.headers.authorization);
+    } else if (!serverToken) {
+      return deny(res, 503, "Server-side Dataverse token unavailable");
     }
 
-    if (req.headers["__requestverificationtoken"]) {
-      fetchHeaders["__RequestVerificationToken"] = String(
-        req.headers["__requestverificationtoken"],
-      );
-    }
     if (req.headers["content-type"]) {
       fetchHeaders["Content-Type"] = String(req.headers["content-type"]);
     }
@@ -209,23 +312,6 @@ export async function runDataverseProxy(
       data = await response.text();
     }
 
-    if (
-      parsed &&
-      session &&
-      PRIVATE_MERGE_ENTITY_SETS.has(parsed.entitySetLc) &&
-      req.method === "GET" &&
-      parsed.recordId &&
-      response.ok &&
-      contentType?.includes("application/json") &&
-      typeof data === "object" &&
-      data !== null &&
-      !Array.isArray(data)
-    ) {
-      if (!privateRecordAllowed(parsed.entitySetLc, session, data as Record<string, unknown>)) {
-        return deny(res, 404, "Not found");
-      }
-    }
-
     res.status(response.status);
 
     if (response.headers.get("content-type")) {
@@ -249,11 +335,15 @@ export async function runDataverseProxy(
     }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[Proxy] Error on ${req.method} ${req.path}`, err);
-    res.status(502).json({
-      error: "Proxy error",
-      details: msg,
-      target: DATAVERSE_BASE_URL + req.path,
-    });
+    const isProd = process.env.NODE_ENV === "production";
+    res.status(502).json(
+      isProd
+        ? { error: "Proxy error" }
+        : {
+            error: "Proxy error",
+            details: msg,
+            target: DATAVERSE_BASE_URL + req.path,
+          },
+    );
   }
 }
