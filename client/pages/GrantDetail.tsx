@@ -10,6 +10,7 @@ import {
   TableName,
   ResearchAreaKeys,
   GrantCycleKeys,
+  ExpandRelations,
 } from "@/constants/index";
 import { useAuth } from "@/state/useAuth";
 import { OverlayLoader } from "@/components/Loader";
@@ -109,8 +110,9 @@ const getYMD=(start:string, end:string) =>{
     if (!id) return;
 
     try {
-      // Fetch all grant cycles and filter by research area
-      const url = `/_api/${TableName.GRANTCYCLES}?$select=*&$expand=prmtk_researchareas&$filter=prmtk_researchareas/any(r: r/prmtk_researchareaid eq ${id})`;
+      // N:N navigation on prmtk_grantcycle (not the entity set name `prmtk_researchareas`)
+      const grantCycleResearchNav = ExpandRelations.RESEARCH_AREAS;
+      const url = `/_api/${TableName.GRANTCYCLES}?$select=*&$expand=${grantCycleResearchNav}&$filter=${grantCycleResearchNav}/any(r: r/prmtk_researchareaid eq ${id})`;
       const res = await callApi<{ value: any[] }>({ url, method: "GET" });
       const cycles = res?.value ?? [];
       
@@ -689,12 +691,22 @@ const blob = new Blob([buffer], { type:  "application/octet-stream"});
               {/* Contact Box */}
               <div className="bg-white-100 border-8 border-yellow-300 p-4 rounded-xl">
                 <h3 className="font-semibold mb-5">Need Help?</h3>
-                 <p className="mt-1 text-sm text-slate-500">
-                <p className="font-medium mb-3">    If you have other question regarding research, grants or other opportunities at ECA please contact  ECA Research Team</p>
-              </p>
-                <p className="text-sm mb-1">📧 <a href="mailto:Research@eca.gov.ae" className="text-blue-500 hover:underline">
-                  Research@eca.gov.ae
-                </a></p>
+                <div className="mt-1 space-y-2 text-sm text-slate-500">
+                  <p className="m-0 font-medium text-slate-700">
+                    If you have other questions regarding research, grants, or
+                    other opportunities at ECA, please contact the ECA Research
+                    Team.
+                  </p>
+                  <p className="m-0 text-sm">
+                    📧{" "}
+                    <a
+                      href="mailto:Research@eca.gov.ae"
+                      className="text-blue-500 hover:underline"
+                    >
+                      Research@eca.gov.ae
+                    </a>
+                  </p>
+                </div>
               </div>
             </div>
           </div>
