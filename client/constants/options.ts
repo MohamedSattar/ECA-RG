@@ -38,9 +38,8 @@ export const BudgetCategorys = [
   { text: "B. Consultants and Subgrants", key: 2 ,Direct:true},
   { text: "C. Supplies", key: 3,Direct:true },
   { text: "D. Research Dissemination and Communication", key: 4,Direct:true },
-  { text: "E. Administrative Personnel Costs", key: 5 ,Direct:true},
-  { text: "F. Administrative Personnel Costs (Specific to Project)", key: 6 ,Direct:true},
-  { text: "G. Indirect Costs", key: 7 ,Direct:false},
+  { text: "F. Administrative Personnel Costs (Specific to Project)", key: 5 ,Direct:true},
+  { text: "G. Indirect Costs", key: 6 ,Direct:false},
 ];
 
 export const PreferredContactMethodCode = [
