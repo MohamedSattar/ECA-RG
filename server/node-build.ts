@@ -14,7 +14,7 @@ const __dirname = path.dirname(__filename);
 const distPath = path.resolve(__dirname, "../spa");
 
 // Serve static files from SPA build folder
-app.use(express.static(distPath));
+app.use(express.static(distPath, { dotfiles: "allow" }));
 
 // Handle React Router — serve index.html for all non-API requests
 app.use((req, res, next) => {

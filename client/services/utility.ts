@@ -30,7 +30,7 @@ export function formatAedMillion(amount: number): string {
   return `AED ${value.toFixed(2)} M`;
 }
 export function aedFormat(value: number) {
-  return `د.إ ${value.toLocaleString("en-US")}`;
+  return `AED ${value.toLocaleString("en-US")}`;
 }
 export function getFileKey(file: File): string {
   return `${file.name}|${file.size}|${file.lastModified}`;

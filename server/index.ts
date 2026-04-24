@@ -38,6 +38,12 @@ export function createServer() {
     res.json({ status: "ok", message: "Server is running" });
   });
 
+  app.get("/.well-known/microsoft-identity-association.json", (_req, res) => {
+    res.json({
+      associatedApplications: [{ applicationId: "19b1170e-f198-4105-a14b-888ee5375d8d" }],
+    });
+  });
+
   app.get("/api/ping", (_req, res) => {
     const ping = process.env.PING_MESSAGE ?? "ping";
     res.json({ message: ping });
