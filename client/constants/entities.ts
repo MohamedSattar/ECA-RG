@@ -1,3 +1,11 @@
+export interface ResearchArea {
+  prmtk_researchareaid: string;
+  prmtk_areaname: string;
+  prmtk_areadescription: string;
+  prmtk_thumbnail_url?: string | null;
+  prmtk_allocatedbudget?: number | null;
+}
+
 /**
  * Research Area entity field names
  * Entity: prmtk_researcharea

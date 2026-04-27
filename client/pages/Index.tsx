@@ -4,6 +4,7 @@ import { ChevronDown, User } from "lucide-react";
 import Reveal from "@/motion/Reveal";
 import { useDataverseApi } from "@/hooks/useDataverseApi";
 import { formatDate, normalizeImageUrl } from "@/lib/utils";
+import type { ResearchArea } from "@/constants/index";
 import {
   ApplicationKeys,
   ContactKeys,
@@ -466,8 +467,8 @@ export default function Index() {
   }, []);
 
   // Memoize research areas for performance
-  const researchAreas = useMemo(
-    () => grant?.[ExpandRelations.RESEARCH_AREAS] || [],
+  const researchAreas = useMemo<ResearchArea[]>(
+    () => grant?.[ExpandRelations.RESEARCH_AREAS] ?? [],
     [grant],
   );
 
@@ -671,10 +672,10 @@ export default function Index() {
       </section>
 
       {/* Active Grants Section */}
-      {grant && !loading && (
-        <div>
-          <section className="bg-white">
-            <div className="container py-14 md:py-16">
+      {!loading && (
+        <section className="bg-white">
+          <div className="container py-14 md:py-16">
+            {grant && (
               <div className="mt-10 grid gap-2">
                 <h3 className="text-3xl md:text-4xl font-extrabold tracking-tight text-blue">
                   {grant[GrantCycleKeys.CYCLENAME]}
@@ -703,35 +704,47 @@ export default function Index() {
                   </div>
                 </div>
               </div>
+            )}
 
-              {/* Research Areas Section */}
-              <h2 className="mt-8 text-[#391400] text-center tracking-[0.25em] text-4xl font-semibold">
-                ACTIVE GRANTS
-              </h2>
-              <div className="mt-6 h-px bg-slate-200" />
+            {/* Research Areas Section */}
+            <h2 className="mt-8 text-[#391400] text-center tracking-[0.25em] text-4xl font-semibold">
+              ACTIVE GRANTS
+            </h2>
+            <div className="mt-6 h-px bg-slate-200" />
+            {grant && researchAreas.length > 0 ? (
               <div className="mt-10 grid gap-20">
-                {researchAreas &&
-                  researchAreas.map((area, idx) => (
-                    <GrantCard
-                      key={area[ResearchAreaKeys.RESEARCHAREAID]}
-                      GrantCycleKeyId={grant[GrantCycleKeys.GRANTCYCLEID]}
-                      number={idx + 1}
-                      ResearchAreaKeyId={area[ResearchAreaKeys.RESEARCHAREAID]}
-                      title={area[ResearchAreaKeys.AREANAME]}
-                      image={normalizeImageUrl(
-                        area[ResearchAreaKeys.THUMBNAIL_URL],
-                      )}
-                      description={area[ResearchAreaKeys.AREADESCRIPTION]}
-                      reverse={idx % 2 === 0}
-                      navigate={navigate}
-                      onApplyClick={handleApplyForGrant}
-                    />
-                  ))}
+                {researchAreas.map((area, idx) => (
+                  <GrantCard
+                    key={area[ResearchAreaKeys.RESEARCHAREAID]}
+                    GrantCycleKeyId={grant[GrantCycleKeys.GRANTCYCLEID]}
+                    number={idx + 1}
+                    ResearchAreaKeyId={area[ResearchAreaKeys.RESEARCHAREAID]}
+                    title={area[ResearchAreaKeys.AREANAME]}
+                    image={normalizeImageUrl(
+                      area[ResearchAreaKeys.THUMBNAIL_URL],
+                    )}
+                    description={area[ResearchAreaKeys.AREADESCRIPTION]}
+                    reverse={idx % 2 === 0}
+                    navigate={navigate}
+                    onApplyClick={handleApplyForGrant}
+                  />
+                ))}
               </div>
-            </div>
-          </section>
-          
-        </div>
+            ) : (
+              <div className="mt-16 mb-8 flex flex-col items-center gap-4 text-center">
+                <div className="text-5xl">🔍</div>
+                <h3 className="text-2xl font-semibold text-[#391400]">
+                  No Open Grants at This Time
+                </h3>
+                <p className="max-w-md text-muted-foreground text-light-brown leading-relaxed">
+                  There are currently no active open grants available under
+                  this cycle. Please check back soon — new research
+                  opportunities are added regularly.
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
       )}
 
       {/* Loading State */}
